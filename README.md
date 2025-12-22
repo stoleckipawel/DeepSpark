@@ -1,80 +1,116 @@
 # LightThreads
 
-A Hugo + Blowfish site for real-time rendering articles, screenshots, and experiment logs.
+LightThreads is a Hugo + Blowfish site for **real-time rendering** writing: articles, experiment logs, and profiling/analysis workflows.
 
-## The one rule (so you never get lost)
+## What’s inside
 
-- Main Hugo config lives in `config.toml`
-- All Blowfish overrides live in `config/_default/`
+- **Posts**: longer, polished write-ups (pipeline design, techniques, trade-offs)
+- **Experiments**: short iterative logs (what I tried today + next steps)
+- **Analysis**: repeatable workflows (profiling, frame capture, performance interpretation)
 
-If you see other `*.toml` configs outside those locations, they should NOT exist (they cause confusing overrides).
+## Folder map (where to edit things)
 
-## Where things live (folder locations)
+- Site-wide config: `config.toml`
+- Blowfish overrides: `config/_default/`
+	- Theme params: `config/_default/params.toml`
+	- Menus: `config/_default/menus.en.toml`
+	- Author + site description: `config/_default/languages.en.toml`
+- Content:
+	- Home page: `content/_index.md`
+	- About page: `content/about.md`
+	- Posts: `content/posts/`
+	- Experiments: `content/experiments/`
+	- Analysis: `content/analysis/`
+- Static assets (served as-is): `static/`
+	- Images: `static/images/` → available at `/images/...`
 
-- Site config (main): `config.toml`
-- Theme overrides (Blowfish): `config/_default/`
-  - Theme params: `config/_default/params.toml`
-  - Menus: `config/_default/menus.en.toml`
-  - Language metadata + author profile: `config/_default/languages.en.toml`
-- Blog posts: `content/posts/`
-- Experiments: `content/experiments/`
-- Static images/videos you link to: `static/`
-  - Example: images in `static/images/` are served at `/images/...`
+## Prerequisites
+
+- **Hugo Extended** (required by Blowfish)
+- Git
+
+Check Hugo:
+
+```powershell
+hugo version
+```
 
 ## Run locally (PC)
 
-From the repo root folder:
-
 ```powershell
+# from repo root
 hugo server
 ```
 
-Open on your PC:
+Open:
 
 - http://localhost:1313/
 
-## Open the site on your phone (same Wi‑Fi)
+## Open on your phone (same Wi‑Fi)
 
-1) Find your PC’s local IPv4 address (example: `192.168.0.50`):
-
-```powershell
-Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -match '^192\\.|^10\\.|^172\\.' } | Format-Table IPAddress,InterfaceAlias
-```
-
-2) Start Hugo bound to all network interfaces (from the repo root folder):
+1) Find your PC’s IPv4 address (example: `192.168.100.12`):
 
 ```powershell
-hugo server --bind 0.0.0.0 --baseURL http://YOUR_PC_IP:1313/ --appendPort=false
+Get-NetIPAddress -AddressFamily IPv4 |
+	Where-Object { $_.IPAddress -match '^192\.|^10\.|^172\.' } |
+	Format-Table IPAddress,InterfaceAlias
 ```
 
-3) On your phone (same Wi‑Fi), open:
+2) Start Hugo bound to your network interface:
+
+```powershell
+hugo server --bind 0.0.0.0 --port 1313 --baseURL http://YOUR_PC_IP:1313/ --appendPort=false
+```
+
+3) On your phone open:
 
 - `http://YOUR_PC_IP:1313/`
 
-If it doesn’t load, allow port 1313 through Windows Firewall:
+If it doesn’t load, allow inbound port 1313 (run once):
 
 ```powershell
 New-NetFirewallRule -DisplayName "Hugo Dev Server 1313" -Direction Inbound -Protocol TCP -LocalPort 1313 -Action Allow
 ```
 
+## Writing workflow
+
+- Create a new post folder under `content/posts/<slug>/index.md`
+- Drop images under `static/images/` and reference them as `/images/<file>`
+
+Suggested structure for technical posts:
+
+1. Goal
+2. Constraints (platform, frame budget)
+3. Approach (algorithm/data)
+4. Debug views (how you validate correctness)
+5. Performance (timings + why)
+6. Results (screenshots/videos)
+7. Next steps
+
+## Theme
+
+This repo uses the **Blowfish** theme as a git submodule.
+
+If you cloned without submodules:
+
+```powershell
+git submodule update --init --recursive
+```
+
 ## Deploy to GitHub Pages (automatic)
 
-Workflow file location:
+This repo contains a GitHub Actions workflow:
 
 - `.github/workflows/deploy-pages.yml`
 
-After you push to the `main` branch, GitHub Actions builds and publishes automatically.
+To enable publishing:
 
-Repo settings (GitHub UI):
+1) GitHub repo → **Settings → Pages**
+2) Source: **GitHub Actions**
 
-- Repo → **Settings** → **Pages** → Source: **GitHub Actions**
+After that, every push to `main` builds and deploys.
 
-## Custom domain ("LightThreads" URL)
+## Credits
 
-To use a custom domain like `lightthreads.dev` or `lightthreads.com`, you need to:
-
-- Buy/register the domain
-- Configure GitHub Pages custom domain (Repo → Settings → Pages)
-- Point DNS records to GitHub Pages
-
-Tell me the exact domain you own/want (e.g. `lightthreads.dev`) and I’ll add the correct `static/CNAME` file and DNS instructions.
+- Hugo: https://gohugo.io/
+- Blowfish theme: https://github.com/nunocoracao/blowfish
