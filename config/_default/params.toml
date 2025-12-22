@@ -16,7 +16,7 @@ enableStructuredBreadcrumbs = false
 
 replyByEmail = false
 
-mainSections = ["posts", "experiments"]
+mainSections = ["posts"]
 
 # mainSections = ["section1", "section2"]
 # robots = ""
