@@ -13,13 +13,3 @@ title = "LightThreads"
   # secondaryLogo = "img/secondary-logo.png"
   description = "Graphics software engineering — real-time rendering notes, GPU experiments, and performance analysis."
   # copyright = "Copy, _right?_ :thinking_face:"
-
-  [params.author]
-    name = "Paweł Stolecki"
-    headline = "Real-time rendering, GPU architecture, and engine experiments"
-    bio = "LightThreads is my lab notebook for rendering techniques, performance analysis, and visual experiments."
-    links = [
-      { email = "mailto:stoleckipawel98@gmail.com" },
-      { github = "https://github.com/stoleckipawel" },
-      { linkedin = "https://www.linkedin.com/in/stoleckirendering/" },
-    ]

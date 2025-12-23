@@ -11,36 +11,28 @@
 # ordered by weight from lowest to highest.
 
 [[main]]
-name = "Posts"
+name = "Posts 📝"
 pageRef = "posts"
 weight = 10
 
 [[main]]
-name = "About"
+name = "About 👋"
 pageRef = "about"
 weight = 20
 
 [[main]]
-name = "LinkedIn"
-name = ""
-pre = "linkedin"
-title = "LinkedIn"
-url = "https://www.linkedin.com/in/stoleckirendering/"
-weight = 40
-
-[[main]]
-name = ""
+name = "GitHub"
 pre = "github"
 title = "GitHub"
 url = "https://github.com/stoleckipawel"
 weight = 30
 
 [[main]]
-name = ""
-pre = "mail"
-title = "Email"
-url = "mailto:stoleckipawel98@gmail.com"
-weight = 50
+name = "LinkedIn"
+pre = "linkedin"
+title = "LinkedIn"
+url = "https://www.linkedin.com/in/stoleckirendering/"
+weight = 40
 
 #[[main]]
 #  name = "Blog"
