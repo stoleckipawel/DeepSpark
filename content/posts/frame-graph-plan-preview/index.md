@@ -10,6 +10,12 @@ series: ["Rendering Architecture"]
 
 <!-- This is a preview-only file generated from ARTICLE_PLAN.md. Not the final article. -->
 
+# Part I — Theory
+
+*What a render graph is, what problems it solves, and why every major engine uses one.*
+
+---
+
 ## Why You Want One
 
 1. **Composability.** Add a pass, remove a pass, reorder passes. Nothing breaks. The graph recompiles.
@@ -218,9 +224,37 @@ If you've seen UE5 code, this should look familiar:
 
 The macro approach has a cost: it's opaque, hard to debug, and impossible to compose dynamically. If you want to declare resources conditionally at runtime, you fight the macro system. Our explicit two-lambda API is simpler and more flexible — UE5 traded that flexibility for compile-time validation and reflection.
 
-This is the API we're building toward. The next three sections construct the internals, version by version.
+This is the API we're building toward. The next three sections construct the internals, version by version. Here's a preview of how the final API reads:
 
-<!-- TODO: ~20-line C++ usage snippet here -->
+```cpp
+FrameGraph fg;
+auto depth = fg.createResource({1920, 1080, Format::D32F});
+auto gbufA = fg.createResource({1920, 1080, Format::RGBA8});
+auto gbufN = fg.createResource({1920, 1080, Format::RGBA8});
+auto hdr   = fg.createResource({1920, 1080, Format::RGBA16F});
+
+fg.addPass("DepthPrepass",
+    [&]() { fg.write(0, depth); },
+    [&](/*cmd*/) { /* draw scene depth-only */ });
+
+fg.addPass("GBuffer",
+    [&]() { fg.read(1, depth); fg.write(1, gbufA); fg.write(1, gbufN); },
+    [&](/*cmd*/) { /* draw scene to GBuffer MRTs */ });
+
+fg.addPass("Lighting",
+    [&]() { fg.read(2, gbufA); fg.read(2, gbufN); fg.write(2, hdr); },
+    [&](/*cmd*/) { /* fullscreen lighting pass */ });
+
+fg.execute();  // → topo-sort, cull, alias, barrier, run
+```
+
+Three passes, declared as lambdas. The graph handles the rest — ordering, barriers, memory. We build this step by step below.
+
+---
+
+# Part II — Build It
+
+*Three iterations from blank file to working frame graph with automatic barriers and memory aliasing. Each version builds on the last — by the end you'll have something you can drop into a real renderer.*
 
 ---
 
@@ -254,7 +288,100 @@ This is the API we're building toward. The next three sections construct the int
 
 **Flow:** Declare passes in order → execute in order. No dependency tracking yet. Resources are created eagerly.
 
-<!-- TODO: Full buildable C++ — structs, addPass(), execute(). ~60–80 lines. -->
+**Buildable C++ — the full MVP v1:**
+
+```cpp
+#include <cstdint>
+#include <functional>
+#include <string>
+#include <vector>
+
+// ── Resource description (virtual until compile) ──────────────
+enum class Format { RGBA8, RGBA16F, R8, D32F };
+
+struct ResourceDesc {
+    uint32_t width  = 0;
+    uint32_t height = 0;
+    Format   format = Format::RGBA8;
+};
+
+// Handle = typed index into the graph's resource array.
+// No GPU memory behind it yet — just a number.
+struct ResourceHandle {
+    uint32_t index = UINT32_MAX;
+    bool isValid() const { return index != UINT32_MAX; }
+};
+
+// ── Render pass ───────────────────────────────────────────────
+struct RenderPass {
+    std::string                        name;
+    std::function<void()>              setup;    // build the DAG (v1: unused)
+    std::function<void(/*cmd list*/)>  execute;  // record GPU commands
+};
+
+// ── Frame graph ───────────────────────────────────────────────
+class FrameGraph {
+public:
+    // Create a virtual resource — returns a handle, not GPU memory.
+    ResourceHandle createResource(const ResourceDesc& desc) {
+        resources_.push_back(desc);
+        return { static_cast<uint32_t>(resources_.size() - 1) };
+    }
+
+    // Register a pass. Setup runs now; execute is stored for later.
+    template <typename SetupFn, typename ExecFn>
+    void addPass(const std::string& name, SetupFn&& setup, ExecFn&& exec) {
+        passes_.push_back({ name, std::forward<SetupFn>(setup),
+                                   std::forward<ExecFn>(exec) });
+        passes_.back().setup();  // run setup immediately
+    }
+
+    // Compile + execute. v1 is trivial — just run in declaration order.
+    void execute() {
+        // In v1 we skip compile entirely — no sorting, no culling,
+        // no barriers. Just run every pass in the order it was added.
+        for (auto& pass : passes_) {
+            // Here you'd bind resources, begin render pass, etc.
+            pass.execute(/* &cmdList */);
+        }
+
+        // Frame over — clear everything for next frame.
+        passes_.clear();
+        resources_.clear();
+    }
+
+private:
+    std::vector<RenderPass>    passes_;
+    std::vector<ResourceDesc>  resources_;
+};
+```
+
+**Usage** — three passes wired together in ~20 lines:
+
+```cpp
+FrameGraph fg;
+
+auto depth  = fg.createResource({1920, 1080, Format::D32F});
+auto gbufA  = fg.createResource({1920, 1080, Format::RGBA8});
+auto gbufN  = fg.createResource({1920, 1080, Format::RGBA8});
+auto hdr    = fg.createResource({1920, 1080, Format::RGBA16F});
+
+fg.addPass("DepthPrepass",
+    [&]()          { /* setup: declare writes depth */ },
+    [&](/*cmd*/)   { /* execute: draw scene depth-only */ });
+
+fg.addPass("GBuffer",
+    [&]()          { /* setup: reads depth, writes gbufA, gbufN */ },
+    [&](/*cmd*/)   { /* execute: draw scene to GBuffer MRTs */ });
+
+fg.addPass("Lighting",
+    [&]()          { /* setup: reads gbufA, gbufN, writes hdr */ },
+    [&](/*cmd*/)   { /* execute: fullscreen lighting pass */ });
+
+fg.execute();  // runs all three in order — done
+```
+
+This compiles and runs. It doesn't *do* anything on the GPU yet — the execute lambdas are stubs — but the scaffolding is real. Every piece we add in v2 and v3 goes into this same `FrameGraph` class.
 
 **What it proves:** The lambda-based pass declaration pattern works. You can already compose passes without manual barrier calls (even though barriers are no-ops here).
 
@@ -320,28 +447,242 @@ Runs in O(V + E). Kahn's is preferred over DFS-based topo-sort because cycle det
 
 **Barrier insertion:** Walk the sorted order. For each pass, check each resource against a state table tracking its current pipeline stage, access flags, and image layout. If usage changed, emit a barrier.
 
+Here's what that looks like in practice — every one of these is a barrier your graph inserts automatically, but you'd have to place by hand without one:
+
 ```
-  What a barrier does (GPU-level):
-
-  Pass A writes GBuffer        Pass B reads GBuffer
-  (COLOR_ATTACHMENT)            (SHADER_READ)
-        │                            ▲
-        │   ┌───────────────────┐   │
-        └──▶│    BARRIER         │───┘
-            │                   │
-            │ 1. Pipeline stall │  wait for A to finish
-            │ 2. Cache flush    │  A's writes → visible
-            │ 3. Layout change  │  COLOR_ATTACHMENT →
-            │                   │  SHADER_READ_ONLY
-            └───────────────────┘
-
-  Vulkan: VkImageMemoryBarrier2 (srcStageMask → dstStageMask)
-  D3D12:  D3D12_RESOURCE_BARRIER (StateBefore → StateAfter)
+  ┌────────────────────────────────────────────────────────────────────┐
+  │  Barrier zoo — the transitions a real frame actually needs        │
+  ├────────────────────────────────────────────────────────────────────┤
+  │                                                                    │
+  │  1. Render target → Shader read (most common)                     │
+  │     GBuffer pass writes albedo → Lighting pass samples it          │
+  │     Vulkan:  COLOR_ATTACHMENT_OUTPUT → FRAGMENT_SHADER             │
+  │     D3D12:   RENDER_TARGET → PIXEL_SHADER_RESOURCE                │
+  │                                                                    │
+  │  2. Depth write → Depth read (shadow sampling)                    │
+  │     Shadow pass writes depth → Lighting reads as texture           │
+  │     Vulkan:  LATE_FRAGMENT_TESTS → FRAGMENT_SHADER                │
+  │     D3D12:   DEPTH_WRITE → PIXEL_SHADER_RESOURCE                  │
+  │     Layout:  DEPTH_ATTACHMENT → SHADER_READ_ONLY                  │
+  │                                                                    │
+  │  3. Compute UAV write → Compute UAV read (ping-pong)              │
+  │     Bloom downsample writes mip N → reads mip N to write mip N+1  │
+  │     Vulkan:  COMPUTE_SHADER (WRITE) → COMPUTE_SHADER (READ)       │
+  │     D3D12:   UAV barrier (same resource, same state — still       │
+  │              needed to flush compute caches!)                      │
+  │                                                                    │
+  │  4. Shader read → Render target (reuse after sampling)            │
+  │     Lighting sampled HDR buffer → Tonemap now writes to it         │
+  │     Vulkan:  FRAGMENT_SHADER → COLOR_ATTACHMENT_OUTPUT             │
+  │     Layout:  SHADER_READ_ONLY → COLOR_ATTACHMENT_OPTIMAL          │
+  │                                                                    │
+  │  5. Render target → Present (every frame, easy to forget)         │
+  │     Final composite → swapchain present                            │
+  │     Vulkan:  COLOR_ATTACHMENT_OUTPUT → BOTTOM_OF_PIPE             │
+  │     D3D12:   RENDER_TARGET → PRESENT                              │
+  │                                                                    │
+  │  6. Aliasing barrier (two resources, same memory)                 │
+  │     GBuffer dies → HDR lighting reuses same physical block         │
+  │     D3D12:   explicit D3D12_RESOURCE_BARRIER_TYPE_ALIASING        │
+  │     Vulkan:  handled via image layout UNDEFINED (discard)          │
+  │                                                                    │
+  └────────────────────────────────────────────────────────────────────┘
 ```
 
-The graph places *exact* barriers because it knows which pass wrote and which pass reads — no conservative over-synchronization.
+A 25-pass frame needs 30–50 of these. Miss one: corruption or device lost. Add a redundant one: GPU stall for nothing. Get the source/dest stages wrong: validation errors or subtle frame-order bugs that only show on a different vendor's driver. This is exactly why you don't want to place them by hand — the graph sees every read/write edge and emits the *exact* set.
 
-<!-- TODO: Show the diff from v1 — resource versioning, topo-sort, cull, barrier insertion. -->
+**Diff from v1 — what changes in the code:**
+
+We need four new pieces: (1) resource versioning with read/write tracking, (2) adjacency list for the DAG, (3) topological sort, (4) pass culling, and (5) barrier insertion. Here's the updated `FrameGraph` class — additions marked with `// NEW v2`:
+
+```cpp
+#include <algorithm>
+#include <cassert>
+#include <queue>
+#include <unordered_set>
+
+// ── Resource state tracking (NEW v2) ──────────────────────────
+enum class ResourceState { Undefined, ColorAttachment, DepthAttachment,
+                           ShaderRead, Present };
+
+struct ResourceVersion {                 // NEW v2
+    uint32_t writerPass = UINT32_MAX;    // which pass wrote this version
+    std::vector<uint32_t> readerPasses;  // which passes read it
+};
+
+// Extend ResourceDesc with tracking:
+struct ResourceEntry {
+    ResourceDesc desc;
+    std::vector<ResourceVersion> versions;  // version 0, 1, 2...
+    ResourceState currentState = ResourceState::Undefined;
+};
+
+// ── Updated render pass ───────────────────────────────────────
+struct RenderPass {
+    std::string name;
+    std::function<void()>             setup;
+    std::function<void(/*cmd list*/)> execute;
+
+    std::vector<ResourceHandle> reads;    // NEW v2
+    std::vector<ResourceHandle> writes;   // NEW v2
+    std::vector<uint32_t> dependsOn;      // NEW v2 — adjacency list
+    uint32_t inDegree = 0;                // NEW v2 — for Kahn's
+    bool     alive    = false;            // NEW v2 — for culling
+};
+
+// ── Updated FrameGraph ────────────────────────────────────────
+class FrameGraph {
+public:
+    ResourceHandle createResource(const ResourceDesc& desc) {
+        entries_.push_back({ desc, {{}}, ResourceState::Undefined });
+        return { static_cast<uint32_t>(entries_.size() - 1) };
+    }
+
+    // Declare a read — links this pass to the resource's current version.
+    void read(uint32_t passIdx, ResourceHandle h) {    // NEW v2
+        auto& ver = entries_[h.index].versions.back();
+        if (ver.writerPass != UINT32_MAX) {
+            passes_[passIdx].dependsOn.push_back(ver.writerPass);
+            passes_[ver.writerPass].inDegree; // edge tracked
+        }
+        ver.readerPasses.push_back(passIdx);
+        passes_[passIdx].reads.push_back(h);
+    }
+
+    // Declare a write — creates a new version of the resource.
+    void write(uint32_t passIdx, ResourceHandle h) {   // NEW v2
+        entries_[h.index].versions.push_back({});
+        entries_[h.index].versions.back().writerPass = passIdx;
+        passes_[passIdx].writes.push_back(h);
+    }
+
+    template <typename SetupFn, typename ExecFn>
+    void addPass(const std::string& name, SetupFn&& setup, ExecFn&& exec) {
+        uint32_t idx = static_cast<uint32_t>(passes_.size());
+        passes_.push_back({ name, std::forward<SetupFn>(setup),
+                                   std::forward<ExecFn>(exec) });
+        currentPass_ = idx;   // NEW v2 — so setup can call read()/write()
+        passes_.back().setup();
+    }
+
+    void execute() {
+        buildEdges();        // NEW v2
+        auto sorted = topoSort();        // NEW v2
+        cull(sorted);        // NEW v2
+
+        for (uint32_t idx : sorted) {
+            if (!passes_[idx].alive) continue;  // skip culled
+            insertBarriers(idx);                 // NEW v2
+            passes_[idx].execute(/* &cmdList */);
+        }
+        passes_.clear();
+        entries_.clear();
+    }
+
+private:
+    uint32_t currentPass_ = 0;
+    std::vector<RenderPass>    passes_;
+    std::vector<ResourceEntry> entries_;
+
+    // ── Build dependency edges ────────────────────────────────
+    void buildEdges() {                              // NEW v2
+        for (auto& pass : passes_) {
+            // deduplicate and count in-degrees
+            std::unordered_set<uint32_t> seen;
+            for (uint32_t dep : pass.dependsOn) {
+                if (seen.insert(dep).second)
+                    passes_[dep].inDegree++;
+            }
+        }
+    }
+
+    // ── Kahn's topological sort ───────────────────────────────
+    std::vector<uint32_t> topoSort() {               // NEW v2
+        std::queue<uint32_t> q;
+        std::vector<uint32_t> inDeg(passes_.size());
+        for (uint32_t i = 0; i < passes_.size(); i++) {
+            inDeg[i] = passes_[i].inDegree;
+            if (inDeg[i] == 0) q.push(i);
+        }
+        std::vector<uint32_t> order;
+        while (!q.empty()) {
+            uint32_t cur = q.front(); q.pop();
+            order.push_back(cur);
+            // visit all passes that depend on 'cur'
+            for (uint32_t i = 0; i < passes_.size(); i++) {
+                for (uint32_t dep : passes_[i].dependsOn) {
+                    if (dep == cur && --inDeg[i] == 0)
+                        q.push(i);
+                }
+            }
+        }
+        assert(order.size() == passes_.size() && "Cycle detected!");
+        return order;
+    }
+
+    // ── Cull dead passes (backward walk from output) ──────────
+    void cull(const std::vector<uint32_t>& sorted) { // NEW v2
+        // Mark the last pass (present) as alive, then walk backward.
+        if (sorted.empty()) return;
+        passes_[sorted.back()].alive = true;
+        for (int i = static_cast<int>(sorted.size()) - 1; i >= 0; i--) {
+            if (!passes_[sorted[i]].alive) continue;
+            for (uint32_t dep : passes_[sorted[i]].dependsOn)
+                passes_[dep].alive = true;
+        }
+    }
+
+    // ── Insert barriers where resource state changes ──────────
+    void insertBarriers(uint32_t passIdx) {          // NEW v2
+        auto stateForUsage = [](bool isWrite, Format fmt) {
+            if (isWrite)
+                return (fmt == Format::D32F) ? ResourceState::DepthAttachment
+                                             : ResourceState::ColorAttachment;
+            return ResourceState::ShaderRead;
+        };
+
+        for (auto& h : passes_[passIdx].reads) {
+            ResourceState needed = ResourceState::ShaderRead;
+            if (entries_[h.index].currentState != needed) {
+                // → emit barrier (old state → ShaderRead)
+                entries_[h.index].currentState = needed;
+            }
+        }
+        for (auto& h : passes_[passIdx].writes) {
+            ResourceState needed = stateForUsage(true, entries_[h.index].desc.format);
+            if (entries_[h.index].currentState != needed) {
+                // → emit barrier (old state → write state)
+                entries_[h.index].currentState = needed;
+            }
+        }
+    }
+};
+```
+
+**Usage — same passes, now with declared dependencies:**
+
+```cpp
+FrameGraph fg;
+auto depth = fg.createResource({1920, 1080, Format::D32F});
+auto gbufA = fg.createResource({1920, 1080, Format::RGBA8});
+auto hdr   = fg.createResource({1920, 1080, Format::RGBA16F});
+
+fg.addPass("DepthPrepass",
+    [&]() { fg.write(0, depth); },
+    [&](/*cmd*/) { /* draw depth */ });
+
+fg.addPass("GBuffer",
+    [&]() { fg.read(1, depth); fg.write(1, gbufA); },
+    [&](/*cmd*/) { /* draw GBuffer */ });
+
+fg.addPass("Lighting",
+    [&]() { fg.read(2, gbufA); fg.write(2, hdr); },
+    [&](/*cmd*/) { /* fullscreen lighting */ });
+
+fg.execute();  // → sorts, culls dead passes, inserts barriers, runs
+```
+
+Remove GBuffer's read of `depth` and the depth prepass gets culled automatically — no `#ifdef`, no flag. That's the graph working for you.
 
 **What it proves:** Automatic barriers from declared dependencies. Pass reordering is safe. Dead passes are culled. Three of the four intro promises delivered.
 
@@ -411,7 +752,115 @@ This is the same approach Frostbite described at GDC 2017.
 
 Without aliasing: 52 MB. With aliasing: GBuffer Albedo and HDR Lighting share one 16 MB block (lifetimes don't overlap). GBuffer Normals and Bloom Scratch share another. SSAO Scratch and SSAO Result share a third. **Physical memory: 36 MB — 31% saved.** In more complex pipelines with more transient resources, savings reach 40–50%.
 
-<!-- TODO: Diff from v2 — lifetime tracking, free-list allocator. ~30–40 new lines. -->
+**Diff from v2 — lifetime tracking and free-list allocator:**
+
+Two additions to the `FrameGraph` class: (1) a lifetime scan that records each transient resource's first and last use in the sorted pass order, and (2) a greedy free-list allocator that reuses physical blocks when lifetimes don't overlap.
+
+```cpp
+// ── Physical memory block ─────────────────────────────────────
+struct PhysicalBlock {
+    uint32_t sizeBytes   = 0;
+    Format   format      = Format::RGBA8;
+    uint32_t availAfter  = 0;  // pass index after which this block is free
+};
+
+// ── Lifetime info per resource ────────────────────────────────
+struct Lifetime {
+    uint32_t firstUse = UINT32_MAX;   // earliest pass that touches it
+    uint32_t lastUse  = 0;            // latest pass that touches it
+    bool     isTransient = true;      // imported resources excluded
+};
+
+// Add these to FrameGraph, called between topoSort() and execute():
+
+// ── Step 1: Scan lifetimes ────────────────────────────────────
+std::vector<Lifetime> scanLifetimes(const std::vector<uint32_t>& sorted) {
+    std::vector<Lifetime> life(entries_.size());
+
+    for (uint32_t order = 0; order < sorted.size(); order++) {
+        uint32_t passIdx = sorted[order];
+        if (!passes_[passIdx].alive) continue;
+
+        for (auto& h : passes_[passIdx].reads) {
+            life[h.index].firstUse = std::min(life[h.index].firstUse, order);
+            life[h.index].lastUse  = std::max(life[h.index].lastUse,  order);
+        }
+        for (auto& h : passes_[passIdx].writes) {
+            life[h.index].firstUse = std::min(life[h.index].firstUse, order);
+            life[h.index].lastUse  = std::max(life[h.index].lastUse,  order);
+        }
+    }
+    return life;
+}
+
+// ── Step 2: Greedy free-list aliasing ─────────────────────────
+// Returns a mapping: virtual resource index → physical block index.
+std::vector<uint32_t> aliasResources(const std::vector<Lifetime>& lifetimes) {
+    std::vector<PhysicalBlock> freeList;
+    std::vector<uint32_t> mapping(entries_.size(), UINT32_MAX);
+
+    // Sort resources by first-use for greedy scan.
+    std::vector<uint32_t> indices(entries_.size());
+    std::iota(indices.begin(), indices.end(), 0);
+    std::sort(indices.begin(), indices.end(), [&](uint32_t a, uint32_t b) {
+        return lifetimes[a].firstUse < lifetimes[b].firstUse;
+    });
+
+    for (uint32_t resIdx : indices) {
+        if (!lifetimes[resIdx].isTransient) continue;
+        if (lifetimes[resIdx].firstUse == UINT32_MAX) continue; // unused
+
+        uint32_t needed = entries_[resIdx].desc.width
+                        * entries_[resIdx].desc.height * 4; // simplified
+        bool reused = false;
+
+        // Try to find a compatible free block.
+        for (uint32_t b = 0; b < freeList.size(); b++) {
+            if (freeList[b].availAfter < lifetimes[resIdx].firstUse
+                && freeList[b].sizeBytes >= needed) {
+                // Reuse this block!
+                mapping[resIdx] = b;
+                freeList[b].availAfter = lifetimes[resIdx].lastUse;
+                reused = true;
+                break;
+            }
+        }
+
+        if (!reused) {
+            // Allocate a new physical block.
+            mapping[resIdx] = static_cast<uint32_t>(freeList.size());
+            freeList.push_back({ needed, entries_[resIdx].desc.format,
+                                 lifetimes[resIdx].lastUse });
+        }
+    }
+    return mapping;  // use this to bind physical memory before execute
+}
+```
+
+**Updated `execute()` — now with lifetime analysis:**
+
+```cpp
+void execute() {
+    buildEdges();
+    auto sorted   = topoSort();
+    cull(sorted);
+    auto lifetimes = scanLifetimes(sorted);   // NEW v3
+    auto mapping   = aliasResources(lifetimes); // NEW v3
+
+    // At this point, 'mapping' tells you which physical block
+    // each virtual resource should use. Bind them here.
+
+    for (uint32_t idx : sorted) {
+        if (!passes_[idx].alive) continue;
+        insertBarriers(idx);
+        passes_[idx].execute(/* &cmdList */);
+    }
+    passes_.clear();
+    entries_.clear();
+}
+```
+
+That's ~70 new lines on top of v2. The aliasing runs once per frame in O(R log R) — sort the resources, then a linear scan of the free list. For 15 transient resources this is sub-microsecond.
 
 **What it proves:** The full value prop — automatic memory aliasing *and* automatic barriers. The MVP is now feature-equivalent to Frostbite's 2017 GDC demo (minus async compute).
 
@@ -483,6 +932,12 @@ Two kinds of resources in play:
 Where V = passes (~25), E = dependency edges (~50), R = transient resources (~15). Everything is linear or near-linear in the graph size. All data fits in L1 cache, so the constant factors are tiny — the entire compile is well under 0.1 ms even on a cold rebuild.
 
 > The graph doesn't care about your rendering *strategy*. It cares about your *dependencies*. That's the whole point.
+
+---
+
+# Part III — Production Engines
+
+*How UE5, Frostbite, and Unity implement the same ideas at scale — what they added, what they compromised, and where they still differ.*
 
 ---
 
@@ -926,52 +1381,6 @@ For each resource transition (resource R transitions from state S1 in pass A to 
 
 Both Frostbite and UE5 support split barriers. Diminishing returns unless you're already saturating the pipeline. Add last, and only if profiling shows barrier stalls.
 
-### Priority matrix
-
-| Feature | VRAM Savings | GPU Time Savings | Impl Effort | Add When |
-|---------|-------------|-----------------|-------------|----------|
-| Memory aliasing | ★★★ | ★ | ★★ | First |
-| Pass merging | ★ | ★★★ (mobile) | ★★ | If mobile |
-| Async compute | — | ★★ | ★★★ | If GPU-bound |
-| Split barriers | — | ★ | ★★★ | Last |
-
----
-
-## Resources
-
-Further reading, ordered from "start here" to deep dives.
-
-```
-  Start here             Go deeper             Go deepest
-  ────────────           ─────────────         ─────────────
-  Frostbite GDC talk  →  themaister blog    →  UE5 RDG source
-  Loggini overview    →  D3D12 barriers doc →  Vulkan sync blog
-```
-
-**The original talk that started it all** — **[FrameGraph: Extensible Rendering Architecture in Frostbite (GDC 2017)](https://www.gdcvault.com/play/1024612/FrameGraph-Extensible-Rendering-Architecture-in)**
-
-Yuriy O'Donnell's presentation at GDC 2017 is where the modern frame graph concept was introduced to the wider industry. Covers the motivation, the declare/compile/execute model, transient resource management, and how Frostbite uses it across all their titles. If you read one thing, make it this.
-
-**Render Graphs overview with D3D12 examples** — **[Render Graphs — Riccardo Loggini](https://logins.github.io/graphics/2021/05/31/RenderGraphs.html)**
-
-A practical walkthrough of render graphs with D3D12 placed resources and aliasing. Covers setup/compile/execute phases with concrete code, references Frostbite's design, and explains how transient memory aliasing works in practice. Great complement to this article if you want a second perspective on the same concepts.
-
-**Render graphs and Vulkan — a deep dive** — **[themaister](https://themaister.net/blog/2017/08/15/render-graphs-and-vulkan-a-deep-dive/)**
-
-Hans-Kristian Arntzen (themaister) walks through his complete Vulkan render graph implementation in Granite. Covers dependency graph traversal, pass reordering for optimal overlap, subpass merging for tile-based renderers, transient image detection, barrier placement with VkEvent, and render target aliasing. If you want to understand the Vulkan-specific details — image layouts, split barriers via events, async compute semaphores — this is the reference.
-
-**UE5 Render Dependency Graph — official docs** — **[Render Dependency Graph in Unreal Engine](https://dev.epicgames.com/documentation/en-us/unreal-engine/render-dependency-graph-in-unreal-engine/)**
-
-The official Epic documentation for UE5's RDG. Covers the shader parameter struct system, `FRDGBuilder` API, pass declaration with `AddPass`, transient resource allocation, async compute scheduling, RDG Insights profiling plugin, and debugging tools (`r.RDG.ImmediateMode`, transition logs). Essential if you're working in UE5 or want to see how the concepts in this article map to a production codebase.
-
-**Vulkan synchronization explained** — **[Understanding Vulkan Synchronization — Khronos Blog](https://www.khronos.org/blog/understanding-vulkan-synchronization)**
-
-The Khronos Group's own guide to Vulkan synchronization primitives: pipeline barriers, events, semaphores, fences, and timeline semaphores. If barrier placement in MVP v2 or the split barriers section felt abstract, this page grounds every concept in the Vulkan spec with diagrams and examples.
-
-**D3D12 resource barriers reference** — **[Using Resource Barriers to Synchronize Resource States in Direct3D 12 — Microsoft Learn](https://learn.microsoft.com/en-us/windows/win32/direct3d12/using-resource-barriers-to-synchronize-resource-states-in-direct3d-12)**
-
-Microsoft's reference on D3D12 resource state management: transition barriers, aliasing barriers, UAV barriers, split barriers (`BEGIN_ONLY`/`END_ONLY`), implicit state promotion, and state decay. Covers the exact API calls that a D3D12 frame graph backend needs to emit. Includes a multi-threaded example with shadow maps and resource lifecycle.
-
 ---
 
 ## Closing
@@ -983,3 +1392,45 @@ If you've made it this far, you now understand every major piece of UE5's RDG: t
 The point isn't that every project needs a render graph. The point is that if you understand how they work, you'll make a better decision about whether *yours* does.
 
 <!-- TODO: Full source: [github.com/username/frame-graph-mvp](link) -->
+
+---
+
+## Resources
+
+Further reading, ordered from "start here" to deep dives.
+
+```
+  Start here                Go deeper               Go deepest
+  ──────────────            ──────────────           ──────────────
+  Wijiler video (15 min) →  Frostbite GDC talk   →  UE5 RDG source
+  Loggini overview       →  themaister blog      →  Vulkan sync blog
+  GPUOpen render graphs  →  D3D12 barriers doc   →  AMD RPS SDK
+```
+
+**Quick visual intro (start here)** — **[Rendergraphs & High Level Rendering in Modern Graphics APIs — Wijiler (YouTube)](https://www.youtube.com/watch?v=FBYg64QKjFo)**
+~15-minute video covering what render graphs are and how they fit into modern graphics APIs. Best starting point if you prefer video over text.
+
+**Render graphs overview** — **[Render Graphs — GPUOpen](https://gpuopen.com/learn/render-graphs/)**
+AMD's overview of render graph concepts and their RPS SDK. Covers declare/compile/execute, barriers, aliasing with D3D12 and Vulkan backends.
+
+**The original talk that started it all** — **[FrameGraph: Extensible Rendering Architecture in Frostbite (GDC 2017)](https://www.gdcvault.com/play/1024612/FrameGraph-Extensible-Rendering-Architecture-in)**
+Yuriy O'Donnell's GDC 2017 presentation — where the modern frame graph concept was introduced. If you read one thing, make it this.
+
+**Render Graphs with D3D12 examples** — **[Render Graphs — Riccardo Loggini](https://logins.github.io/graphics/2021/05/31/RenderGraphs.html)**
+Practical walkthrough with D3D12 placed resources. Covers setup/compile/execute phases with concrete code and transient memory aliasing.
+
+**Render graphs and Vulkan — a deep dive** — **[themaister](https://themaister.net/blog/2017/08/15/render-graphs-and-vulkan-a-deep-dive/)**
+Complete Vulkan render graph implementation in Granite. Covers subpass merging, barrier placement with VkEvent, async compute, and render target aliasing.
+
+**UE5 Render Dependency Graph — official docs** — **[Render Dependency Graph in Unreal Engine](https://dev.epicgames.com/documentation/en-us/unreal-engine/render-dependency-graph-in-unreal-engine/)**
+Epic's official RDG documentation. Covers `FRDGBuilder`, pass declaration, transient allocation, async compute, and RDG Insights debugging tools.
+
+**Vulkan synchronization explained** — **[Understanding Vulkan Synchronization — Khronos Blog](https://www.khronos.org/blog/understanding-vulkan-synchronization)**
+Khronos Group's guide to Vulkan sync primitives: pipeline barriers, events, semaphores, fences, and timeline semaphores.
+
+**D3D12 resource barriers reference** — **[Using Resource Barriers — Microsoft Learn](https://learn.microsoft.com/en-us/windows/win32/direct3d12/using-resource-barriers-to-synchronize-resource-states-in-direct3d-12)**
+Microsoft's reference on D3D12 transition, aliasing, UAV, and split barriers. The exact API calls a D3D12 frame graph backend needs to emit.
+
+**AMD Render Pipeline Shaders SDK (open source)** — **[RenderPipelineShaders — GitHub](https://github.com/GPUOpen-LibrariesAndSDKs/RenderPipelineShaders)**
+AMD's open-source render graph framework (MIT). Automatic barriers, transient aliasing, RPSL language extension for HLSL. D3D12 + Vulkan.
+
