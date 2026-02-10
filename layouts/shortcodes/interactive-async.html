@@ -5,6 +5,11 @@
     <span class="widget-title">Interactive: Async Compute Scheduling</span>
     <p class="widget-hint">Modern GPUs have separate Graphics and Compute queues that run <strong>in parallel</strong>. Move compute-eligible passes (blue) to the Compute queue — the GPU executes both lanes simultaneously, finishing the frame faster. Yellow dashed lines are <strong>fences</strong> (GPU sync points needed when one queue waits for another).</p>
   </div>
+  <div class="async-example-bar">
+    <button class="async-ex-btn async-ex-active" onclick="asyncSetExample(0)">Deferred Shading</button>
+    <button class="async-ex-btn" onclick="asyncSetExample(1)">Compute Post-FX</button>
+    <button class="async-ex-btn" onclick="asyncSetExample(2)">Hybrid Ray-Trace</button>
+  </div>
   <div class="widget-body">
     <svg id="async-svg" viewBox="0 0 700 290" style="width:100%;border-radius:.375rem;border:1px solid var(--color-neutral-200,#e5e5e5)"></svg>
     <div class="async-legend" id="async-legend"></div>
@@ -28,21 +33,70 @@
 .async-legend-swatch{width:14px;height:14px;border-radius:3px;flex-shrink:0}
 .async-explain{font-size:.82em;line-height:1.6;margin-top:.5em;padding:.5em .7em;border-radius:.375rem;border-left:3px solid #3b82f6;background:var(--color-neutral-100,#f5f5f5)}
 :is(.dark,.scheme-congo) .async-explain{background:var(--color-neutral-900);border-color:#3b82f6}
+.async-example-bar{display:flex;gap:.5em;flex-wrap:wrap;margin-bottom:.5em}
+.async-ex-btn{padding:.35em .9em;border-radius:999px;border:1.5px solid var(--color-neutral-300,#d1d5db);background:var(--color-neutral-100,#f5f5f5);font-size:.82em;font-weight:600;cursor:pointer;color:var(--color-neutral-700,#374151);transition:all .15s}
+.async-ex-btn:hover{border-color:#3b82f6;color:#3b82f6}
+.async-ex-active{background:#3b82f6!important;color:#fff!important;border-color:#3b82f6!important;box-shadow:0 0 0 2px rgba(59,130,246,.25)!important}
+:is(.dark,.scheme-congo) .async-ex-btn{border-color:var(--color-neutral-600);color:var(--color-neutral-300);background:var(--color-neutral-700)}
 </style>
 
 <script>
 (function(){
-const passes=[
-  {id:0,name:"Depth",       queue:"gfx",cost:2,deps:[],     canCompute:false,desc:"Rasterizes depth -- needs graphics pipeline"},
-  {id:1,name:"Shadows",     queue:"gfx",cost:3,deps:[],     canCompute:false,desc:"Shadow map rasterization -- graphics only"},
-  {id:2,name:"GBuffer",     queue:"gfx",cost:3,deps:[0],    canCompute:false,desc:"Rasterizes geometry to G-buffers -- graphics only"},
-  {id:3,name:"SSAO",        queue:"gfx",cost:2,deps:[2],    canCompute:true, desc:"Screen-space compute -- no rasterization needed"},
-  {id:4,name:"Light Cull",  queue:"gfx",cost:2,deps:[0],    canCompute:true, desc:"Tile/cluster light assignment -- pure compute"},
-  {id:5,name:"Volumetrics", queue:"gfx",cost:3,deps:[1],    canCompute:true, desc:"Raymarching fog/god rays -- pure compute"},
-  {id:6,name:"Lighting",    queue:"gfx",cost:3,deps:[2,3,4,5],canCompute:false,desc:"Deferred shading -- reads all inputs, needs raster"},
-  {id:7,name:"Bloom",       queue:"gfx",cost:2,deps:[6],    canCompute:true, desc:"Downsample + blur -- compute dispatches"},
-  {id:8,name:"Tonemap",     queue:"gfx",cost:1,deps:[6,7],  canCompute:false,desc:"Final output -- needs graphics for present"}
+
+var EXAMPLES=[
+  {
+    name:"Deferred Shading",
+    passes:[
+      {id:0,name:"Depth",       queue:"gfx",cost:2,deps:[],     canCompute:false,desc:"Rasterizes depth -- needs graphics pipeline"},
+      {id:1,name:"Shadows",     queue:"gfx",cost:3,deps:[],     canCompute:false,desc:"Shadow map rasterization -- graphics only"},
+      {id:2,name:"GBuffer",     queue:"gfx",cost:3,deps:[0],    canCompute:false,desc:"Rasterizes geometry to G-buffers -- graphics only"},
+      {id:3,name:"SSAO",        queue:"gfx",cost:2,deps:[2],    canCompute:true, desc:"Screen-space compute -- no rasterization needed"},
+      {id:4,name:"Light Cull",  queue:"gfx",cost:2,deps:[0],    canCompute:true, desc:"Tile/cluster light assignment -- pure compute"},
+      {id:5,name:"Volumetrics", queue:"gfx",cost:3,deps:[1],    canCompute:true, desc:"Raymarching fog/god rays -- pure compute"},
+      {id:6,name:"Lighting",    queue:"gfx",cost:3,deps:[2,3,4,5],canCompute:false,desc:"Deferred shading -- reads all inputs, needs raster"},
+      {id:7,name:"Bloom",       queue:"gfx",cost:2,deps:[6],    canCompute:true, desc:"Downsample + blur -- compute dispatches"},
+      {id:8,name:"Tonemap",     queue:"gfx",cost:1,deps:[6,7],  canCompute:false,desc:"Final output -- needs graphics for present"}
+    ]
+  },
+  {
+    name:"Compute Post-FX",
+    passes:[
+      {id:0,name:"Depth",     queue:"gfx",cost:2,deps:[],   canCompute:false,desc:"Depth prepass -- rasterization"},
+      {id:1,name:"GBuffer",   queue:"gfx",cost:3,deps:[0],  canCompute:false,desc:"G-buffer fill -- rasterization"},
+      {id:2,name:"Lighting",  queue:"gfx",cost:3,deps:[1],  canCompute:false,desc:"Deferred lighting -- rasterization"},
+      {id:3,name:"Bloom Down",queue:"gfx",cost:2,deps:[2],  canCompute:true, desc:"Bloom downsample -- pure compute"},
+      {id:4,name:"Bloom Up",  queue:"gfx",cost:2,deps:[3],  canCompute:true, desc:"Bloom upsample -- pure compute"},
+      {id:5,name:"DOF",       queue:"gfx",cost:2,deps:[2],  canCompute:true, desc:"Depth of field -- gather compute"},
+      {id:6,name:"TAA",       queue:"gfx",cost:1,deps:[4,5],canCompute:true, desc:"Temporal AA resolve -- pure compute"},
+      {id:7,name:"Tonemap",   queue:"gfx",cost:1,deps:[6],  canCompute:false,desc:"Final output -- needs present"}
+    ]
+  },
+  {
+    name:"Hybrid Ray-Trace",
+    passes:[
+      {id:0,name:"Depth",     queue:"gfx",cost:2,deps:[],    canCompute:false,desc:"Depth prepass -- rasterization"},
+      {id:1,name:"GBuffer",   queue:"gfx",cost:3,deps:[0],   canCompute:false,desc:"G-buffer fill -- rasterization"},
+      {id:2,name:"RT Shadows",queue:"gfx",cost:4,deps:[1],   canCompute:true, desc:"Ray-traced shadows -- compute/RT pipeline"},
+      {id:3,name:"RT AO",     queue:"gfx",cost:3,deps:[1],   canCompute:true, desc:"Ray-traced ambient occlusion -- compute/RT"},
+      {id:4,name:"Denoise",   queue:"gfx",cost:2,deps:[2,3], canCompute:true, desc:"Spatio-temporal denoiser -- compute"},
+      {id:5,name:"Lighting",  queue:"gfx",cost:3,deps:[1,4], canCompute:false,desc:"Deferred resolve -- rasterization"},
+      {id:6,name:"Composite", queue:"gfx",cost:1,deps:[5],   canCompute:false,desc:"Final composite + present"}
+    ]
+  }
 ];
+
+var curExIdx=0;
+var passes=EXAMPLES[0].passes.map(function(p){return Object.assign({},p)});
+
+function loadExample(idx){
+  curExIdx=idx;
+  passes=EXAMPLES[idx].passes.map(function(p){return Object.assign({},p)});
+  document.querySelectorAll(".async-ex-btn").forEach(function(b,i){
+    b.classList.toggle("async-ex-active",i===idx);
+  });
+  render();
+}
+window.asyncSetExample=function(i){loadExample(i);}
 
 const svg=document.getElementById("async-svg");
 const NS="http://www.w3.org/2000/svg";
@@ -222,7 +276,7 @@ document.getElementById("async-legend").innerHTML=[
   {c:"#f59e0b",l:"Fence (cross-queue sync)"}
 ].map(function(i){return '<span class="async-legend-item"><span class="async-legend-swatch" style="background:'+i.c+'"></span>'+i.l+'</span>'}).join("");
 
-window.asyncReset=function(){passes.forEach(function(p){p.queue="gfx"});render();};
+window.asyncReset=function(){loadExample(curExIdx);};
 render();
 var obs=new MutationObserver(function(){render();});
 obs.observe(document.documentElement,{attributes:true,attributeFilter:["class"]});

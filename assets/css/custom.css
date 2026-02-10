@@ -797,61 +797,101 @@
 .diagram-nav .dn-col:nth-child(2) { border-color: #3b82f6; }
 .diagram-nav .dn-col:last-child { border-color: #8b5cf6; }
 
-/* Barrier zoo items */
-.diagram-zoo {
+/* Barrier zoo — compact 2-col grid */
+.barrier-zoo-grid {
   margin: 1em 0;
-  border: 2px solid var(--color-neutral-300, #d4d4d4);
-  border-radius: 0.5rem;
-  overflow: hidden;
-  font-size: 0.82em;
 }
-:is(.dark,.scheme-congo) .diagram-zoo {
-  border-color: var(--color-neutral-600);
-}
-.diagram-zoo .dz-title {
-  padding: 0.5em 1em;
+.bz-header {
   font-weight: 700;
-  background: var(--color-neutral-100, #f5f5f5);
-  border-bottom: 2px solid var(--color-neutral-300, #d4d4d4);
   font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.9em;
+  margin-bottom: 0.6em;
+  color: var(--color-neutral-700, #374151);
 }
-:is(.dark,.scheme-congo) .diagram-zoo .dz-title {
+:is(.dark,.scheme-congo) .bz-header { color: var(--color-neutral-300); }
+.bz-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6em;
+}
+@media (max-width: 640px) {
+  .bz-cards { grid-template-columns: 1fr; }
+}
+.bz-card {
+  padding: 0.65em 0.85em;
+  border-radius: 8px;
+  border: 1.5px solid var(--color-neutral-200, #e5e5e5);
+  background: var(--color-neutral-50, #fafafa);
+  font-size: 0.82em;
+  line-height: 1.5;
+  position: relative;
+}
+:is(.dark,.scheme-congo) .bz-card {
   background: var(--color-neutral-800);
-  border-color: var(--color-neutral-600);
+  border-color: var(--color-neutral-700);
 }
-.diagram-zoo .dz-item {
-  padding: 0.6em 1em;
-  border-bottom: 1px solid var(--color-neutral-200, #e5e5e5);
-  line-height: 1.7;
+.bz-card-head {
+  font-weight: 700;
+  font-size: 1em;
+  margin-bottom: 0.2em;
 }
-:is(.dark,.scheme-congo) .diagram-zoo .dz-item {
-  border-color: var(--color-neutral-800);
-}
-.diagram-zoo .dz-item:last-child { border-bottom: none; }
-.diagram-zoo .dz-num {
+.bz-num {
   display: inline-flex;
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   background: #3b82f6;
   color: #fff;
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 0.85em;
-  margin-right: 0.5em;
+  font-size: 0.8em;
+  margin-right: 0.4em;
   vertical-align: middle;
 }
-.diagram-zoo .dz-name {
-  font-weight: 700;
-}
-.diagram-zoo .dz-apis {
-  margin-top: 0.3em;
-  padding-left: 2em;
-  opacity: 0.75;
-  font-family: ui-monospace, SFMono-Regular, monospace;
+.bz-desc {
+  color: var(--color-neutral-600, #4b5563);
   font-size: 0.92em;
+  margin-bottom: 0.35em;
 }
+:is(.dark,.scheme-congo) .bz-desc { color: var(--color-neutral-400); }
+.bz-tag {
+  display: inline-block;
+  padding: 0.1em 0.5em;
+  border-radius: 999px;
+  font-size: 0.78em;
+  font-weight: 600;
+  margin-bottom: 0.35em;
+}
+.bz-common { background: rgba(34,197,94,.12); color: #16a34a; }
+.bz-shadow { background: rgba(100,116,139,.12); color: #475569; }
+.bz-compute { background: rgba(139,92,246,.12); color: #7c3aed; }
+.bz-reuse { background: rgba(59,130,246,.12); color: #2563eb; }
+.bz-every { background: rgba(245,158,11,.12); color: #d97706; }
+.bz-alias { background: rgba(236,72,153,.12); color: #db2777; }
+:is(.dark,.scheme-congo) .bz-common { background: rgba(34,197,94,.15); color: #4ade80; }
+:is(.dark,.scheme-congo) .bz-shadow { background: rgba(148,163,184,.15); color: #94a3b8; }
+:is(.dark,.scheme-congo) .bz-compute { background: rgba(139,92,246,.15); color: #a78bfa; }
+:is(.dark,.scheme-congo) .bz-reuse { background: rgba(59,130,246,.15); color: #60a5fa; }
+:is(.dark,.scheme-congo) .bz-every { background: rgba(245,158,11,.15); color: #fbbf24; }
+:is(.dark,.scheme-congo) .bz-alias { background: rgba(236,72,153,.15); color: #f472b6; }
+.bz-api {
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.85em;
+  color: var(--color-neutral-500, #6b7280);
+  line-height: 1.4;
+}
+:is(.dark,.scheme-congo) .bz-api { color: var(--color-neutral-500); }
+.bz-vk, .bz-dx {
+  display: inline-block;
+  padding: 0 0.3em;
+  border-radius: 3px;
+  font-size: 0.82em;
+  font-weight: 700;
+  margin-right: 0.2em;
+}
+.bz-vk { background: #ef4444; color: #fff; }
+.bz-dx { background: #22c55e; color: #fff; }
 
 /* Code-diff shortcode */
 .code-diff {

@@ -6,6 +6,12 @@
     <p class="widget-hint">Step through Kahn's algorithm. The <strong>rule panel</strong> shows exactly which rule fires at each step. Edges flash when consumed.</p>
   </div>
   <div class="widget-body">
+    <div class="topo-example-bar">
+      <span class="topo-example-label">Example:</span>
+      <button class="widget-btn topo-ex-btn topo-ex-active" data-ex="0" onclick="topoSetExample(0)">Deferred Shading</button>
+      <button class="widget-btn topo-ex-btn" data-ex="1" onclick="topoSetExample(1)">Shadow Cascades</button>
+      <button class="widget-btn topo-ex-btn" data-ex="2" onclick="topoSetExample(2)">Post-Processing Chain</button>
+    </div>
     <div class="topo-layout">
       <div class="topo-left">
         <svg id="topo-svg" viewBox="0 0 560 200" xmlns="http://www.w3.org/2000/svg"></svg>
@@ -88,10 +94,10 @@
 .topo-rule.active .topo-rule-num{background:#3b82f6;color:#fff}
 .topo-explain{font-size:.82em;line-height:1.6;margin:.5em 0;padding:.5em .8em;border-radius:.375rem;border-left:3px solid #3b82f6;background:var(--color-neutral-100,#f5f5f5);min-height:2em}
 :is(.dark,.scheme-congo) .topo-explain{background:var(--color-neutral-900);border-color:#3b82f6}
-.widget-btn-row{display:flex;gap:.5em}
-.widget-btn-primary{background:#3b82f6!important;color:#fff!important;border-color:#3b82f6!important}
+.widget-btn-row{display:flex;gap:.5em;align-items:center}
+.widget-btn-primary{background:#3b82f6!important;color:#fff!important;border-color:#3b82f6!important;box-shadow:0 2px 8px rgba(59,130,246,.3)!important;font-weight:700!important}
 .widget-btn-primary:hover{background:#2563eb!important}
-.widget-btn-primary:disabled{background:#6b7280!important;border-color:#6b7280!important;cursor:default}
+.widget-btn-primary:disabled{background:#6b7280!important;border-color:#6b7280!important;cursor:default;box-shadow:none!important}
 #topo-svg{width:100%;display:block;margin:0 auto}
 #topo-svg .node rect{rx:8;ry:8;stroke-width:2}
 #topo-svg .node text{font:600 12px ui-monospace,SFMono-Regular,monospace;fill:#fff;pointer-events:none;text-anchor:middle;dominant-baseline:central}
@@ -100,27 +106,88 @@
 #topo-svg .edge polygon{stroke:none}
 @keyframes edgePulse{0%{stroke-width:2.5;opacity:.8}50%{stroke-width:5;opacity:1}100%{stroke-width:2.5;opacity:.3}}
 @keyframes badgePulse{0%{r:11}50%{r:15}100%{r:11}}
+.topo-example-bar{display:flex;align-items:center;gap:.5em;margin-bottom:.75em;flex-wrap:wrap}
+.topo-example-label{font-size:.82em;font-weight:700;color:var(--color-neutral-500)}
+.topo-ex-btn{font-size:.78em!important;padding:.35em .9em!important;border-radius:999px!important;font-weight:600!important}
+.topo-ex-active{background:#3b82f6!important;color:#fff!important;border-color:#3b82f6!important;box-shadow:0 0 0 2px rgba(59,130,246,.25)!important}
 </style>
 
 <script>
 (function(){
 var NW=100,NH=34;
-var passes=[
-  {id:0,name:"Depth",x:30,y:40},
-  {id:1,name:"GBuffer",x:175,y:40},
-  {id:2,name:"SSAO",x:360,y:40},
-  {id:3,name:"Lighting",x:230,y:130},
-  {id:4,name:"Tonemap",x:420,y:130}
+var EXAMPLES=[
+  {
+    name:"Deferred Shading",
+    passes:[
+      {id:0,name:"Depth",x:30,y:40},
+      {id:1,name:"GBuffer",x:175,y:40},
+      {id:2,name:"SSAO",x:360,y:40},
+      {id:3,name:"Lighting",x:230,y:130},
+      {id:4,name:"Tonemap",x:420,y:130}
+    ],
+    edges:[
+      {from:0,to:1,label:"depth"},
+      {from:1,to:2,label:"normals"},
+      {from:1,to:3,label:"albedo"},
+      {from:2,to:3,label:"ssao"},
+      {from:3,to:4,label:"hdr"}
+    ]
+  },
+  {
+    name:"Shadow Cascades",
+    passes:[
+      {id:0,name:"Cascade0",x:20,y:30},
+      {id:1,name:"Cascade1",x:20,y:100},
+      {id:2,name:"Cascade2",x:20,y:170},
+      {id:3,name:"GBuffer",x:200,y:100},
+      {id:4,name:"Lighting",x:380,y:65},
+      {id:5,name:"Tonemap",x:380,y:150}
+    ],
+    edges:[
+      {from:0,to:4,label:"shadow0"},
+      {from:1,to:4,label:"shadow1"},
+      {from:2,to:4,label:"shadow2"},
+      {from:3,to:4,label:"albedo"},
+      {from:4,to:5,label:"hdr"}
+    ]
+  },
+  {
+    name:"Post-Processing Chain",
+    passes:[
+      {id:0,name:"Scene",x:30,y:80},
+      {id:1,name:"Bloom",x:180,y:30},
+      {id:2,name:"DOF",x:180,y:130},
+      {id:3,name:"Composite",x:340,y:80},
+      {id:4,name:"TAA",x:460,y:80}
+    ],
+    edges:[
+      {from:0,to:1,label:"hdr"},
+      {from:0,to:2,label:"hdr+depth"},
+      {from:1,to:3,label:"bloom"},
+      {from:2,to:3,label:"dof"},
+      {from:3,to:4,label:"color"}
+    ]
+  }
 ];
-var edgeDefs=[
-  {from:0,to:1,label:"depth"},
-  {from:1,to:2,label:"normals"},
-  {from:1,to:3,label:"albedo"},
-  {from:2,to:3,label:"ssao"},
-  {from:3,to:4,label:"hdr"}
-];
+
+var curExampleIdx=0;
+var passes,edgeDefs;
 var COL={wait:"#6b7280",queued:"#f59e0b",proc:"#3b82f6",done:"#22c55e",edge:"#3b82f6",edgeDim:"#374151",edgeConsumed:"#ef4444"};
 var inDeg,queue,sorted,step,done,currentPopped,consumedEdges,activeRule,flashEdges;
+
+function loadExample(idx){
+  curExampleIdx=idx;
+  var ex=EXAMPLES[idx];
+  passes=ex.passes.map(function(p){return{id:p.id,name:p.name,x:p.x,y:p.y}});
+  edgeDefs=ex.edges.map(function(e){return{from:e.from,to:e.to,label:e.label}});
+  document.querySelectorAll('.topo-ex-btn').forEach(function(b){
+    b.classList.toggle('topo-ex-active',parseInt(b.dataset.ex)===idx);
+  });
+  var maxX=Math.max.apply(null,passes.map(function(p){return p.x}))+NW+30;
+  var maxY=Math.max.apply(null,passes.map(function(p){return p.y}))+NH+30;
+  document.getElementById('topo-svg').setAttribute('viewBox','0 0 '+maxX+' '+maxY);
+  init();
+}
 
 function cx(p){return p.x+NW/2}function cy(p){return p.y+NH/2}
 function edgePath(e){
@@ -336,6 +403,7 @@ window.topoNext=function(){
 };
 
 window.topoReset=init;
-init();
+window.topoSetExample=loadExample;
+loadExample(0);
 })();
 </script>

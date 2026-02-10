@@ -6,6 +6,12 @@
     <p class="widget-hint">Step through execution. Watch resource states change and barriers fire automatically.</p>
   </div>
   <div class="widget-body">
+    <div class="barrier-example-bar">
+      <span class="barrier-example-label">Example:</span>
+      <button class="widget-btn barrier-ex-btn barrier-ex-active" data-ex="0" onclick="barrierSetExample(0)">Deferred Pipeline</button>
+      <button class="widget-btn barrier-ex-btn" data-ex="1" onclick="barrierSetExample(1)">Compute Post-FX</button>
+      <button class="widget-btn barrier-ex-btn" data-ex="2" onclick="barrierSetExample(2)">Shadow + Forward</button>
+    </div>
     <div class="barrier-pass-bar" id="barrier-passes"></div>
     <table class="barrier-table">
       <thead>
@@ -50,26 +56,83 @@
 :is(.dark,.scheme-congo) .barrier-log{background:var(--color-neutral-900);border-color:var(--color-neutral-700)}
 .barrier-log-entry{margin:.2em 0;line-height:1.5}
 .barrier-log-entry.barrier-fired{color:#3b82f6;font-weight:600}
+.barrier-example-bar{display:flex;align-items:center;gap:.5em;margin-bottom:.75em;flex-wrap:wrap}
+.barrier-example-label{font-size:.82em;font-weight:700;color:var(--color-neutral-500)}
+.barrier-ex-btn{font-size:.78em!important;padding:.35em .9em!important;border-radius:999px!important;font-weight:600!important}
+.barrier-ex-active{background:#3b82f6!important;color:#fff!important;border-color:#3b82f6!important;box-shadow:0 0 0 2px rgba(59,130,246,.25)!important}
 </style>
 
 <script>
 (function(){
-const resources=[
-  {name:"depth",fmt:"D32F",state:"Undefined"},
-  {name:"gbufAlbedo",fmt:"RGBA8",state:"Undefined"},
-  {name:"gbufNormals",fmt:"RGBA8",state:"Undefined"},
-  {name:"ssaoResult",fmt:"R8",state:"Undefined"},
-  {name:"hdr",fmt:"RGBA16F",state:"Undefined"},
-  {name:"backbuffer",fmt:"RGBA8",state:"Undefined"}
+var EXAMPLES=[
+  {
+    name:"Deferred Pipeline",
+    resources:[
+      {name:"depth",fmt:"D32F"},
+      {name:"gbufAlbedo",fmt:"RGBA8"},
+      {name:"gbufNormals",fmt:"RGBA8"},
+      {name:"ssaoResult",fmt:"R8"},
+      {name:"hdr",fmt:"RGBA16F"},
+      {name:"backbuffer",fmt:"RGBA8"}
+    ],
+    passOrder:[
+      {name:"DepthPrepass",writes:[0],reads:[],desc:"Writes depth buffer"},
+      {name:"GBuffer",reads:[0],writes:[1,2],desc:"Reads depth, writes albedo + normals"},
+      {name:"SSAO",reads:[2],writes:[3],desc:"Reads normals, writes SSAO result"},
+      {name:"Lighting",reads:[1,2,3],writes:[4],desc:"Reads albedo + normals + SSAO, writes HDR"},
+      {name:"Tonemap",reads:[4],writes:[5],desc:"Reads HDR, writes backbuffer"},
+      {name:"Present",reads:[5],writes:[],desc:"Present backbuffer to screen"}
+    ]
+  },
+  {
+    name:"Compute Post-FX",
+    resources:[
+      {name:"sceneColor",fmt:"RGBA16F"},
+      {name:"bloomDownA",fmt:"RGBA16F"},
+      {name:"bloomDownB",fmt:"RGBA16F"},
+      {name:"bloomResult",fmt:"RGBA16F"},
+      {name:"backbuffer",fmt:"RGBA8"}
+    ],
+    passOrder:[
+      {name:"SceneRender",writes:[0],reads:[],desc:"Render scene to HDR color"},
+      {name:"BloomDown1",reads:[0],writes:[1],desc:"Compute: downsample to half-res"},
+      {name:"BloomDown2",reads:[1],writes:[2],desc:"Compute: downsample to quarter-res"},
+      {name:"BloomUp",reads:[2],writes:[3],desc:"Compute: upsample + merge bloom"},
+      {name:"Composite",reads:[0,3],writes:[4],desc:"Blend scene + bloom to backbuffer"},
+      {name:"Present",reads:[4],writes:[],desc:"Present backbuffer"}
+    ]
+  },
+  {
+    name:"Shadow + Forward",
+    resources:[
+      {name:"shadowMap",fmt:"D32F"},
+      {name:"depth",fmt:"D32F"},
+      {name:"color",fmt:"RGBA16F"},
+      {name:"backbuffer",fmt:"RGBA8"}
+    ],
+    passOrder:[
+      {name:"ShadowPass",writes:[0],reads:[],desc:"Render shadow depth map"},
+      {name:"DepthPrepass",writes:[1],reads:[],desc:"Render scene depth"},
+      {name:"Forward",reads:[0,1],writes:[2],desc:"Forward shading with shadow lookup"},
+      {name:"Tonemap",reads:[2],writes:[3],desc:"Tonemap HDR to LDR"},
+      {name:"Present",reads:[3],writes:[],desc:"Present backbuffer"}
+    ]
+  }
 ];
-const passOrder=[
-  {name:"DepthPrepass",writes:[0],reads:[],desc:"Writes depth buffer"},
-  {name:"GBuffer",reads:[0],writes:[1,2],desc:"Reads depth, writes albedo + normals"},
-  {name:"SSAO",reads:[2],writes:[3],desc:"Reads normals, writes SSAO result"},
-  {name:"Lighting",reads:[1,2,3],writes:[4],desc:"Reads albedo + normals + SSAO, writes HDR"},
-  {name:"Tonemap",reads:[4],writes:[5],desc:"Reads HDR, writes backbuffer"},
-  {name:"Present",reads:[5],writes:[],desc:"Present backbuffer to screen"}
-];
+
+var curExIdx=0;
+var resources,passOrder;
+
+function loadExample(idx){
+  curExIdx=idx;
+  var ex=EXAMPLES[idx];
+  resources=ex.resources.map(function(r){return{name:r.name,fmt:r.fmt,state:"Undefined"}});
+  passOrder=ex.passOrder;
+  document.querySelectorAll('.barrier-ex-btn').forEach(function(b){
+    b.classList.toggle('barrier-ex-active',parseInt(b.dataset.ex)===idx);
+  });
+  init();
+}
 
 function stateFor(isWrite,fmt){
   if(!isWrite)return"ShaderRead";
@@ -100,7 +163,7 @@ function apiCall(oldS,newS){
 let currentStep,logEntries,transitions;
 
 function init(){
-  resources.forEach(r=>r.state="Undefined");
+  resources.forEach(function(r){r.state="Undefined"});
   currentStep=-1;logEntries=[];transitions={};
   renderPasses();renderTable();renderLog();
   document.getElementById("barrier-next").disabled=false;
@@ -186,7 +249,8 @@ window.barrierNext=function(){
   renderPasses();renderTable();renderLog();
 };
 
-window.barrierReset=init;
-init();
+window.barrierReset=function(){loadExample(curExIdx)};
+window.barrierSetExample=loadExample;
+loadExample(0);
 })();
 </script>

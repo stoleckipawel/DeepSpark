@@ -5,6 +5,11 @@
     <span class="widget-title">Interactive: Split Barriers</span>
     <p class="widget-hint">A barrier transitions a resource between states (e.g. render target → shader read). A <strong>regular</strong> barrier stalls the GPU at the transition point. A <strong>split</strong> barrier spreads it over a gap — the GPU overlaps other work in between. Drag the <span style="color:#ef4444;font-weight:700">BEGIN</span> marker left to widen the gap.</p>
   </div>
+  <div class="split-example-bar">
+    <button class="split-ex-btn split-ex-active" onclick="splitSetExample(0)">SSAO → Lighting</button>
+    <button class="split-ex-btn" onclick="splitSetExample(1)">Shadow → Forward</button>
+    <button class="split-ex-btn" onclick="splitSetExample(2)">Bloom → Composite</button>
+  </div>
   <div class="widget-body">
     <svg id="split-svg" viewBox="0 0 680 310" style="width:100%;border-radius:.375rem;border:1px solid var(--color-neutral-200,#e5e5e5)"></svg>
     <div class="split-stats" id="split-stats"></div>
@@ -26,6 +31,11 @@
 :is(.dark,.scheme-congo) .split-stat-neutral{background:var(--color-neutral-700);color:var(--color-neutral-300)}
 .split-explain{font-size:.84em;line-height:1.65;margin:.5em 0;padding:.5em .8em;border-radius:.375rem;border-left:3px solid #3b82f6;background:var(--color-neutral-100,#f5f5f5);min-height:2em}
 :is(.dark,.scheme-congo) .split-explain{background:var(--color-neutral-900);border-color:#3b82f6}
+.split-example-bar{display:flex;gap:.5em;flex-wrap:wrap;margin-bottom:.5em}
+.split-ex-btn{padding:.35em .9em;border-radius:999px;border:1.5px solid var(--color-neutral-300,#d1d5db);background:var(--color-neutral-100,#f5f5f5);font-size:.82em;font-weight:600;cursor:pointer;color:var(--color-neutral-700,#374151);transition:all .15s}
+.split-ex-btn:hover{border-color:#3b82f6;color:#3b82f6}
+.split-ex-active{background:#3b82f6!important;color:#fff!important;border-color:#3b82f6!important;box-shadow:0 0 0 2px rgba(59,130,246,.25)!important}
+:is(.dark,.scheme-congo) .split-ex-btn{border-color:var(--color-neutral-600);color:var(--color-neutral-300);background:var(--color-neutral-700)}
 </style>
 
 <script>
@@ -33,22 +43,69 @@
 var NS="http://www.w3.org/2000/svg";
 var svg=document.getElementById("split-svg");
 
-// 6 passes with realistic durations (ms), source pass = GBuffer (writes SSAO input),
-// dest pass = Lighting (reads SSAO output). The barrier is for the SSAO result
-// transitioning from ColorAttachment -> ShaderRead between SSAO and Lighting.
-var passes=[
-  {name:"Depth",dur:1.2,color:"#6b7280"},
-  {name:"GBuffer",dur:2.0,color:"#3b82f6"},
-  {name:"SSAO",dur:1.5,color:"#8b5cf6"},
-  {name:"Shadows",dur:2.2,color:"#64748b"},
-  {name:"Lighting",dur:2.5,color:"#f59e0b"},
-  {name:"Tonemap",dur:0.8,color:"#22c55e"}
+var EXAMPLES=[
+  {
+    name:"SSAO → Lighting",
+    passes:[
+      {name:"Depth",dur:1.2,color:"#6b7280"},
+      {name:"GBuffer",dur:2.0,color:"#3b82f6"},
+      {name:"SSAO",dur:1.5,color:"#8b5cf6"},
+      {name:"Shadows",dur:2.2,color:"#64748b"},
+      {name:"Lighting",dur:2.5,color:"#f59e0b"},
+      {name:"Tonemap",dur:0.8,color:"#22c55e"}
+    ],
+    srcPass:2,dstPass:4,
+    srcName:"SSAO",dstName:"Lighting",
+    transLabel:"SSAO result — ColorAttachment → ShaderRead"
+  },
+  {
+    name:"Shadow → Forward",
+    passes:[
+      {name:"Shadow CSM0",dur:1.0,color:"#64748b"},
+      {name:"Shadow CSM1",dur:1.2,color:"#475569"},
+      {name:"Shadow CSM2",dur:0.8,color:"#334155"},
+      {name:"Depth",dur:1.5,color:"#6b7280"},
+      {name:"Sky",dur:0.6,color:"#38bdf8"},
+      {name:"Forward",dur:3.0,color:"#f59e0b"},
+      {name:"Post",dur:1.0,color:"#22c55e"}
+    ],
+    srcPass:2,dstPass:5,
+    srcName:"Shadow CSM2",dstName:"Forward",
+    transLabel:"Shadow atlas — DepthWrite → ShaderRead"
+  },
+  {
+    name:"Bloom → Composite",
+    passes:[
+      {name:"GBuffer",dur:2.5,color:"#3b82f6"},
+      {name:"Lighting",dur:2.0,color:"#f59e0b"},
+      {name:"Bloom Down",dur:1.0,color:"#a855f7"},
+      {name:"DOF",dur:1.5,color:"#ec4899"},
+      {name:"TAA",dur:0.8,color:"#14b8a6"},
+      {name:"Composite",dur:0.6,color:"#22c55e"}
+    ],
+    srcPass:2,dstPass:5,
+    srcName:"Bloom Down",dstName:"Composite",
+    transLabel:"Bloom mip chain — UAV Write → ShaderRead"
+  }
 ];
 
-// The barrier we're splitting: SSAO result (ColorAttachment -> ShaderRead)
-// Source pass: SSAO (index 2), Dest pass: Lighting (index 4)
-// Passes 3 (Shadows) sits between them — perfect gap for split barrier
-var srcPass=2, dstPass=4;
+var curExIdx=0;
+var passes,srcPass,dstPass,srcName,dstName,transLabel;
+
+function loadExample(idx){
+  curExIdx=idx;
+  var ex=EXAMPLES[idx];
+  passes=ex.passes.map(function(p){return{name:p.name,dur:p.dur,color:p.color}});
+  srcPass=ex.srcPass;dstPass=ex.dstPass;
+  srcName=ex.srcName;dstName=ex.dstName;
+  transLabel=ex.transLabel;
+  splitPos=1.0;
+  document.querySelectorAll(".split-ex-btn").forEach(function(b,i){
+    b.classList.toggle("split-ex-active",i===idx);
+  });
+  render();
+}
+window.splitSetExample=function(i){loadExample(i);}
 
 var splitPos=1.0; // 1.0 = regular (begin at boundary), 0.0 = max split (begin right after src)
 var dragging=false;
@@ -161,7 +218,7 @@ function render(){
 
   // Transition label
   var transY=splitY+laneH+70;
-  svg.append(txt(left+(right-left)/2,transY,"Transition: SSAO result — ColorAttachment -> ShaderRead",mutedC,"11px ui-monospace,monospace","middle"));
+  svg.append(txt(left+(right-left)/2,transY,"Transition: "+transLabel,mutedC,"11px ui-monospace,monospace","middle"));
 
   // === ROW 3: Timeline comparison ===
   var cmpY=transY+20;
@@ -228,15 +285,14 @@ function updateInfo(){
   // Explanation
   if(overlapPct<5){
     explainEl.innerHTML=
-      "<strong>Regular barrier:</strong> The GPU finishes SSAO, <em>stalls</em> while it flushes color caches and invalidates shader-read caches, then starts Shadows. The stall wastes GPU cycles. "+
+      "<strong>Regular barrier:</strong> The GPU finishes "+srcName+", <em>stalls</em> while it flushes caches, then starts the next pass. The stall wastes GPU cycles. "+
       "<strong>Drag the red BEGIN marker left</strong> to split the barrier and see how the GPU can overlap the cache flush with other work.";
   }else{
     explainEl.innerHTML=
-      "<strong>Split barrier ("+overlapPct+"% overlap):</strong> BEGIN (flush) fires right after SSAO completes — the GPU starts flushing color attachment caches. "+
-      "Meanwhile, <strong>Shadows</strong> runs in the gap — it doesn't touch the SSAO result, so there's no conflict. "+
-      "END (invalidate) fires just before Lighting, ensuring shader-read caches are ready. "+
-      "<br><br><strong>Result:</strong> The "+gapPasses+" pass"+(gapPasses!==1?"es":"")+" in the gap execute while cache operations happen in the background. "+
-      "The GPU never stalls — the transition cost is fully hidden."+
+      "<strong>Split barrier ("+overlapPct+"% overlap):</strong> BEGIN (flush) fires right after "+srcName+" completes — the GPU starts flushing caches. "+
+      "Meanwhile, the "+gapPasses+" pass"+(gapPasses!==1?"es":"")+" in the gap run"+(gapPasses===1?"s":"")+" — they don't touch the transitioning resource, so there's no conflict. "+
+      "END (invalidate) fires just before "+dstName+", ensuring caches are ready. "+
+      "<br><br><strong>Result:</strong> The GPU never stalls — the transition cost is fully hidden."+
       (overlapPct>80?" <strong style='color:#22c55e'>Maximum overlap achieved.</strong>":"");
   }
 }
@@ -246,7 +302,7 @@ window.splitReset=function(){
   render();
 };
 
-render();
+loadExample(0);
 var obs=new MutationObserver(function(){render();});
 obs.observe(document.documentElement,{attributes:true,attributeFilter:["class"]});
 })();
