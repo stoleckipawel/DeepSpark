@@ -1,0 +1,230 @@
+{{/* Interactive Async Compute Scheduler — richer pass set with more flexibility */}}
+<div class="interactive-widget" id="async-widget">
+  <div class="widget-header">
+    <span class="widget-icon">🔬</span>
+    <span class="widget-title">Interactive: Async Compute Scheduling</span>
+    <p class="widget-hint">Modern GPUs have separate Graphics and Compute queues that run <strong>in parallel</strong>. Move compute-eligible passes (blue) to the Compute queue — the GPU executes both lanes simultaneously, finishing the frame faster. Yellow dashed lines are <strong>fences</strong> (GPU sync points needed when one queue waits for another).</p>
+  </div>
+  <div class="widget-body">
+    <svg id="async-svg" viewBox="0 0 700 290" style="width:100%;border-radius:.375rem;border:1px solid var(--color-neutral-200,#e5e5e5)"></svg>
+    <div class="async-legend" id="async-legend"></div>
+    <div class="async-stats" id="async-stats"></div>
+    <div class="async-explain" id="async-explain"></div>
+    <div class="widget-btn-row">
+      <button class="widget-btn" onclick="asyncReset()">Reset</button>
+    </div>
+  </div>
+</div>
+
+<style>
+:is(.dark,.scheme-congo) #async-svg{border-color:var(--color-neutral-700)}
+.async-stats{font-family:ui-monospace,monospace;font-size:.82em;margin-top:.5em;display:flex;gap:1em;flex-wrap:wrap}
+.async-stat{padding:.3em .6em;border-radius:.25em;font-weight:600}
+.async-stat.good{background:#22c55e;color:#fff}
+.async-stat.neutral{background:var(--color-neutral-200,#e5e5e5);color:var(--color-neutral-700)}
+:is(.dark,.scheme-congo) .async-stat.neutral{background:var(--color-neutral-700);color:var(--color-neutral-300)}
+.async-legend{display:flex;gap:1em;flex-wrap:wrap;font-family:ui-monospace,monospace;font-size:.75em;margin-top:.5em}
+.async-legend-item{display:flex;align-items:center;gap:.3em}
+.async-legend-swatch{width:14px;height:14px;border-radius:3px;flex-shrink:0}
+.async-explain{font-size:.82em;line-height:1.6;margin-top:.5em;padding:.5em .7em;border-radius:.375rem;border-left:3px solid #3b82f6;background:var(--color-neutral-100,#f5f5f5)}
+:is(.dark,.scheme-congo) .async-explain{background:var(--color-neutral-900);border-color:#3b82f6}
+</style>
+
+<script>
+(function(){
+const passes=[
+  {id:0,name:"Depth",       queue:"gfx",cost:2,deps:[],     canCompute:false,desc:"Rasterizes depth -- needs graphics pipeline"},
+  {id:1,name:"Shadows",     queue:"gfx",cost:3,deps:[],     canCompute:false,desc:"Shadow map rasterization -- graphics only"},
+  {id:2,name:"GBuffer",     queue:"gfx",cost:3,deps:[0],    canCompute:false,desc:"Rasterizes geometry to G-buffers -- graphics only"},
+  {id:3,name:"SSAO",        queue:"gfx",cost:2,deps:[2],    canCompute:true, desc:"Screen-space compute -- no rasterization needed"},
+  {id:4,name:"Light Cull",  queue:"gfx",cost:2,deps:[0],    canCompute:true, desc:"Tile/cluster light assignment -- pure compute"},
+  {id:5,name:"Volumetrics", queue:"gfx",cost:3,deps:[1],    canCompute:true, desc:"Raymarching fog/god rays -- pure compute"},
+  {id:6,name:"Lighting",    queue:"gfx",cost:3,deps:[2,3,4,5],canCompute:false,desc:"Deferred shading -- reads all inputs, needs raster"},
+  {id:7,name:"Bloom",       queue:"gfx",cost:2,deps:[6],    canCompute:true, desc:"Downsample + blur -- compute dispatches"},
+  {id:8,name:"Tonemap",     queue:"gfx",cost:1,deps:[6,7],  canCompute:false,desc:"Final output -- needs graphics for present"}
+];
+
+const svg=document.getElementById("async-svg");
+const NS="http://www.w3.org/2000/svg";
+
+function isDark(){
+  return document.documentElement.classList.contains("dark")||
+         document.documentElement.classList.contains("scheme-congo");
+}
+
+function schedule(){
+  const gfx=[],comp=[];
+  passes.forEach(p=>{
+    if(p.queue==="compute")comp.push({...p});
+    else gfx.push({...p});
+  });
+  const startTime={},endTime={};
+  // Schedule gfx sequentially
+  let gfxTime=0;
+  gfx.forEach(p=>{
+    let earliest=gfxTime;
+    p.deps.forEach(d=>{if(endTime[d]!==undefined)earliest=Math.max(earliest,endTime[d]);});
+    startTime[p.id]=earliest;endTime[p.id]=earliest+p.cost;gfxTime=endTime[p.id];
+  });
+  // Schedule compute sequentially on its own lane
+  let compTime=0;
+  comp.forEach(p=>{
+    let earliest=compTime;
+    p.deps.forEach(d=>{if(endTime[d]!==undefined)earliest=Math.max(earliest,endTime[d]);});
+    startTime[p.id]=earliest;endTime[p.id]=earliest+p.cost;compTime=endTime[p.id];
+  });
+  // Re-settle gfx (some may depend on compute results)
+  let changed=true,iters=0;
+  while(changed&&iters<20){
+    changed=false;iters++;let t=0;
+    gfx.forEach(p=>{
+      let earliest=t;
+      p.deps.forEach(d=>{if(endTime[d]!==undefined)earliest=Math.max(earliest,endTime[d]);});
+      if(earliest!==startTime[p.id]){changed=true;}
+      startTime[p.id]=earliest;endTime[p.id]=earliest+p.cost;t=endTime[p.id];
+    });
+  }
+  const totalTime=Math.max(...Object.values(endTime));
+  return{startTime,endTime,totalTime,gfx,comp};
+}
+
+function render(){
+  while(svg.firstChild)svg.removeChild(svg.firstChild);
+  const bg=isDark()?"#1a1a2e":"#f9fafb";
+  const textC=isDark()?"#e5e5e5":"#1e1e1e";
+  const gridC=isDark()?"#333":"#e0e0e0";
+  const laneC=isDark()?"rgba(255,255,255,.06)":"rgba(0,0,0,.03)";
+
+  svg.append(el("rect",{x:0,y:0,width:700,height:290,fill:bg,rx:6}));
+
+  const left=105,top=35,right=670,laneH=85,gap=35;
+  const gfxY=top,compY=top+laneH+gap;
+
+  // Lane labels
+  svg.append(txt(8,gfxY+laneH/2-6,"Graphics",textC,"bold 13px ui-monospace,monospace","start"));
+  svg.append(txt(8,gfxY+laneH/2+10,"Queue",isDark()?"#666":"#999","11px ui-monospace,monospace","start"));
+  svg.append(txt(8,compY+laneH/2-6,"Compute",textC,"bold 13px ui-monospace,monospace","start"));
+  svg.append(txt(8,compY+laneH/2+10,"Queue",isDark()?"#666":"#999","11px ui-monospace,monospace","start"));
+
+  // Lane backgrounds
+  svg.append(el("rect",{x:left,y:gfxY,width:right-left,height:laneH,fill:laneC,rx:4}));
+  svg.append(el("rect",{x:left,y:compY,width:right-left,height:laneH,fill:laneC,rx:4}));
+
+  const sc=schedule();
+  if(sc.totalTime===0)return;
+  const scale=(right-left)/sc.totalTime;
+  const serialTime=passes.reduce((s,p)=>s+p.cost,0);
+
+  // Time grid
+  for(let t=0;t<=sc.totalTime;t++){
+    const x=left+t*scale;
+    svg.append(el("line",{x1:x,y1:top-8,x2:x,y2:compY+laneH+5,stroke:gridC,"stroke-width":1}));
+    svg.append(txt(x,compY+laneH+18,"t="+t,isDark()?"#555":"#aaa","10px ui-monospace,monospace","middle"));
+  }
+
+  // Arrow marker
+  const defs=el("defs",{});
+  defs.innerHTML='<marker id="async-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#f59e0b"/></marker>';
+  svg.prepend(defs);
+
+  // Draw passes
+  const boxH=40;
+  passes.forEach(p=>{
+    const isComp=p.queue==="compute";
+    const laneTop=isComp?compY:gfxY;
+    const y=laneTop+(laneH-boxH)/2;
+    const x=left+sc.startTime[p.id]*scale+2;
+    const w=p.cost*scale-4;
+
+    const fill=isComp?"#8b5cf6":p.canCompute?"#3b82f6":"#6b7280";
+    const group=el("g",{style:"cursor:"+(p.canCompute?"pointer":"default")});
+
+    group.append(el("rect",{x:x,y:y,width:w,height:boxH,rx:6,fill:fill,opacity:.9,
+      stroke:p.canCompute?(isDark()?"#93c5fd":"#60a5fa"):"transparent","stroke-width":p.canCompute?2:0}));
+    group.append(txt(x+w/2,y+boxH/2+1,p.name,"#fff","bold 11px ui-monospace,monospace","middle"));
+    // Cost label
+    group.append(txt(x+w/2,y+boxH+12,p.cost+"ms",isDark()?"#666":"#aaa","9px ui-monospace,monospace","middle"));
+
+    if(p.canCompute){
+      // Move icon
+      const iconY=y-2;
+      group.append(txt(x+w-10,iconY,isComp?"↑":"↓",isComp?"#c084fc":"#93c5fd","bold 13px sans-serif","middle"));
+      group.addEventListener("click",()=>{
+        p.queue=isComp?"gfx":"compute";
+        render();
+      });
+    }
+    svg.append(group);
+  });
+
+  // Draw cross-queue fences
+  const fenceCount=[];
+  passes.forEach(p=>{
+    p.deps.forEach(d=>{
+      const dep=passes[d];
+      if(dep.queue!==p.queue){
+        const fromComp=dep.queue==="compute";
+        const fromY=fromComp?compY+(laneH/2):gfxY+(laneH/2);
+        const toY=p.queue==="compute"?compY+(laneH/2):gfxY+(laneH/2);
+        const x1=left+sc.endTime[d]*scale;
+        const x2=left+sc.startTime[p.id]*scale;
+        svg.append(el("line",{x1:x1,y1:fromY,x2:x2,y2:toY,stroke:"#f59e0b","stroke-width":2.5,"stroke-dasharray":"5,3","marker-end":"url(#async-arrow)"}));
+        // Fence label
+        const mx=(x1+x2)/2,my=(fromY+toY)/2;
+        svg.append(txt(mx,my-8,"fence","#f59e0b","bold 9px ui-monospace,monospace","middle"));
+        fenceCount.push({from:dep.name,to:p.name});
+      }
+    });
+  });
+
+  // Stats
+  const overlapTime=Math.max(0,serialTime-sc.totalTime);
+  const pct=serialTime>0?Math.round(overlapTime/serialTime*100):0;
+  const asyncPasses=passes.filter(p=>p.queue==="compute").length;
+  const el2=document.getElementById("async-stats");
+  el2.innerHTML=
+    '<span class="async-stat '+(pct>0?"good":"neutral")+'">Frame time: '+sc.totalTime+' cycles '+(pct>0?"("+pct+"% faster)":"")+'</span>'+
+    '<span class="async-stat neutral">Serial: '+serialTime+' cycles</span>'+
+    '<span class="async-stat neutral">Async passes: '+asyncPasses+'</span>'+
+    '<span class="async-stat neutral">Fences: '+fenceCount.length+'</span>';
+
+  // Explanation
+  const explEl=document.getElementById("async-explain");
+  if(asyncPasses===0){
+    explEl.innerHTML="<strong>All passes on Graphics queue.</strong> The GPU processes them one after another. "+
+      "Click a <span style='color:#3b82f6;font-weight:600'>blue pass</span> to offload it to the Compute queue -- "+
+      "good candidates are compute-only work like SSAO, Light Culling, Volumetrics, or Bloom.";
+  }else{
+    var names=passes.filter(function(p){return p.queue==="compute"}).map(function(p){return p.name}).join(", ");
+    var msg="<strong>"+names+"</strong> running on the Compute queue in parallel with Graphics. ";
+    if(pct>0) msg+="The GPU finishes <strong>"+pct+"% faster</strong> because both queues execute simultaneously. ";
+    if(fenceCount.length>0) msg+=fenceCount.length+" fence"+(fenceCount.length>1?"s":"")+" needed for cross-queue sync ("+fenceCount.map(function(f){return f.from+"->"+f.to}).join(", ")+"). ";
+    msg+="Each fence costs ~5-15us, so only move passes with >0.5ms duration.";
+    explEl.innerHTML=msg;
+  }
+}
+
+function el(tag,attrs,text){
+  var e=document.createElementNS(NS,tag);
+  if(attrs)Object.entries(attrs).forEach(function(kv){e.setAttribute(kv[0],kv[1])});
+  if(text)e.textContent=text;return e;
+}
+function txt(x,y,text,fill,font,anchor){
+  var t=el("text",{x:x,y:y,fill:fill,"text-anchor":anchor||"start","dominant-baseline":"auto"});
+  t.style.font=font;t.textContent=text;return t;
+}
+
+// Legend
+document.getElementById("async-legend").innerHTML=[
+  {c:"#6b7280",l:"Graphics-only (can't move)"},
+  {c:"#3b82f6",l:"Compute-eligible (click to move)"},
+  {c:"#8b5cf6",l:"Running on Compute queue"},
+  {c:"#f59e0b",l:"Fence (cross-queue sync)"}
+].map(function(i){return '<span class="async-legend-item"><span class="async-legend-swatch" style="background:'+i.c+'"></span>'+i.l+'</span>'}).join("");
+
+window.asyncReset=function(){passes.forEach(function(p){p.queue="gfx"});render();};
+render();
+var obs=new MutationObserver(function(){render();});
+obs.observe(document.documentElement,{attributes:true,attributeFilter:["class"]});
+})();
+</script>

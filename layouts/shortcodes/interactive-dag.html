@@ -1,0 +1,200 @@
+{{/* Interactive DAG + Pass Culling — click edges to toggle, see dead passes culled */}}
+<div class="interactive-widget" id="dag-widget">
+  <div class="widget-header">
+    <span class="widget-icon">🔬</span>
+    <span class="widget-title">Interactive: DAG &amp; Pass Culling</span>
+    <p class="widget-hint">Click any edge to disable it. Passes that lose their path to the output (Tonemap) are automatically culled — grayed out and removed from the execution order.</p>
+  </div>
+  <div class="widget-body">
+    <svg id="dag-svg" viewBox="0 0 600 280" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div class="widget-info" id="dag-info">
+      <div><strong>Topological order:</strong> <span id="dag-topo">—</span></div>
+      <div><strong>Active:</strong> <span id="dag-active">5</span> / 5 passes</div>
+    </div>
+    <div class="dag-explain" id="dag-explain"></div>
+    <button class="widget-btn" onclick="dagReset()">Reset</button>
+  </div>
+</div>
+
+<style>
+.interactive-widget{margin:1.5em 0;border:1px solid var(--color-neutral-300,#d4d4d4);border-radius:.75rem;overflow:hidden;background:var(--color-neutral-50,#fafafa)}
+:is(.dark,.scheme-congo) .interactive-widget{background:var(--color-neutral-800,#262626);border-color:var(--color-neutral-700,#404040)}
+.widget-header{padding:.75em 1em .25em;border-bottom:1px solid var(--color-neutral-200,#e5e5e5)}
+:is(.dark,.scheme-congo) .widget-header{border-color:var(--color-neutral-700)}
+.widget-icon{font-size:1.2em;margin-right:.3em}
+.widget-title{font-weight:700;font-size:.95em}
+.widget-hint{margin:.3em 0 0;font-size:.8em;opacity:.7}
+.widget-body{padding:1em}
+.widget-info{font-family:ui-monospace,SFMono-Regular,monospace;font-size:.82em;margin:.5em 0;line-height:1.7}
+.widget-btn{font-size:.8em;padding:.35em 1em;border:1px solid var(--color-neutral-400);border-radius:.375rem;background:transparent;cursor:pointer;color:inherit}
+.widget-btn:hover{background:var(--color-neutral-200,#e5e5e5)}
+:is(.dark,.scheme-congo) .widget-btn:hover{background:var(--color-neutral-700)}
+.dag-explain{font-size:.84em;line-height:1.65;margin:.5em 0;padding:.5em .8em;border-radius:.375rem;border-left:3px solid #3b82f6;background:var(--color-neutral-100,#f5f5f5);min-height:1.5em}
+:is(.dark,.scheme-congo) .dag-explain{background:var(--color-neutral-900);border-color:#3b82f6}
+#dag-svg{width:100%;max-height:300px;display:block;margin:0 auto}
+#dag-svg .node rect{rx:8;ry:8;stroke-width:2;cursor:default;transition:fill .2s,stroke .2s,opacity .2s}
+#dag-svg .node text{font:600 13px ui-monospace,SFMono-Regular,monospace;fill:#fff;pointer-events:none;text-anchor:middle;dominant-baseline:central}
+#dag-svg .edge{cursor:pointer}
+#dag-svg .edge path{fill:none;stroke-width:4;transition:stroke .2s,opacity .2s}
+#dag-svg .edge polygon{transition:fill .2s,opacity .2s}
+#dag-svg .edge-label{font:500 10px system-ui,sans-serif;pointer-events:none;text-anchor:middle;dominant-baseline:central;transition:fill .2s,opacity .2s}
+#dag-svg .edge-hit{fill:transparent;stroke:transparent;stroke-width:22;cursor:pointer}
+</style>
+
+<script>
+(function(){
+const W=600,H=280,NW=110,NH=36;
+const passes=[
+  {id:0,name:"Depth",x:60,y:50},
+  {id:1,name:"GBuffer",x:240,y:50},
+  {id:2,name:"SSAO",x:440,y:50},
+  {id:3,name:"Lighting",x:300,y:150},
+  {id:4,name:"Tonemap",x:300,y:240}
+];
+const edges=[
+  {from:0,to:1,label:"depth",active:true},
+  {from:1,to:2,label:"normals",active:true},
+  {from:1,to:3,label:"albedo",active:true},
+  {from:2,to:3,label:"ssao",active:true},
+  {from:3,to:4,label:"hdr",active:true}
+];
+const COL_ALIVE="#22c55e",COL_DEAD="#6b7280",COL_OUTPUT="#f59e0b",COL_EDGE="#3b82f6",COL_OFF="#9ca3af";
+
+function cx(p){return p.x+NW/2}
+function cy(p){return p.y+NH/2}
+
+function topoSort(){
+  const adj={},inDeg={};
+  passes.forEach(p=>{adj[p.id]=[];inDeg[p.id]=0});
+  edges.filter(e=>e.active).forEach(e=>{adj[e.from].push(e.to);inDeg[e.to]++});
+  const q=passes.filter(p=>inDeg[p.id]===0).map(p=>p.id);
+  const order=[];let i=0;
+  while(i<q.length){const c=q[i++];order.push(c);adj[c].forEach(s=>{if(--inDeg[s]===0)q.push(s)})}
+  return order;
+}
+
+function cull(order){
+  const alive=new Set();
+  const adj={};
+  passes.forEach(p=>adj[p.id]=[]);
+  edges.filter(e=>e.active).forEach(e=>adj[e.from].push(e.to));
+  if(order.length===0)return alive;
+  // Walk backward from last (output)
+  const last=order[order.length-1];
+  alive.add(last);
+  // Build reverse adjacency
+  const rev={};passes.forEach(p=>rev[p.id]=[]);
+  edges.filter(e=>e.active).forEach(e=>rev[e.to].push(e.from));
+  const stack=[last];
+  while(stack.length){
+    const c=stack.pop();
+    rev[c].forEach(p=>{if(!alive.has(p)){alive.add(p);stack.push(p)}});
+  }
+  return alive;
+}
+
+function edgePath(e){
+  const s=passes[e.from],d=passes[e.to];
+  const sx=cx(s),sy=cy(s),dx=cx(d),dy=cy(d);
+  // offset start/end to node edge
+  const ang=Math.atan2(dy-sy,dx-sx);
+  const x1=sx+Math.cos(ang)*(NW/2+2),y1=sy+Math.sin(ang)*(NH/2+2);
+  const x2=dx-Math.cos(ang)*(NW/2+8),y2=dy-Math.sin(ang)*(NH/2+8);
+  // slight curve
+  const mx=(x1+x2)/2,my=(y1+y2)/2;
+  const nx=-(y2-y1)*.12,ny=(x2-x1)*.12;
+  return{x1,y1,x2,y2,mx:mx+nx,my:my+ny,
+    d:`M${x1},${y1} Q${mx+nx},${my+ny} ${x2},${y2}`};
+}
+
+function arrowHead(x2,y2,mx,my){
+  const ang=Math.atan2(y2-my,x2-mx);
+    const sz=10;
+  return`${x2},${y2} ${p1x},${p1y} ${p2x},${p2y}`;
+}
+
+function render(){
+  const svg=document.getElementById("dag-svg");
+  svg.innerHTML="";
+  const order=topoSort();
+  const alive=cull(order);
+
+  // Draw edges
+  edges.forEach((e,i)=>{
+    const g=document.createElementNS("http://www.w3.org/2000/svg","g");
+    g.setAttribute("class","edge");
+    const p=edgePath(e);
+    // Hit area
+    const hit=document.createElementNS("http://www.w3.org/2000/svg","path");
+    hit.setAttribute("d",p.d);hit.setAttribute("class","edge-hit");
+    hit.setAttribute("stroke-width","18");hit.setAttribute("stroke","transparent");
+    hit.setAttribute("fill","none");
+    hit.addEventListener("click",()=>{
+      e.active=!e.active;render();
+    });
+    // Visible path
+    const path=document.createElementNS("http://www.w3.org/2000/svg","path");
+    path.setAttribute("d",p.d);
+    path.setAttribute("stroke",e.active?COL_EDGE:COL_OFF);
+    if(!e.active)path.setAttribute("stroke-dasharray","6 4");
+    path.setAttribute("opacity",e.active?"1":"0.4");
+    // Arrowhead
+    const arrow=document.createElementNS("http://www.w3.org/2000/svg","polygon");
+    arrow.setAttribute("points",arrowHead(p.x2,p.y2,p.mx,p.my));
+    arrow.setAttribute("fill",e.active?COL_EDGE:COL_OFF);
+    arrow.setAttribute("opacity",e.active?"1":"0.4");
+    // Label
+    const label=document.createElementNS("http://www.w3.org/2000/svg","text");
+    label.setAttribute("x",p.mx);label.setAttribute("y",p.my-8);
+    label.setAttribute("class","edge-label");
+    label.setAttribute("fill",e.active?COL_EDGE:COL_OFF);
+    label.setAttribute("opacity",e.active?"1":"0.4");
+    label.textContent=e.label;
+    g.append(path,arrow,label,hit);
+    svg.append(g);
+  });
+
+  // Draw nodes
+  passes.forEach(p=>{
+    const isAlive=alive.has(p.id);
+    const isOutput=p.id===4;
+    const g=document.createElementNS("http://www.w3.org/2000/svg","g");
+    g.setAttribute("class","node");
+    const r=document.createElementNS("http://www.w3.org/2000/svg","rect");
+    r.setAttribute("x",p.x);r.setAttribute("y",p.y);
+    r.setAttribute("width",NW);r.setAttribute("height",NH);
+    r.setAttribute("fill",isOutput?COL_OUTPUT:isAlive?COL_ALIVE:COL_DEAD);
+    r.setAttribute("stroke",isOutput?"#d97706":isAlive?"#16a34a":"#4b5563");
+    r.setAttribute("opacity",isAlive?"1":"0.45");
+    const t=document.createElementNS("http://www.w3.org/2000/svg","text");
+    t.setAttribute("x",cx(p));t.setAttribute("y",cy(p));
+    t.textContent=isAlive?p.name:p.name+" ✗";
+    t.setAttribute("opacity",isAlive?"1":"0.5");
+    g.append(r,t);svg.append(g);
+  });
+
+  // Update info
+  const aliveOrder=order.filter(i=>alive.has(i));
+  document.getElementById("dag-topo").textContent=
+    aliveOrder.map(i=>passes[i].name).join(" → ")||"(empty)";
+  document.getElementById("dag-active").textContent=alive.size;
+
+  // Explanation panel
+  const info2=document.getElementById("dag-explain");
+  const disabledEdges=edges.filter(e=>!e.active);
+  const culled=passes.filter(p=>!alive.has(p.id));
+  if(disabledEdges.length===0){
+    info2.innerHTML="All edges active. Every pass is reachable from the output. Try clicking an edge to break a dependency and see which passes get culled.";
+  }else if(alive.size===0){
+    info2.innerHTML="<strong style='color:#ef4444'>No passes reachable!</strong> The output node (Tonemap) itself is disconnected. In a real renderer, this would mean nothing renders — the graph compiler would warn you.";
+  }else if(culled.length>0){
+    info2.innerHTML="<strong>"+culled.map(p=>p.name).join(", ")+"</strong> culled — "+(culled.length===1?"its output is":"their outputs are")+" no longer read by any path leading to the final output. The graph compiler skips "+(culled.length===1?"this pass":"these passes")+" entirely, freeing their resources.";
+  }else{
+    info2.innerHTML="Edges disabled but all passes still reachable through alternate paths. The topological order may change.";
+  }
+}
+
+window.dagReset=function(){edges.forEach(e=>e.active=true);render()};
+render();
+})();
+</script>

@@ -1,0 +1,75 @@
+{{/* Compile-compare shortcode: two side-by-side compile buttons showing different outputs */}}
+{{ $fileA := .Get "fileA" }}
+{{ $fileB := .Get "fileB" }}
+{{ $labelA := .Get "labelA" | default "Variant A" }}
+{{ $labelB := .Get "labelB" | default "Variant B" }}
+{{ $deps := .Get "deps" | default "" }}
+{{ $lang := .Get "lang" | default "cpp" }}
+{{ $resA := .Page.Resources.GetMatch $fileA }}
+{{ $resB := .Page.Resources.GetMatch $fileB }}
+{{ if and $resA $resB }}
+{{/* Build compilable source for A */}}
+{{ $srcA := $resA.Content }}
+{{ if $deps }}
+  {{ $depRes := $.Page.Resources.GetMatch $deps }}
+  {{ if $depRes }}
+    {{ $incDir := printf "#include \"%s\"" $deps }}
+    {{ $srcA = replace $srcA $incDir $depRes.Content }}
+  {{ end }}
+{{ end }}
+{{/* Build compilable source for B */}}
+{{ $srcB := $resB.Content }}
+{{ if $deps }}
+  {{ $depRes := $.Page.Resources.GetMatch $deps }}
+  {{ if $depRes }}
+    {{ $incDir := printf "#include \"%s\"" $deps }}
+    {{ $srcB = replace $srcB $incDir $depRes.Content }}
+  {{ end }}
+{{ end }}
+<div class="compile-compare">
+  <div class="cc-header">
+    <span class="cc-icon">⚖</span>
+    <span class="cc-title">Compare: {{ $labelA }} vs {{ $labelB }}</span>
+    <p class="cc-hint">Click both buttons to compile and compare the output side by side.</p>
+  </div>
+  <div class="cc-panels">
+    <div class="cc-panel">
+      <div class="cc-panel-title cc-panel-a">{{ $labelA }}</div>
+      <details class="code-collapse">
+        <summary>
+          <span class="code-collapse-label">{{ $fileA }} <span class="code-collapse-hint">(click to expand)</span></span>
+          <div class="code-preview-body">
+            {{ highlight (delimit (first 6 (split $resA.Content "\n")) "\n") $lang "" }}
+            <div class="code-fade-overlay"></div>
+          </div>
+        </summary>
+        {{ highlight $resA.Content $lang "" }}
+      </details>
+      <div class="code-actions" data-source="{{ $srcA | base64Encode }}">
+        <button class="compile-btn" onclick="compileAndRun(this)">▶ Compile &amp; Run</button>
+      </div>
+      <pre class="compile-output"></pre>
+    </div>
+    <div class="cc-panel">
+      <div class="cc-panel-title cc-panel-b">{{ $labelB }}</div>
+      <details class="code-collapse">
+        <summary>
+          <span class="code-collapse-label">{{ $fileB }} <span class="code-collapse-hint">(click to expand)</span></span>
+          <div class="code-preview-body">
+            {{ highlight (delimit (first 6 (split $resB.Content "\n")) "\n") $lang "" }}
+            <div class="code-fade-overlay"></div>
+          </div>
+        </summary>
+        {{ highlight $resB.Content $lang "" }}
+      </details>
+      <div class="code-actions" data-source="{{ $srcB | base64Encode }}">
+        <button class="compile-btn" onclick="compileAndRun(this)">▶ Compile &amp; Run</button>
+      </div>
+      <pre class="compile-output"></pre>
+    </div>
+  </div>
+</div>
+{{ else }}
+  {{ if not $resA }}{{ errorf "compile-compare: fileA %q not found" $fileA }}{{ end }}
+  {{ if not $resB }}{{ errorf "compile-compare: fileB %q not found" $fileB }}{{ end }}
+{{ end }}

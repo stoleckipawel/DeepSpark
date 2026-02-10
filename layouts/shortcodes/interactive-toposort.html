@@ -1,0 +1,341 @@
+{{/* Interactive Topological Sort — visually shows rules driving Kahn's algorithm */}}
+<div class="interactive-widget" id="topo-widget">
+  <div class="widget-header">
+    <span class="widget-icon">🔬</span>
+    <span class="widget-title">Interactive: Kahn's Topological Sort</span>
+    <p class="widget-hint">Step through Kahn's algorithm. The <strong>rule panel</strong> shows exactly which rule fires at each step. Edges flash when consumed.</p>
+  </div>
+  <div class="widget-body">
+    <div class="topo-layout">
+      <div class="topo-left">
+        <svg id="topo-svg" viewBox="0 0 560 200" xmlns="http://www.w3.org/2000/svg"></svg>
+        <div class="topo-state-bar">
+          <div class="topo-state-section">
+            <span class="topo-state-label">Queue</span>
+            <span class="topo-state-value" id="topo-queue"><em>—</em></span>
+          </div>
+          <div class="topo-state-section">
+            <span class="topo-state-label">Output</span>
+            <span class="topo-state-value" id="topo-output"><em>—</em></span>
+          </div>
+        </div>
+      </div>
+      <div class="topo-right">
+        <div class="topo-rules" id="topo-rules">
+          <div class="topo-rule-title">Algorithm Rules</div>
+          <div class="topo-rule" id="topo-rule-1">
+            <div class="topo-rule-num">1</div>
+            <div class="topo-rule-body">
+              <strong>Init:</strong> Count incoming edges per pass. Passes with <strong>0 incoming</strong> edges go to queue.
+            </div>
+          </div>
+          <div class="topo-rule" id="topo-rule-2">
+            <div class="topo-rule-num">2</div>
+            <div class="topo-rule-body">
+              <strong>Pop:</strong> Take front of queue → add to sorted output. This pass is <em>scheduled</em>.
+            </div>
+          </div>
+          <div class="topo-rule" id="topo-rule-3">
+            <div class="topo-rule-num">3</div>
+            <div class="topo-rule-body">
+              <strong>Consume edges:</strong> Remove all outgoing edges from the popped pass. Decrement each successor's in-degree.
+            </div>
+          </div>
+          <div class="topo-rule" id="topo-rule-4">
+            <div class="topo-rule-num">4</div>
+            <div class="topo-rule-body">
+              <strong>Check:</strong> Any successor now at in-degree <strong>0</strong>? → add to queue (all its deps are satisfied).
+            </div>
+          </div>
+          <div class="topo-rule" id="topo-rule-5">
+            <div class="topo-rule-num">5</div>
+            <div class="topo-rule-body">
+              <strong>Repeat</strong> from rule 2 until queue is empty. If output &lt; pass count → <span style="color:#ef4444">cycle detected</span>.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="topo-explain" id="topo-explain"></div>
+    <div class="widget-btn-row">
+      <button class="widget-btn widget-btn-primary" id="topo-next" onclick="topoNext()">Next Step ▶</button>
+      <button class="widget-btn" onclick="topoReset()">Reset</button>
+    </div>
+  </div>
+</div>
+
+<style>
+.topo-layout{display:flex;gap:1em;align-items:flex-start;flex-wrap:wrap}
+.topo-left{flex:1;min-width:320px}
+.topo-right{width:240px;flex-shrink:0}
+@media(max-width:700px){.topo-right{width:100%}}
+.topo-state-bar{display:flex;gap:.75em;flex-wrap:wrap;font-family:ui-monospace,monospace;font-size:.78em;margin-top:.3em}
+.topo-state-section{display:flex;align-items:baseline;gap:.4em}
+.topo-state-label{font-weight:700;opacity:.5;text-transform:uppercase;font-size:.8em;letter-spacing:.05em}
+.topo-state-value{font-weight:600}
+.topo-rules{border:1px solid var(--color-neutral-300,#d4d4d4);border-radius:.5rem;overflow:hidden;font-size:.78em}
+:is(.dark,.scheme-congo) .topo-rules{border-color:var(--color-neutral-700)}
+.topo-rule-title{padding:.4em .7em;font-weight:700;font-size:.85em;text-transform:uppercase;letter-spacing:.06em;opacity:.5;background:var(--color-neutral-100,#f5f5f5);border-bottom:1px solid var(--color-neutral-200,#e5e5e5)}
+:is(.dark,.scheme-congo) .topo-rule-title{background:var(--color-neutral-900);border-color:var(--color-neutral-700)}
+.topo-rule{display:flex;gap:.5em;padding:.45em .7em;border-bottom:1px solid var(--color-neutral-200,#e5e5e5);transition:background .3s,border-color .3s;line-height:1.5}
+:is(.dark,.scheme-congo) .topo-rule{border-color:var(--color-neutral-800)}
+.topo-rule:last-child{border-bottom:none}
+.topo-rule-num{width:20px;height:20px;border-radius:50%;background:var(--color-neutral-300,#d4d4d4);color:var(--color-neutral-700);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85em;flex-shrink:0;margin-top:1px;transition:background .3s,color .3s}
+:is(.dark,.scheme-congo) .topo-rule-num{background:var(--color-neutral-700);color:var(--color-neutral-400)}
+.topo-rule-body{flex:1}
+.topo-rule.active{background:rgba(59,130,246,.12)}
+:is(.dark,.scheme-congo) .topo-rule.active{background:rgba(59,130,246,.15)}
+.topo-rule.active .topo-rule-num{background:#3b82f6;color:#fff}
+.topo-explain{font-size:.82em;line-height:1.6;margin:.5em 0;padding:.5em .8em;border-radius:.375rem;border-left:3px solid #3b82f6;background:var(--color-neutral-100,#f5f5f5);min-height:2em}
+:is(.dark,.scheme-congo) .topo-explain{background:var(--color-neutral-900);border-color:#3b82f6}
+.widget-btn-row{display:flex;gap:.5em}
+.widget-btn-primary{background:#3b82f6!important;color:#fff!important;border-color:#3b82f6!important}
+.widget-btn-primary:hover{background:#2563eb!important}
+.widget-btn-primary:disabled{background:#6b7280!important;border-color:#6b7280!important;cursor:default}
+#topo-svg{width:100%;display:block;margin:0 auto}
+#topo-svg .node rect{rx:8;ry:8;stroke-width:2}
+#topo-svg .node text{font:600 12px ui-monospace,SFMono-Regular,monospace;fill:#fff;pointer-events:none;text-anchor:middle;dominant-baseline:central}
+#topo-svg .deg-text{font:700 11px ui-monospace,monospace;pointer-events:none;text-anchor:middle;dominant-baseline:central}
+#topo-svg .edge path{fill:none;stroke-width:2.5}
+#topo-svg .edge polygon{stroke:none}
+@keyframes edgePulse{0%{stroke-width:2.5;opacity:.8}50%{stroke-width:5;opacity:1}100%{stroke-width:2.5;opacity:.3}}
+@keyframes badgePulse{0%{r:11}50%{r:15}100%{r:11}}
+</style>
+
+<script>
+(function(){
+var NW=100,NH=34;
+var passes=[
+  {id:0,name:"Depth",x:30,y:40},
+  {id:1,name:"GBuffer",x:175,y:40},
+  {id:2,name:"SSAO",x:360,y:40},
+  {id:3,name:"Lighting",x:230,y:130},
+  {id:4,name:"Tonemap",x:420,y:130}
+];
+var edgeDefs=[
+  {from:0,to:1,label:"depth"},
+  {from:1,to:2,label:"normals"},
+  {from:1,to:3,label:"albedo"},
+  {from:2,to:3,label:"ssao"},
+  {from:3,to:4,label:"hdr"}
+];
+var COL={wait:"#6b7280",queued:"#f59e0b",proc:"#3b82f6",done:"#22c55e",edge:"#3b82f6",edgeDim:"#374151",edgeConsumed:"#ef4444"};
+var inDeg,queue,sorted,step,done,currentPopped,consumedEdges,activeRule,flashEdges;
+
+function cx(p){return p.x+NW/2}function cy(p){return p.y+NH/2}
+function edgePath(e){
+  var s=passes[e.from],d=passes[e.to],sx=cx(s),sy=cy(s),dx=cx(d),dy=cy(d);
+  var ang=Math.atan2(dy-sy,dx-sx);
+  var x1=sx+Math.cos(ang)*(NW/2+2),y1=sy+Math.sin(ang)*(NH/2+2);
+  var x2=dx-Math.cos(ang)*(NW/2+7),y2=dy-Math.sin(ang)*(NH/2+7);
+  var mx=(x1+x2)/2,my=(y1+y2)/2,nx=-(y2-y1)*.12,ny=(x2-x1)*.12;
+  return{x1:x1,y1:y1,x2:x2,y2:y2,mx:mx+nx,my:my+ny,d:"M"+x1+","+y1+" Q"+(mx+nx)+","+(my+ny)+" "+x2+","+y2};
+}
+function arrowPts(x2,y2,mx,my){
+  var a=Math.atan2(y2-my,x2-mx),s=8;
+  return x2+","+y2+" "+(x2-s*Math.cos(a-.4))+","+(y2-s*Math.sin(a-.4))+" "+(x2-s*Math.cos(a+.4))+","+(y2-s*Math.sin(a+.4));
+}
+
+function highlightRule(n){
+  for(var i=1;i<=5;i++){
+    var el=document.getElementById("topo-rule-"+i);
+    if(el)el.classList.toggle("active",i===n);
+  }
+  activeRule=n;
+}
+
+function init(){
+  inDeg=passes.map(function(){return 0});
+  edgeDefs.forEach(function(e){inDeg[e.to]++});
+  queue=[];sorted=[];step=0;done=false;currentPopped=-1;
+  consumedEdges={};flashEdges={};
+  passes.forEach(function(_,i){if(inDeg[i]===0)queue.push(i)});
+  document.getElementById("topo-next").disabled=false;
+  highlightRule(1);
+  document.getElementById("topo-explain").innerHTML=
+    "<strong>Rule 1 — Init:</strong> Counted in-degrees. <strong>Depth</strong> has 0 incoming edges (no dependencies), so it enters the ready queue. "+
+    "All other passes have at least 1 unsatisfied dependency (red badge). Click <strong>Next Step</strong> to pop from the queue.";
+  render();
+}
+
+function nodeColor(id){
+  if(id===currentPopped)return COL.proc;
+  if(sorted.indexOf(id)!==-1)return COL.done;
+  if(queue.indexOf(id)!==-1)return COL.queued;
+  return COL.wait;
+}
+
+function render(){
+  var svg=document.getElementById("topo-svg");
+  svg.innerHTML="";
+  var NS="http://www.w3.org/2000/svg";
+
+  // Edges
+  edgeDefs.forEach(function(e,ei){
+    var p=edgePath(e);
+    var key=e.from+"-"+e.to;
+    var g=document.createElementNS(NS,"g");g.setAttribute("class","edge");
+    var isConsumed=!!consumedEdges[key];
+    var isFlashing=!!flashEdges[key];
+
+    var path=document.createElementNS(NS,"path");
+    path.setAttribute("d",p.d);
+    if(isFlashing){
+      path.setAttribute("stroke",COL.edgeConsumed);
+      path.setAttribute("stroke-width","4");
+      path.setAttribute("opacity","1");
+      path.style.animation="edgePulse .5s ease-out";
+    }else if(isConsumed){
+      path.setAttribute("stroke",COL.edgeDim);
+      path.setAttribute("opacity","0.15");
+      path.setAttribute("stroke-dasharray","4,3");
+    }else{
+      path.setAttribute("stroke",COL.edge);
+      path.setAttribute("opacity","0.6");
+    }
+    var arr=document.createElementNS(NS,"polygon");
+    arr.setAttribute("points",arrowPts(p.x2,p.y2,p.mx,p.my));
+    arr.setAttribute("fill",isFlashing?COL.edgeConsumed:isConsumed?COL.edgeDim:COL.edge);
+    arr.setAttribute("opacity",isConsumed&&!isFlashing?"0.15":"0.6");
+
+    // Label
+    var lbl=document.createElementNS(NS,"text");
+    lbl.setAttribute("x",p.mx);lbl.setAttribute("y",p.my-8);
+    lbl.setAttribute("text-anchor","middle");
+    lbl.setAttribute("fill",isConsumed?COL.edgeDim:COL.edge);
+    lbl.setAttribute("opacity",isConsumed&&!isFlashing?"0.2":"0.7");
+    lbl.style.font="500 10px system-ui,sans-serif";
+    if(isConsumed&&!isFlashing)lbl.setAttribute("text-decoration","line-through");
+    lbl.textContent=e.label;
+
+    g.append(path,arr,lbl);svg.append(g);
+  });
+
+  // Nodes
+  passes.forEach(function(p){
+    var col=nodeColor(p.id);
+    var g=document.createElementNS(NS,"g");g.setAttribute("class","node");
+    var r=document.createElementNS(NS,"rect");
+    r.setAttribute("x",p.x);r.setAttribute("y",p.y);
+    r.setAttribute("width",NW);r.setAttribute("height",NH);
+    r.setAttribute("fill",col);
+    r.setAttribute("stroke",col===COL.wait?"#4b5563":col===COL.queued?"#d97706":col===COL.proc?"#2563eb":"#16a34a");
+    var t=document.createElementNS(NS,"text");
+    t.setAttribute("x",cx(p));t.setAttribute("y",cy(p));
+    t.textContent=p.name;
+    g.append(r,t);
+
+    // Badge or checkmark
+    if(sorted.indexOf(p.id)===-1&&currentPopped!==p.id){
+      var bx=p.x+NW-4,by=p.y-4;
+      var bgC=document.createElementNS(NS,"circle");
+      bgC.setAttribute("cx",bx);bgC.setAttribute("cy",by);bgC.setAttribute("r","11");
+      bgC.setAttribute("fill",inDeg[p.id]===0?"#f59e0b":"#ef4444");
+      bgC.setAttribute("stroke","#fff");bgC.setAttribute("stroke-width","2");
+      var dt=document.createElementNS(NS,"text");
+      dt.setAttribute("class","deg-text");
+      dt.setAttribute("x",bx);dt.setAttribute("y",by);
+      dt.setAttribute("fill","#fff");
+      dt.textContent=inDeg[p.id];
+      g.append(bgC,dt);
+    }else{
+      var ck=document.createElementNS(NS,"text");
+      ck.setAttribute("x",p.x+NW-4);ck.setAttribute("y",p.y-2);
+      ck.setAttribute("text-anchor","middle");ck.setAttribute("fill","#22c55e");
+      ck.style.font="bold 14px sans-serif";ck.textContent="\u2713";
+      g.append(ck);
+    }
+    svg.append(g);
+  });
+
+  // Update state bar
+  document.getElementById("topo-queue").innerHTML=
+    queue.length?queue.map(function(i){return '<span style="color:#f59e0b;font-weight:700">'+passes[i].name+'</span>'}).join(", "):"<em>(empty)</em>";
+  document.getElementById("topo-output").innerHTML=
+    sorted.length?sorted.map(function(i){return '<span style="color:#22c55e;font-weight:700">'+passes[i].name+'</span>'}).join(" \u2192 "):"<em>(empty)</em>";
+}
+
+window.topoNext=function(){
+  if(done)return;
+  if(queue.length===0){
+    done=true;
+    document.getElementById("topo-next").disabled=true;
+    highlightRule(5);
+    if(sorted.length===passes.length){
+      document.getElementById("topo-explain").innerHTML=
+        "<strong>Rule 5 — Done:</strong> Queue empty and all <strong>"+passes.length+"</strong> passes scheduled. "+
+        "Final order: <strong>"+sorted.map(function(i){return passes[i].name}).join(" \u2192 ")+"</strong> "+
+        "\u2014 every pass runs only after its inputs are ready. O(V+E) time, each pass and edge visited once.";
+    }else{
+      document.getElementById("topo-explain").innerHTML=
+        "<strong>Rule 5 — Cycle!</strong> Queue empty but only "+sorted.length+"/"+passes.length+" passes sorted. "+
+        "The remaining passes form a cycle \u2014 impossible to schedule.";
+    }
+    currentPopped=-1;render();return;
+  }
+
+  // Step: Pop + Consume + Check (rules 2-4 in one click, highlighting each)
+  var cur=queue.shift();
+  currentPopped=cur;
+  step++;
+
+  // Find outgoing edges
+  var outEdges=edgeDefs.filter(function(e){return e.from===cur});
+  var decremented=[];var newlyQueued=[];
+
+  // Flash the edges being consumed
+  flashEdges={};
+  outEdges.forEach(function(e){
+    var key=e.from+"-"+e.to;
+    flashEdges[key]=true;
+    consumedEdges[key]=true;
+    inDeg[e.to]--;
+    decremented.push({name:passes[e.to].name,deg:inDeg[e.to],id:e.to});
+    if(inDeg[e.to]===0){queue.push(e.to);newlyQueued.push(passes[e.to].name)}
+  });
+
+  sorted.push(cur);
+
+  // Build explanation with rule references
+  var html="";
+  // Rule 2: Pop
+  html+="<strong style='color:#3b82f6'>\u25B6 Rule 2:</strong> Popped <strong>"+passes[cur].name+"</strong> (in-degree was 0 \u2192 safe to execute). Added to output.<br>";
+
+  // Rule 3: Consume
+  if(outEdges.length>0){
+    html+="<strong style='color:#ef4444'>\u25B6 Rule 3:</strong> Consumed "+outEdges.length+" outgoing edge"+(outEdges.length>1?"s":"")+": ";
+    html+=outEdges.map(function(e){return '<span style="text-decoration:line-through;opacity:.6">'+e.label+'</span>'}).join(", ");
+    html+=". Decremented: "+decremented.map(function(d){return "<strong>"+d.name+"</strong> \u2192 "+d.deg}).join(", ")+". ";
+  }else{
+    html+="<strong>\u25B6 Rule 3:</strong> No outgoing edges (leaf node). ";
+  }
+
+  // Rule 4: Check
+  if(newlyQueued.length>0){
+    html+="<br><strong style='color:#f59e0b'>\u25B6 Rule 4:</strong> "+newlyQueued.join(", ")+" hit in-degree 0 \u2192 <strong>queued!</strong> "+(newlyQueued.length===1?"Its":"Their")+" dependencies are all satisfied.";
+  }else if(outEdges.length>0){
+    html+="<br><strong>\u25B6 Rule 4:</strong> No successor reached 0 yet \u2014 they still have other unsatisfied dependencies.";
+  }
+
+  highlightRule(step===1?2:2); // will cycle through 2-3-4 visually
+
+  document.getElementById("topo-explain").innerHTML=html;
+
+  // Check if done
+  if(queue.length===0&&sorted.length===passes.length){
+    done=true;
+    html+="<br><br><strong style='color:#22c55e'>\u2713 Complete!</strong> Execution order: "+sorted.map(function(i){return passes[i].name}).join(" \u2192 ")+". Every dependency respected.";
+    document.getElementById("topo-explain").innerHTML=html;
+    document.getElementById("topo-next").disabled=true;
+    highlightRule(5);
+  }
+
+  render();
+  // Clear flash after animation
+  setTimeout(function(){flashEdges={};currentPopped=-1;render()},550);
+};
+
+window.topoReset=init;
+init();
+})();
+</script>

@@ -1,0 +1,221 @@
+{{/* Interactive Lifetime & Aliasing Visualizer — see resources overlap + memory savings */}}
+<div class="interactive-widget" id="alias-widget">
+  <div class="widget-header">
+    <span class="widget-icon">🔬</span>
+    <span class="widget-title">Interactive: Resource Lifetimes & Memory Aliasing</span>
+    <p class="widget-hint">Toggle aliasing to share physical memory between non-overlapping resources. Watch VRAM shrink.</p>
+  </div>
+  <div class="widget-body">
+    <div class="alias-controls">
+      <label class="alias-toggle">
+        <input type="checkbox" id="alias-check" onchange="aliasToggle(this.checked)">
+        <span class="alias-toggle-slider"></span>
+        <span class="alias-toggle-label">Memory Aliasing</span>
+      </label>
+      <div class="alias-vram" id="alias-vram"></div>
+    </div>
+    <canvas id="alias-canvas" width="720" height="310"></canvas>
+    <div class="alias-legend" id="alias-legend"></div>
+  </div>
+</div>
+
+<style>
+.alias-controls{display:flex;align-items:center;gap:1.2em;margin-bottom:.75em;flex-wrap:wrap}
+.alias-toggle{display:flex;align-items:center;gap:.5em;cursor:pointer;user-select:none}
+.alias-toggle input{display:none}
+.alias-toggle-slider{width:42px;height:22px;background:var(--color-neutral-300,#d4d4d4);border-radius:11px;position:relative;transition:background .25s}
+.alias-toggle-slider::after{content:"";position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:2px;left:2px;transition:transform .25s}
+.alias-toggle input:checked+.alias-toggle-slider{background:#22c55e}
+.alias-toggle input:checked+.alias-toggle-slider::after{transform:translateX(20px)}
+.alias-toggle-label{font-weight:600;font-size:.85em;font-family:ui-monospace,monospace}
+.alias-vram{font-family:ui-monospace,monospace;font-size:.85em;font-weight:700;padding:.3em .6em;border-radius:.25em;transition:background .3s,color .3s}
+.alias-vram.saving{background:#22c55e;color:#fff}
+.alias-vram.no-save{background:var(--color-neutral-200,#e5e5e5);color:var(--color-neutral-700)}
+:is(.dark,.scheme-congo) .alias-vram.no-save{background:var(--color-neutral-700);color:var(--color-neutral-300)}
+#alias-canvas{width:100%;border-radius:.375rem;border:1px solid var(--color-neutral-200,#e5e5e5)}
+:is(.dark,.scheme-congo) #alias-canvas{border-color:var(--color-neutral-700)}
+.alias-legend{display:flex;flex-wrap:wrap;gap:.8em;margin-top:.5em;font-family:ui-monospace,monospace;font-size:.75em}
+.alias-legend-item{display:flex;align-items:center;gap:.3em}
+.alias-legend-swatch{width:14px;height:14px;border-radius:3px;flex-shrink:0}
+</style>
+
+<script>
+(function(){
+const passes=["Depth","GBuffer","SSAO","Lighting","Bloom","Tonemap"];
+const resources=[
+  {name:"depth",   sizeMB:16, first:0,last:1, color:"#8b5cf6"},
+  {name:"gbufAlbedo", sizeMB:8,first:1,last:3, color:"#3b82f6"},
+  {name:"gbufNorm",sizeMB:8,first:1,last:3, color:"#06b6d4"},
+  {name:"ssao",    sizeMB:4,first:2,last:3, color:"#f59e0b"},
+  {name:"hdr",     sizeMB:16,first:3,last:5, color:"#ef4444"},
+  {name:"bloom",   sizeMB:8,first:4,last:5, color:"#ec4899"},
+  {name:"backbuf", sizeMB:8,first:5,last:5, color:"#22c55e"}
+];
+
+function overlaps(a,b){return a.first<=b.last&&b.first<=a.last;}
+
+function computeAliasing(){
+  const blocks=[];
+  const assignment=new Array(resources.length).fill(-1);
+  resources.forEach((r,i)=>{
+    let placed=false;
+    for(let b=0;b<blocks.length;b++){
+      const canFit=blocks[b].every(j=>!overlaps(resources[j],r));
+      if(canFit&&blocks[b].reduce((m,j)=>Math.max(m,resources[j].sizeMB),0)>=r.sizeMB){
+        // fits in existing block (largest resource determines block size)
+        blocks[b].push(i);assignment[i]=b;placed=true;break;
+      }
+    }
+    if(!placed){
+      // try to reuse block if no overlap even if block must grow
+      for(let b=0;b<blocks.length;b++){
+        const canFit=blocks[b].every(j=>!overlaps(resources[j],r));
+        if(canFit){blocks[b].push(i);assignment[i]=b;placed=true;break;}
+      }
+    }
+    if(!placed){blocks.push([i]);assignment[i]=blocks.length-1;}
+  });
+  return{blocks,assignment};
+}
+
+let aliasOn=false;
+const canvas=document.getElementById("alias-canvas");
+const ctx=canvas.getContext("2d");
+
+function isDark(){
+  return document.documentElement.classList.contains("dark")||
+         document.documentElement.classList.contains("scheme-congo");
+}
+
+function draw(){
+  const W=canvas.width,H=canvas.height;
+  const bg=isDark()?"#1a1a2e":"#ffffff";
+  const textC=isDark()?"#e5e5e5":"#1e1e1e";
+  const gridC=isDark()?"#333":"#e5e5e5";
+  const mutedC=isDark()?"#888":"#999";
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+
+  const left=90,top=40,right=W-30,bottom=H-40;
+  const colW=(right-left)/passes.length;
+
+  // Grid + pass labels
+  ctx.textAlign="center";ctx.font="bold 11px ui-monospace,monospace";
+  passes.forEach((p,i)=>{
+    const x=left+i*colW+colW/2;
+    ctx.fillStyle=mutedC;ctx.fillText(p,x,top-12);
+    ctx.strokeStyle=gridC;ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(left+i*colW,top);ctx.lineTo(left+i*colW,bottom);ctx.stroke();
+  });
+  ctx.beginPath();ctx.moveTo(right,top);ctx.lineTo(right,bottom);ctx.stroke();
+
+  let info;
+  if(aliasOn){
+    info=computeAliasing();
+  }else{
+    info={blocks:resources.map((_,i)=>[i]),assignment:resources.map((_,i)=>i)};
+  }
+
+  const rowCount=aliasOn?info.blocks.length:resources.length;
+  const rowH=Math.min(30,Math.floor((bottom-top-10)/rowCount));
+  const gap=4;
+
+  // Draw resource bars
+  ctx.textAlign="right";ctx.font="11px ui-monospace,monospace";
+
+  if(aliasOn){
+    // Draw by block
+    info.blocks.forEach((block,b)=>{
+      const y=top+8+b*(rowH+gap);
+      const blockSize=block.reduce((m,j)=>Math.max(m,resources[j].sizeMB),0);
+      // Block label
+      ctx.fillStyle=mutedC;
+      ctx.textAlign="right";
+      ctx.fillText("block"+b+" ("+blockSize+"MB)",left-6,y+rowH/2+4);
+      // Draw each resource in this block
+      block.forEach(ri=>{
+        const r=resources[ri];
+        const x1=left+r.first*colW+3;
+        const x2=left+(r.last+1)*colW-3;
+        ctx.globalAlpha=0.85;
+        ctx.fillStyle=r.color;
+        roundRect(ctx,x1,y,x2-x1,rowH,4);ctx.fill();
+        ctx.globalAlpha=1;
+        // Label
+        ctx.fillStyle="#fff";ctx.font="bold 10px ui-monospace,monospace";
+        ctx.textAlign="center";
+        ctx.fillText(r.name+" ("+r.sizeMB+"MB)",(x1+x2)/2,y+rowH/2+4);
+      });
+    });
+  }else{
+    resources.forEach((r,i)=>{
+      const y=top+8+i*(rowH+gap);
+      ctx.fillStyle=mutedC;ctx.textAlign="right";ctx.font="11px ui-monospace,monospace";
+      ctx.fillText(r.name+" ("+r.sizeMB+"MB)",left-6,y+rowH/2+4);
+      const x1=left+r.first*colW+3;
+      const x2=left+(r.last+1)*colW-3;
+      ctx.globalAlpha=0.85;ctx.fillStyle=r.color;
+      roundRect(ctx,x1,y,x2-x1,rowH,4);ctx.fill();
+      ctx.globalAlpha=1;
+      ctx.fillStyle="#fff";ctx.font="bold 10px ui-monospace,monospace";
+      ctx.textAlign="center";
+      ctx.fillText(r.name,(x1+x2)/2,y+rowH/2+4);
+    });
+  }
+
+  // VRAM counter
+  const totalMB=resources.reduce((s,r)=>s+r.sizeMB,0);
+  let usedMB;
+  if(aliasOn){
+    usedMB=info.blocks.reduce((s,block)=>s+block.reduce((m,j)=>Math.max(m,resources[j].sizeMB),0),0);
+  }else{
+    usedMB=totalMB;
+  }
+  const vramEl=document.getElementById("alias-vram");
+  const pct=Math.round((1-usedMB/totalMB)*100);
+  if(aliasOn&&pct>0){
+    vramEl.className="alias-vram saving";
+    vramEl.textContent="VRAM: "+usedMB+" MB (saved "+pct+"% vs "+totalMB+" MB)";
+  }else{
+    vramEl.className="alias-vram no-save";
+    vramEl.textContent="VRAM: "+usedMB+" MB (no aliasing)";
+  }
+}
+
+function roundRect(c,x,y,w,h,r){
+  c.beginPath();c.moveTo(x+r,y);c.lineTo(x+w-r,y);c.quadraticCurveTo(x+w,y,x+w,y+r);
+  c.lineTo(x+w,y+h-r);c.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  c.lineTo(x+r,y+h);c.quadraticCurveTo(x,y+h,x,y+h-r);
+  c.lineTo(x,y+r);c.quadraticCurveTo(x,y,x+r,y);c.closePath();
+}
+
+function buildLegend(){
+  const el=document.getElementById("alias-legend");
+  el.innerHTML=resources.map(r=>`<span class="alias-legend-item"><span class="alias-legend-swatch" style="background:${r.color}"></span>${r.name}</span>`).join("");
+}
+
+window.aliasToggle=function(on){aliasOn=on;draw();};
+window.aliasReset=function(){aliasOn=false;document.getElementById("alias-check").checked=false;draw();};
+
+// Handle DPI scaling
+function resizeCanvas(){
+  const rect=canvas.getBoundingClientRect();
+  const dpr=window.devicePixelRatio||1;
+  canvas.width=rect.width*dpr;
+  canvas.height=310*dpr;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  // virtual coords stay same as CSS size
+  canvas.style.height="310px";
+  draw();
+}
+
+buildLegend();
+// Use requestAnimationFrame to ensure layout is ready
+requestAnimationFrame(()=>{resizeCanvas();});
+window.addEventListener("resize",()=>{requestAnimationFrame(resizeCanvas);});
+
+// Re-draw on theme change
+const obs=new MutationObserver(()=>{draw();});
+obs.observe(document.documentElement,{attributes:true,attributeFilter:["class"]});
+})();
+</script>

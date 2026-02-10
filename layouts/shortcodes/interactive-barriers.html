@@ -1,0 +1,192 @@
+{{/* Interactive Barrier State Table — step through passes and watch barriers fire */}}
+<div class="interactive-widget" id="barrier-widget">
+  <div class="widget-header">
+    <span class="widget-icon">🔬</span>
+    <span class="widget-title">Interactive: Automatic Barrier Insertion</span>
+    <p class="widget-hint">Step through execution. Watch resource states change and barriers fire automatically.</p>
+  </div>
+  <div class="widget-body">
+    <div class="barrier-pass-bar" id="barrier-passes"></div>
+    <table class="barrier-table">
+      <thead>
+        <tr>
+          <th>Resource</th>
+          <th>Format</th>
+          <th>Current State</th>
+          <th>Barrier</th>
+        </tr>
+      </thead>
+      <tbody id="barrier-tbody"></tbody>
+    </table>
+    <div class="barrier-log" id="barrier-log"></div>
+    <div class="widget-btn-row">
+      <button class="widget-btn widget-btn-primary" id="barrier-next" onclick="barrierNext()">Next Pass ▶</button>
+      <button class="widget-btn" onclick="barrierReset()">Reset</button>
+    </div>
+  </div>
+</div>
+
+<style>
+.barrier-pass-bar{display:flex;gap:.35em;margin-bottom:1em;flex-wrap:wrap}
+.barrier-pass-pill{padding:.3em .7em;border-radius:.375rem;font-family:ui-monospace,monospace;font-size:.78em;font-weight:600;border:2px solid transparent;background:var(--color-neutral-200,#e5e5e5);color:var(--color-neutral-600)}
+:is(.dark,.scheme-congo) .barrier-pass-pill{background:var(--color-neutral-700);color:var(--color-neutral-300)}
+.barrier-pass-pill.done{background:#22c55e;color:#fff;border-color:#16a34a}
+.barrier-pass-pill.current{background:#3b82f6;color:#fff;border-color:#2563eb;animation:bpulse .8s ease-in-out infinite alternate}
+@keyframes bpulse{to{box-shadow:0 0 8px rgba(59,130,246,.5)}}
+.barrier-table{width:100%;border-collapse:collapse;font-family:ui-monospace,monospace;font-size:.8em;margin:.75em 0}
+.barrier-table th{text-align:left;padding:.35em .5em;border-bottom:2px solid var(--color-neutral-300,#d4d4d4);font-size:.75em;text-transform:uppercase;letter-spacing:.05em;opacity:.7}
+:is(.dark,.scheme-congo) .barrier-table th{border-color:var(--color-neutral-600)}
+.barrier-table td{padding:.4em .5em;border-bottom:1px solid var(--color-neutral-200,#e5e5e5);transition:background .3s}
+:is(.dark,.scheme-congo) .barrier-table td{border-color:var(--color-neutral-700)}
+.barrier-table tr.transition td{background:rgba(59,130,246,.12)}
+.barrier-table .state-badge{display:inline-block;padding:.15em .5em;border-radius:.25rem;font-weight:600;font-size:.9em}
+.state-undefined{background:#6b7280;color:#fff}
+.state-color{background:#22c55e;color:#fff}
+.state-depth{background:#8b5cf6;color:#fff}
+.state-shader{background:#f59e0b;color:#fff}
+.state-present{background:#ef4444;color:#fff}
+.barrier-arrow{font-weight:700;color:#3b82f6;margin:0 .3em}
+.barrier-log{font-family:ui-monospace,monospace;font-size:.78em;max-height:120px;overflow-y:auto;padding:.5em;margin:.5em 0;border:1px solid var(--color-neutral-200,#e5e5e5);border-radius:.375rem;background:var(--color-neutral-100,#f5f5f5)}
+:is(.dark,.scheme-congo) .barrier-log{background:var(--color-neutral-900);border-color:var(--color-neutral-700)}
+.barrier-log-entry{margin:.2em 0;line-height:1.5}
+.barrier-log-entry.barrier-fired{color:#3b82f6;font-weight:600}
+</style>
+
+<script>
+(function(){
+const resources=[
+  {name:"depth",fmt:"D32F",state:"Undefined"},
+  {name:"gbufAlbedo",fmt:"RGBA8",state:"Undefined"},
+  {name:"gbufNormals",fmt:"RGBA8",state:"Undefined"},
+  {name:"ssaoResult",fmt:"R8",state:"Undefined"},
+  {name:"hdr",fmt:"RGBA16F",state:"Undefined"},
+  {name:"backbuffer",fmt:"RGBA8",state:"Undefined"}
+];
+const passOrder=[
+  {name:"DepthPrepass",writes:[0],reads:[],desc:"Writes depth buffer"},
+  {name:"GBuffer",reads:[0],writes:[1,2],desc:"Reads depth, writes albedo + normals"},
+  {name:"SSAO",reads:[2],writes:[3],desc:"Reads normals, writes SSAO result"},
+  {name:"Lighting",reads:[1,2,3],writes:[4],desc:"Reads albedo + normals + SSAO, writes HDR"},
+  {name:"Tonemap",reads:[4],writes:[5],desc:"Reads HDR, writes backbuffer"},
+  {name:"Present",reads:[5],writes:[],desc:"Present backbuffer to screen"}
+];
+
+function stateFor(isWrite,fmt){
+  if(!isWrite)return"ShaderRead";
+  if(fmt==="D32F")return"DepthAttachment";
+  return"ColorAttachment";
+}
+function stateClass(s){
+  if(s==="Undefined")return"state-undefined";
+  if(s.includes("Color"))return"state-color";
+  if(s.includes("Depth"))return"state-depth";
+  if(s.includes("Shader"))return"state-shader";
+  if(s==="Present")return"state-present";
+  return"state-undefined";
+}
+function apiCall(oldS,newS){
+  const vk={
+    "Undefined→DepthAttachment":"vkCmdPipelineBarrier: TOP_OF_PIPE → EARLY_FRAGMENT_TESTS",
+    "Undefined→ColorAttachment":"vkCmdPipelineBarrier: TOP_OF_PIPE → COLOR_ATTACHMENT_OUTPUT",
+    "DepthAttachment→ShaderRead":"vkCmdPipelineBarrier: LATE_FRAGMENT_TESTS → FRAGMENT_SHADER",
+    "ColorAttachment→ShaderRead":"vkCmdPipelineBarrier: COLOR_ATTACHMENT_OUTPUT → FRAGMENT_SHADER",
+    "ShaderRead→ColorAttachment":"vkCmdPipelineBarrier: FRAGMENT_SHADER → COLOR_ATTACHMENT_OUTPUT",
+    "Undefined→ShaderRead":"vkCmdPipelineBarrier: TOP_OF_PIPE → FRAGMENT_SHADER",
+    "ColorAttachment→Present":"vkCmdPipelineBarrier: COLOR_ATTACHMENT_OUTPUT → BOTTOM_OF_PIPE"
+  };
+  return vk[oldS+"→"+newS]||"barrier: "+oldS+" → "+newS;
+}
+
+let currentStep,logEntries,transitions;
+
+function init(){
+  resources.forEach(r=>r.state="Undefined");
+  currentStep=-1;logEntries=[];transitions={};
+  renderPasses();renderTable();renderLog();
+  document.getElementById("barrier-next").disabled=false;
+}
+
+function renderPasses(){
+  const bar=document.getElementById("barrier-passes");
+  bar.innerHTML="";
+  passOrder.forEach((p,i)=>{
+    const pill=document.createElement("span");
+    pill.className="barrier-pass-pill"+(i<currentStep?" done":"")+(i===currentStep?" current":"");
+    pill.textContent=p.name;
+    bar.append(pill);
+  });
+}
+
+function renderTable(){
+  const tbody=document.getElementById("barrier-tbody");
+  tbody.innerHTML="";
+  resources.forEach((r,i)=>{
+    const tr=document.createElement("tr");
+    if(transitions[i])tr.className="transition";
+    const tdName=document.createElement("td");tdName.textContent=r.name;
+    const tdFmt=document.createElement("td");tdFmt.textContent=r.fmt;
+    const tdState=document.createElement("td");
+    const badge=document.createElement("span");
+    badge.className="state-badge "+stateClass(r.state);
+    badge.textContent=r.state;
+    tdState.append(badge);
+    const tdBarrier=document.createElement("td");
+    if(transitions[i]){
+      tdBarrier.innerHTML=`<span class="state-badge ${stateClass(transitions[i].from)}">${transitions[i].from}</span>`+
+        `<span class="barrier-arrow">→</span>`+
+        `<span class="state-badge ${stateClass(transitions[i].to)}">${transitions[i].to}</span>`;
+    }else{
+      tdBarrier.textContent="—";
+    }
+    tr.append(tdName,tdFmt,tdState,tdBarrier);
+    tbody.append(tr);
+  });
+}
+
+function renderLog(){
+  const log=document.getElementById("barrier-log");
+  log.innerHTML=logEntries.length?logEntries.map(e=>`<div class="barrier-log-entry${e.barrier?" barrier-fired":""}">${e.text}</div>`).join(""):"<em>Step through passes to see barriers.</em>";
+  log.scrollTop=log.scrollHeight;
+}
+
+window.barrierNext=function(){
+  currentStep++;
+  if(currentStep>=passOrder.length){
+    document.getElementById("barrier-next").disabled=true;
+    logEntries.push({text:"✓ Frame complete. "+logEntries.filter(e=>e.barrier).length+" barriers inserted automatically.",barrier:false});
+    transitions={};renderPasses();renderTable();renderLog();return;
+  }
+  const pass=passOrder[currentStep];
+  transitions={};
+  logEntries.push({text:`── ${pass.name}: ${pass.desc}`,barrier:false});
+
+  // Process reads
+  pass.reads.forEach(ri=>{
+    const needed=stateFor(false,resources[ri].fmt);
+    if(resources[ri].state!==needed){
+      const old=resources[ri].state;
+      transitions[ri]={from:old,to:needed};
+      logEntries.push({text:`  ⚡ barrier: ${resources[ri].name} ${old} → ${needed}`,barrier:true});
+      logEntries.push({text:`    ${apiCall(old,needed)}`,barrier:false});
+      resources[ri].state=needed;
+    }
+  });
+  // Process writes
+  pass.writes.forEach(wi=>{
+    const needed=currentStep===5?"Present":stateFor(true,resources[wi].fmt);
+    if(resources[wi].state!==needed){
+      const old=resources[wi].state;
+      transitions[wi]={from:old,to:needed};
+      logEntries.push({text:`  ⚡ barrier: ${resources[wi].name} ${old} → ${needed}`,barrier:true});
+      logEntries.push({text:`    ${apiCall(old,needed)}`,barrier:false});
+      resources[wi].state=needed;
+    }
+  });
+
+  renderPasses();renderTable();renderLog();
+};
+
+window.barrierReset=init;
+init();
+})();
+</script>

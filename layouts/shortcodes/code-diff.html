@@ -1,0 +1,18 @@
+{{/* code-diff shortcode: shows a diff view with red/green highlighting */}}
+{{ $title := .Get "title" | default "Diff" }}
+<div class="code-diff">
+  <div class="cd-title">{{ $title }}</div>
+  {{ $raw := .Inner }}
+  {{ $lines := split $raw "\n" }}
+  {{ range $lines }}
+    {{ if hasPrefix . "+" }}
+      <div class="cd-line cd-add">{{ . }}</div>
+    {{ else if hasPrefix . "-" }}
+      <div class="cd-line cd-remove">{{ . }}</div>
+    {{ else if hasPrefix . "@" }}
+      <div class="cd-line" style="color:#8b5cf6;font-weight:600;opacity:.8">{{ . }}</div>
+    {{ else }}
+      <div class="cd-line cd-context">{{ . }}</div>
+    {{ end }}
+  {{ end }}
+</div>

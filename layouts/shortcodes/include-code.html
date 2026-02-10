@@ -1,0 +1,252 @@
+{{ $file := .Get "file" }}
+{{ $lang := .Get "lang" | default "cpp" }}
+{{ $previewLines := .Get "preview" | default "8" | int }}
+{{ $compile := .Get "compile" | default "" }}
+{{ $deps := .Get "deps" | default "" }}
+{{ $resource := .Page.Resources.GetMatch $file }}
+{{ if $resource }}
+{{ $lines := split $resource.Content "\n" }}
+{{ $total := len $lines }}
+{{ $previewCount := math.Min $previewLines $total }}
+{{ $previewSlice := first $previewCount $lines }}
+{{ $previewContent := delimit $previewSlice "\n" }}
+{{/* Build compilable source: inline dependency headers so Godbolt gets a single TU */}}
+{{ $fullSource := $resource.Content }}
+{{ if $deps }}
+  {{ $depResource := $.Page.Resources.GetMatch $deps }}
+  {{ if $depResource }}
+    {{ $includeDirective := printf "#include \"%s\"" $deps }}
+    {{ $fullSource = replace $fullSource $includeDirective $depResource.Content }}
+  {{ end }}
+{{ end }}
+<div class="code-block-wrapper">
+  <details class="code-collapse">
+    <summary>
+      <span class="code-collapse-label">{{ $file }} <span class="code-collapse-hint">({{ $total }} lines — click anywhere to expand)</span></span>
+      <div class="code-preview-body">
+        {{ highlight $previewContent $lang "" }}
+        <div class="code-fade-overlay"></div>
+      </div>
+    </summary>
+    {{ highlight $resource.Content $lang "" }}
+  </details>
+  {{ if eq $compile "true" }}
+  <!-- DEBUG: compile is true for {{ $file }} -->
+  <div class="code-actions" data-source="{{ $fullSource | base64Encode }}">
+    <button class="compile-btn" onclick="compileAndRun(this)">▶ Compile &amp; Run</button>
+    <button class="godbolt-btn" onclick="openInGodbolt(this)">↗ Compiler Explorer</button>
+  </div>
+  <pre class="compile-output"></pre>
+  {{ end }}
+</div>{{/* Click-to-collapse: make the expanded code body close the <details> on click */}}
+<script>
+(function(){
+  var details = document.currentScript.previousElementSibling.querySelector('details.code-collapse');
+  if (!details) return;
+  var fullCode = details.querySelector(':scope > .highlight');
+  if (!fullCode) return;
+  fullCode.addEventListener('click', function(e) {
+    // Don't collapse if user is selecting text
+    if (window.getSelection().toString().length > 0) return;
+    details.open = false;
+  });
+})();
+</script>{{ else }}
+{{ errorf "include-code shortcode: file %q not found in page bundle at %s" $file .Page.File.Path }}
+{{ end }}
+{{/* Inject compile helper JS once per page */}}
+{{ if eq $compile "true" }}
+{{ if not (.Page.Store.Get "compileJsInjected") }}
+{{ .Page.Store.Set "compileJsInjected" true }}
+<script>
+(function() {
+  const GODBOLT_API = "https://godbolt.org/api";
+  const COMPILER   = "g141";           // GCC 14.1
+  const STD_FLAG   = "-std=c++17 -O2";
+
+  function getSource(btn) {
+    return atob(btn.closest(".code-actions").dataset.source);
+  }
+
+  // Render compilation output with color-coded sections
+  function renderOutput(el, text) {
+    el.innerHTML = "";
+    // Remove internal markers and split into lines
+    const lines = text.split("\n");
+    let currentSection = "output";
+    lines.forEach(line => {
+      if (line === "\x1b[compiler]") { currentSection = "compiler"; return; }
+      if (line === "\x1b[build-errors]") { currentSection = "error"; return; }
+      if (line === "\x1b[runtime-stderr]") { currentSection = "error"; return; }
+
+      const span = document.createElement("div");
+      span.style.margin = "0";
+      span.style.padding = "1px 0";
+
+      // Color-code based on content patterns
+      if (line.startsWith("===") || line.startsWith("[OK]")) {
+        span.style.color = "#58a6ff";
+        span.style.fontWeight = "bold";
+        span.style.fontSize = "1.05em";
+        span.style.padding = "4px 0";
+      } else if (line.match(/^\[[\d]+\]/)) {
+        span.style.color = "#d2a8ff";
+        span.style.fontWeight = "bold";
+        span.style.borderTop = "1px solid #30363d";
+        span.style.marginTop = "6px";
+        span.style.paddingTop = "6px";
+      } else if (line.includes("barrier:")) {
+        span.style.color = "#ffa657";
+      } else if (line.includes(">> exec:")) {
+        span.style.color = "#7ee787";
+        span.style.fontWeight = "bold";
+      } else if (line.includes("-- skip:") || line.includes("CULLED")) {
+        span.style.color = "#8b949e";
+        span.style.fontStyle = "italic";
+      } else if (line.includes("ALIVE")) {
+        span.style.color = "#7ee787";
+      } else if (line.includes("DEAD")) {
+        span.style.color = "#f85149";
+      } else if (line.startsWith("  -")) {
+        span.style.color = "#c9d1d9";
+        span.style.paddingLeft = "4px";
+      } else if (line.includes("saved") || line.includes("reuse")) {
+        span.style.color = "#7ee787";
+      } else if (line.includes("NEW physical")) {
+        span.style.color = "#79c0ff";
+      } else if (line.includes("Exit code: 0")) {
+        span.style.color = "#7ee787";
+        span.style.fontWeight = "bold";
+        span.style.borderTop = "1px solid #30363d";
+        span.style.marginTop = "4px";
+        span.style.paddingTop = "4px";
+      } else if (line.includes("Exit code:")) {
+        span.style.color = "#f85149";
+        span.style.fontWeight = "bold";
+      } else if (currentSection === "compiler" || currentSection === "error") {
+        span.style.color = "#f85149";
+      } else {
+        span.style.color = "#c9d1d9";
+      }
+
+      span.textContent = line;
+      el.appendChild(span);
+    });
+  }
+
+  window.compileAndRun = async function(btn) {
+    const actions = btn.closest(".code-actions");
+    const output  = actions.nextElementSibling;   // the <pre class="compile-output">
+    const source  = getSource(btn);
+
+    btn.disabled = true;
+    btn.textContent = "⏳ Compiling…";
+    output.style.display = "block";
+    output.textContent = "Sending to Compiler Explorer…\n";
+
+    try {
+      const resp = await fetch(GODBOLT_API + "/compiler/" + COMPILER + "/compile", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify({
+          source: source,
+          options: {
+            userArguments: STD_FLAG,
+            executeParameters: { args: "", stdin: "" },
+            compilerOptions: { executorRequest: true },
+            filters: { execute: true }
+          }
+        })
+      });
+
+      if (!resp.ok) throw new Error("Godbolt returned " + resp.status);
+      const data = await resp.json();
+
+      let text = "";
+
+      // Compilation errors / warnings
+      if (data.stderr && data.stderr.length) {
+        text += "\x1b[compiler]\n";
+        text += data.stderr.map(l => l.text).join("\n") + "\n";
+      }
+      if (data.stdout && data.stdout.length) {
+        text += data.stdout.map(l => l.text).join("\n") + "\n";
+      }
+
+      // Execution output
+      const exec = data.execResult;
+      if (exec) {
+        if (exec.buildResult && exec.buildResult.stderr && exec.buildResult.stderr.length) {
+          text += "\x1b[build-errors]\n";
+          text += exec.buildResult.stderr.map(l => l.text).join("\n") + "\n";
+        }
+        if (exec.stdout && exec.stdout.length) {
+          text += exec.stdout.map(l => l.text).join("\n") + "\n";
+        }
+        if (exec.stderr && exec.stderr.length) {
+          text += "\x1b[runtime-stderr]\n";
+          text += exec.stderr.map(l => l.text).join("\n") + "\n";
+        }
+        if (typeof exec.code === "number") {
+          text += "\n" + (exec.code === 0 ? "Exit code: 0" : "Exit code: " + exec.code) + "\n";
+        }
+      }
+
+      // Render with color-coded output
+      renderOutput(output, text || "(no output)");
+    } catch (e) {
+      output.textContent = "Error: " + e.message + "\nTry opening in Compiler Explorer instead.";
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "▶ Compile & Run";
+    }
+  };
+
+  window.openInGodbolt = async function(btn) {
+    const source = getSource(btn);
+    btn.disabled = true;
+    btn.textContent = "⏳ Opening…";
+
+    try {
+      const state = {
+        sessions: [{
+          id: 1,
+          language: "c++",
+          source: source,
+          compilers: [],
+          executors: [{
+            compiler: { id: COMPILER, options: STD_FLAG },
+            arguments: "",
+            stdin: ""
+          }]
+        }]
+      };
+
+      const resp = await fetch(GODBOLT_API + "/shortener", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify(state)
+      });
+
+      if (!resp.ok) throw new Error("Shortener returned " + resp.status);
+      const data = await resp.json();
+      window.open(data.url, "_blank");
+    } catch (e) {
+      // Fallback: open with source in hash (works for smaller sources)
+      const encoded = encodeURIComponent(source);
+      window.open("https://godbolt.org/#g:!((g:!((g:!((h:codeEditor,i:(filename:'1',fontScale:14,fontUsePx:'0',j:1,lang:c%2B%2B,selection:(endColumn:1,endLineNumber:1,positionColumn:1,positionLineNumber:1,selectionStartColumn:1,selectionStartLineNumber:1,startColumn:1,startLineNumber:1),source:'" + encoded + "'),l:'5',n:'1',o:'C%2B%2B+source+%231',t:'0')),header:(),l:'4',m:50,n:'0',o:'',s:0,t:'0'),(g:!((h:executor,i:(argsPanels:!(),compilationPanelShown:'1',compiler:g141,compilerOutShown:'0',execArgs:'',execStdin:'',fontScale:14,fontUsePx:'0',j:1,lang:c%2B%2B,libs:!(),options:'" + encodeURIComponent(STD_FLAG) + "',source:1,stdinPanelShown:'1',wrap:'1'),l:'5',n:'0',o:'Executor+x86-64+gcc+14.1+(C%2B%2B,+Editor+%231)',t:'0')),k:50,l:'4',m:50,n:'0',o:'',s:0,t:'0')),l:'2',n:'0',o:'',t:'0')),version:4)", "_blank");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "↗ Compiler Explorer";
+    }
+  };
+})();
+</script>
+{{ end }}
+{{ end }}

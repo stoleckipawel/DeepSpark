@@ -1,0 +1,253 @@
+{{/* Interactive Split Barriers — drag BEGIN marker to see GPU overlap */}}
+<div class="interactive-widget" id="split-widget">
+  <div class="widget-header">
+    <span class="widget-icon">🔬</span>
+    <span class="widget-title">Interactive: Split Barriers</span>
+    <p class="widget-hint">A barrier transitions a resource between states (e.g. render target → shader read). A <strong>regular</strong> barrier stalls the GPU at the transition point. A <strong>split</strong> barrier spreads it over a gap — the GPU overlaps other work in between. Drag the <span style="color:#ef4444;font-weight:700">BEGIN</span> marker left to widen the gap.</p>
+  </div>
+  <div class="widget-body">
+    <svg id="split-svg" viewBox="0 0 680 310" style="width:100%;border-radius:.375rem;border:1px solid var(--color-neutral-200,#e5e5e5)"></svg>
+    <div class="split-stats" id="split-stats"></div>
+    <div class="split-explain" id="split-explain"></div>
+    <div class="widget-btn-row">
+      <button class="widget-btn" onclick="splitReset()">Reset</button>
+    </div>
+  </div>
+</div>
+
+<style>
+:is(.dark,.scheme-congo) #split-svg{border-color:var(--color-neutral-700)}
+.split-stats{display:flex;gap:.6em;flex-wrap:wrap;margin-top:.5em;font-family:ui-monospace,monospace;font-size:.8em}
+.split-stat{padding:.3em .6em;border-radius:.25em;font-weight:600}
+.split-stat-bad{background:#ef4444;color:#fff}
+.split-stat-ok{background:#f59e0b;color:#fff}
+.split-stat-good{background:#22c55e;color:#fff}
+.split-stat-neutral{background:var(--color-neutral-200,#e5e5e5);color:var(--color-neutral-700)}
+:is(.dark,.scheme-congo) .split-stat-neutral{background:var(--color-neutral-700);color:var(--color-neutral-300)}
+.split-explain{font-size:.84em;line-height:1.65;margin:.5em 0;padding:.5em .8em;border-radius:.375rem;border-left:3px solid #3b82f6;background:var(--color-neutral-100,#f5f5f5);min-height:2em}
+:is(.dark,.scheme-congo) .split-explain{background:var(--color-neutral-900);border-color:#3b82f6}
+</style>
+
+<script>
+(function(){
+var NS="http://www.w3.org/2000/svg";
+var svg=document.getElementById("split-svg");
+
+// 6 passes with realistic durations (ms), source pass = GBuffer (writes SSAO input),
+// dest pass = Lighting (reads SSAO output). The barrier is for the SSAO result
+// transitioning from ColorAttachment -> ShaderRead between SSAO and Lighting.
+var passes=[
+  {name:"Depth",dur:1.2,color:"#6b7280"},
+  {name:"GBuffer",dur:2.0,color:"#3b82f6"},
+  {name:"SSAO",dur:1.5,color:"#8b5cf6"},
+  {name:"Shadows",dur:2.2,color:"#64748b"},
+  {name:"Lighting",dur:2.5,color:"#f59e0b"},
+  {name:"Tonemap",dur:0.8,color:"#22c55e"}
+];
+
+// The barrier we're splitting: SSAO result (ColorAttachment -> ShaderRead)
+// Source pass: SSAO (index 2), Dest pass: Lighting (index 4)
+// Passes 3 (Shadows) sits between them — perfect gap for split barrier
+var srcPass=2, dstPass=4;
+
+var splitPos=1.0; // 1.0 = regular (begin at boundary), 0.0 = max split (begin right after src)
+var dragging=false;
+
+function isDark(){
+  return document.documentElement.classList.contains("dark")||
+         document.documentElement.classList.contains("scheme-congo");
+}
+
+function el(tag,attrs,text){
+  var e=document.createElementNS(NS,tag);
+  if(attrs){for(var k in attrs)e.setAttribute(k,attrs[k]);}
+  if(text!==undefined)e.textContent=text;return e;
+}
+
+function txt(x,y,text,fill,font,anchor){
+  var t=el("text",{x:x,y:y,fill:fill,"text-anchor":anchor||"start"});
+  t.style.font=font;t.textContent=text;return t;
+}
+
+function render(){
+  while(svg.firstChild)svg.removeChild(svg.firstChild);
+  var dk=isDark();
+  var bg=dk?"#1a1a2e":"#f8fafc";
+  var textC=dk?"#e5e5e5":"#1e293b";
+  var gridC=dk?"#333":"#e2e8f0";
+  var mutedC=dk?"#888":"#94a3b8";
+
+  svg.append(el("rect",{x:0,y:0,width:680,height:310,fill:bg,rx:8}));
+
+  var left=70,right=640,timeY=42,laneH=44;
+  var totalDur=0;passes.forEach(function(p){totalDur+=p.dur;});
+  var scale=(right-left)/totalDur;
+
+  // Defs for arrow markers
+  var defs=el("defs",{});
+  defs.innerHTML='<marker id="split-al" viewBox="0 0 10 10" refX="2" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M10,0 L0,5 L10,10 z" fill="#22c55e"/></marker>'+
+    '<marker id="split-ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#22c55e"/></marker>';
+  svg.prepend(defs);
+
+  // === ROW 1: Regular barrier ===
+  var regY=timeY;
+  svg.append(txt(12,regY+laneH/2+4,"Regular",mutedC,"bold 11px system-ui,sans-serif","start"));
+  var t1=0;
+  passes.forEach(function(p,i){
+    var x=left+t1*scale+1;
+    var w=p.dur*scale-2;
+    svg.append(el("rect",{x:x,y:regY,width:w,height:laneH,rx:5,fill:p.color,opacity:.85}));
+    svg.append(txt(x+w/2,regY+laneH/2+4,p.name,"#fff","bold 11px ui-monospace,monospace","middle"));
+    svg.append(txt(x+w/2,regY+laneH+12,p.dur.toFixed(1)+"ms",mutedC,"10px ui-monospace,monospace","middle"));
+    t1+=p.dur;
+  });
+
+  // Full stall barrier between SSAO and Shadows (regular = at boundary)
+  var regBarrierX=left;
+  for(var bi=0;bi<=srcPass;bi++)regBarrierX+=passes[bi].dur*scale;
+  // Stall indicator
+  var stallW=12;
+  svg.append(el("rect",{x:regBarrierX-stallW/2,y:regY-2,width:stallW,height:laneH+4,fill:"#ef4444",opacity:.25,rx:3}));
+  svg.append(el("line",{x1:regBarrierX,y1:regY-5,x2:regBarrierX,y2:regY+laneH+5,stroke:"#ef4444","stroke-width":3}));
+  svg.append(txt(regBarrierX,regY-8,"STALL",dk?"#f87171":"#ef4444","bold 9px ui-monospace,monospace","middle"));
+
+  // === ROW 2: Split barrier ===
+  var splitY=regY+laneH+40;
+  svg.append(txt(12,splitY+laneH/2+4,"Split",mutedC,"bold 11px system-ui,sans-serif","start"));
+
+  // Compute pass positions
+  var passXs=[];var tx=0;
+  passes.forEach(function(p){passXs.push(left+tx*scale);tx+=p.dur;});
+
+  // Draw passes
+  passes.forEach(function(p,i){
+    var x=passXs[i]+1;
+    var w=p.dur*scale-2;
+    svg.append(el("rect",{x:x,y:splitY,width:w,height:laneH,rx:5,fill:p.color,opacity:.85}));
+    svg.append(txt(x+w/2,splitY+laneH/2+4,p.name,"#fff","bold 11px ui-monospace,monospace","middle"));
+  });
+
+  // Split barrier: BEGIN can slide from right after srcPass ends to just before dstPass starts
+  var srcEnd=passXs[srcPass]+passes[srcPass].dur*scale;
+  var dstStart=passXs[dstPass];
+  var gapWidth=dstStart-srcEnd;
+  // splitPos: 1.0 = begin at dstStart (=regular), 0.0 = begin at srcEnd (max split)
+  var beginX=srcEnd+(dstStart-srcEnd)*splitPos;
+  var endX=dstStart;
+
+  // Overlap shading
+  if(splitPos<0.95){
+    svg.append(el("rect",{x:beginX,y:splitY-2,width:endX-beginX,height:laneH+4,fill:"#22c55e",opacity:.12,rx:4}));
+    // Overlap arrow
+    if(endX-beginX>30){
+      svg.append(el("line",{x1:beginX+8,y1:splitY+laneH+14,x2:endX-8,y2:splitY+laneH+14,stroke:"#22c55e","stroke-width":2,"marker-start":"url(#split-al)","marker-end":"url(#split-ar)"}));
+      svg.append(txt((beginX+endX)/2,splitY+laneH+28,"GPU overlaps here","#22c55e","bold 10px ui-monospace,monospace","middle"));
+    }
+  }
+
+  // BEGIN marker (draggable)
+  svg.append(el("line",{x1:beginX,y1:splitY-8,x2:beginX,y2:splitY+laneH+10,stroke:"#ef4444","stroke-width":2.5,"stroke-dasharray":"4,2"}));
+  svg.append(el("rect",{x:beginX-24,y:splitY+laneH+35,width:48,height:18,rx:4,fill:"#ef4444"}));
+  svg.append(txt(beginX,splitY+laneH+48,"BEGIN","#fff","bold 9px ui-monospace,monospace","middle"));
+
+  // END marker (fixed at destination start)
+  svg.append(el("line",{x1:endX,y1:splitY-8,x2:endX,y2:splitY+laneH+10,stroke:"#3b82f6","stroke-width":2.5,"stroke-dasharray":"4,2"}));
+  svg.append(el("rect",{x:endX-20,y:splitY+laneH+35,width:40,height:18,rx:4,fill:"#3b82f6"}));
+  svg.append(txt(endX,splitY+laneH+48,"END","#fff","bold 9px ui-monospace,monospace","middle"));
+
+  // Drag hit area
+  var dragHit=el("rect",{x:beginX-18,y:splitY-10,width:36,height:laneH+25,fill:"transparent",style:"cursor:ew-resize"});
+  svg.append(dragHit);
+
+  // Transition label
+  var transY=splitY+laneH+70;
+  svg.append(txt(left+(right-left)/2,transY,"Transition: SSAO result — ColorAttachment -> ShaderRead",mutedC,"11px ui-monospace,monospace","middle"));
+
+  // === ROW 3: Timeline comparison ===
+  var cmpY=transY+20;
+  // Regular total time (has stall)
+  var stallMs=0.3; // assumed stall cost
+  var regTotal=totalDur+stallMs;
+  var splitTotal=totalDur; // no stall when fully split
+  var overlapPct=Math.round((1-splitPos)*100);
+
+  var pctSaved=overlapPct>5?((stallMs/regTotal)*100*(overlapPct/100)):0;
+
+  // API callout
+  var apiY=cmpY+18;
+  svg.append(txt(left,apiY,"Vulkan: vkCmdSetEvent2 (begin) / vkCmdWaitEvents2 (end)",mutedC,"10px ui-monospace,monospace","start"));
+  svg.append(txt(left,apiY+14,"D3D12:  BARRIER_FLAG_BEGIN_ONLY / BARRIER_FLAG_END_ONLY",mutedC,"10px ui-monospace,monospace","start"));
+
+  // Drag logic
+  dragHit.addEventListener("mousedown",function(ev){dragging=true;ev.preventDefault();});
+  svg.addEventListener("mousemove",function(ev){
+    if(!dragging)return;
+    var rect=svg.getBoundingClientRect();
+    var svgX=(ev.clientX-rect.left)/rect.width*680;
+    var ratio=(svgX-srcEnd)/(dstStart-srcEnd);
+    splitPos=Math.max(0,Math.min(1,ratio));
+    render();
+  });
+  svg.addEventListener("mouseup",function(){dragging=false;});
+  svg.addEventListener("mouseleave",function(){dragging=false;});
+  dragHit.addEventListener("touchstart",function(ev){dragging=true;ev.preventDefault();},{passive:false});
+  svg.addEventListener("touchmove",function(ev){
+    if(!dragging)return;
+    var touch=ev.touches[0];
+    var rect=svg.getBoundingClientRect();
+    var svgX=(touch.clientX-rect.left)/rect.width*680;
+    var ratio=(svgX-srcEnd)/(dstStart-srcEnd);
+    splitPos=Math.max(0,Math.min(1,ratio));
+    render();
+  },{passive:false});
+  svg.addEventListener("touchend",function(){dragging=false;});
+
+  updateInfo();
+}
+
+function updateInfo(){
+  var overlapPct=Math.round((1-splitPos)*100);
+  var statsEl=document.getElementById("split-stats");
+  var explainEl=document.getElementById("split-explain");
+
+  // Stats badges
+  var badges="";
+  if(overlapPct<5){
+    badges='<span class="split-stat split-stat-bad">Regular barrier — full GPU stall</span>';
+  }else if(overlapPct<50){
+    badges='<span class="split-stat split-stat-ok">Split: '+overlapPct+'% overlap</span>';
+  }else{
+    badges='<span class="split-stat split-stat-good">Split: '+overlapPct+'% overlap</span>';
+  }
+  // Count gap passes
+  var gapPasses=0;
+  for(var i=srcPass+1;i<dstPass;i++)gapPasses++;
+  badges+=' <span class="split-stat split-stat-neutral">Gap: '+gapPasses+' pass'+(gapPasses!==1?"es":"")+'</span>';
+  statsEl.innerHTML=badges;
+
+  // Explanation
+  if(overlapPct<5){
+    explainEl.innerHTML=
+      "<strong>Regular barrier:</strong> The GPU finishes SSAO, <em>stalls</em> while it flushes color caches and invalidates shader-read caches, then starts Shadows. The stall wastes GPU cycles. "+
+      "<strong>Drag the red BEGIN marker left</strong> to split the barrier and see how the GPU can overlap the cache flush with other work.";
+  }else{
+    explainEl.innerHTML=
+      "<strong>Split barrier ("+overlapPct+"% overlap):</strong> BEGIN (flush) fires right after SSAO completes — the GPU starts flushing color attachment caches. "+
+      "Meanwhile, <strong>Shadows</strong> runs in the gap — it doesn't touch the SSAO result, so there's no conflict. "+
+      "END (invalidate) fires just before Lighting, ensuring shader-read caches are ready. "+
+      "<br><br><strong>Result:</strong> The "+gapPasses+" pass"+(gapPasses!==1?"es":"")+" in the gap execute while cache operations happen in the background. "+
+      "The GPU never stalls — the transition cost is fully hidden."+
+      (overlapPct>80?" <strong style='color:#22c55e'>Maximum overlap achieved.</strong>":"");
+  }
+}
+
+window.splitReset=function(){
+  splitPos=1.0;
+  render();
+};
+
+render();
+var obs=new MutationObserver(function(){render();});
+obs.observe(document.documentElement,{attributes:true,attributeFilter:["class"]});
+})();
+</script>

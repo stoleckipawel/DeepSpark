@@ -1,0 +1,567 @@
+{{/* Article Navigation — sticky progress bar + breadcrumb + side rail */}}
+
+<!-- Progress bar + breadcrumb (top) -->
+<div class="anav-top" id="anav-top">
+  <div class="anav-progress-track">
+    <div class="anav-progress-bar" id="anav-progress-bar"></div>
+  </div>
+  <div class="anav-breadcrumb">
+    <span class="anav-bc-root">Frame Graph</span>
+    <span class="anav-bc-sep">›</span>
+    <span class="anav-bc-part" id="anav-bc-part">Part I</span>
+    <span class="anav-bc-sep">›</span>
+    <span class="anav-bc-section" id="anav-bc-section">—</span>
+    <span class="anav-bc-pct" id="anav-bc-pct">0%</span>
+  </div>
+</div>
+
+<!-- Side rail (right) -->
+<div class="anav-rail" id="anav-rail">
+  <div class="anav-rail-inner" id="anav-rail-inner">
+    <div class="anav-rail-title">Navigation</div>
+    <div class="anav-rail-items" id="anav-rail-items"></div>
+    <div class="anav-rail-pct-bottom" id="anav-rail-pct">0% read</div>
+  </div>
+</div>
+
+<!-- Mobile toggle (bottom-right FAB) -->
+<div class="anav-mobile-backdrop" id="anav-mobile-backdrop"></div>
+<button class="anav-mobile-fab" id="anav-mobile-fab" aria-label="Open navigation">☰</button>
+
+<style>
+/* ── Hide Blowfish built-in TOC (backup; also disabled via front matter) ── */
+.toc { display: none !important; }
+
+/* ── Progress bar + breadcrumb (top) ──────────── */
+.anav-top {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 900;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-100%);
+  transition: opacity .3s, transform .3s;
+}
+.anav-top.visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+.anav-progress-track {
+  height: 5px;
+  background: var(--color-neutral-200, #e5e5e5);
+}
+:is(.dark,.scheme-congo) .anav-progress-track {
+  background: var(--color-neutral-700);
+}
+.anav-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  transition: width .15s linear;
+  border-radius: 0 2px 2px 0;
+}
+.anav-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: .4em;
+  padding: .45em 1em;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: .88em;
+  background: rgba(255,255,255,.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--color-neutral-200, #e5e5e5);
+}
+:is(.dark,.scheme-congo) .anav-breadcrumb {
+  background: rgba(23,23,23,.92);
+  border-color: var(--color-neutral-700);
+}
+.anav-bc-root {
+  opacity: .4;
+  font-weight: 600;
+}
+.anav-bc-sep {
+  opacity: .25;
+  font-size: 1.1em;
+}
+.anav-bc-part {
+  color: #3b82f6;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.anav-bc-part:hover { text-decoration: underline; }
+.anav-bc-section {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 400px;
+}
+.anav-bc-pct {
+  margin-left: auto;
+  font-weight: 700;
+  color: #3b82f6;
+  white-space: nowrap;
+  min-width: 3em;
+  text-align: right;
+}
+
+/* ── Side rail ────────────────────────────────── */
+.anav-rail {
+  position: fixed;
+  top: 80px;
+  right: 16px;
+  width: 300px;
+  max-height: calc(100vh - 120px);
+  z-index: 800;
+  opacity: 0;
+  transform: translateX(20px);
+  transition: opacity .3s, transform .3s;
+  pointer-events: none;
+}
+.anav-rail.visible {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
+}
+.anav-rail-inner {
+  background: rgba(255,255,255,.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--color-neutral-200, #e5e5e5);
+  border-radius: .5rem;
+  padding: .5em 0;
+  max-height: calc(100vh - 130px);
+  overflow-y: auto;
+  box-shadow: 0 2px 12px rgba(0,0,0,.06);
+  scrollbar-width: thin;
+}
+:is(.dark,.scheme-congo) .anav-rail-inner {
+  background: rgba(23,23,23,.92);
+  border-color: var(--color-neutral-700);
+  box-shadow: 0 2px 12px rgba(0,0,0,.3);
+}
+.anav-rail-title {
+  padding: .35em .8em;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: .78em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  opacity: .35;
+}
+.anav-rail-items {
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: .82em;
+}
+.anav-rail-part {
+  padding: .4em .8em;
+  font-weight: 700;
+  font-size: 1em;
+  margin-top: .4em;
+  cursor: pointer;
+  transition: color .15s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.anav-rail-part:hover { text-decoration: underline; }
+.anav-rail-part[data-part="0"] { color: #3b82f6; }
+.anav-rail-part[data-part="1"] { color: #8b5cf6; }
+.anav-rail-part[data-part="2"] { color: #22c55e; }
+.anav-rail-part[data-part="3"] { color: #f59e0b; }
+.anav-rail-part[data-part="4"] { color: #ef4444; }
+
+.anav-rail-link {
+  display: block;
+  padding: .3em .8em .3em 1.4em;
+  cursor: pointer;
+  line-height: 1.55;
+  transition: background .12s, color .12s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-left: 2px solid transparent;
+  margin-left: .3em;
+}
+.anav-rail-link:hover {
+  background: rgba(59,130,246,.08);
+}
+.anav-rail-link.active {
+  color: #3b82f6;
+  font-weight: 700;
+  background: rgba(59,130,246,.1);
+  border-left-color: #3b82f6;
+}
+:is(.dark,.scheme-congo) .anav-rail-link:hover {
+  background: rgba(59,130,246,.12);
+}
+:is(.dark,.scheme-congo) .anav-rail-link.active {
+  background: rgba(59,130,246,.15);
+}
+
+.anav-rail-pct-bottom {
+  padding: .5em .8em .3em;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: .78em;
+  font-weight: 700;
+  color: #3b82f6;
+  border-top: 1px solid var(--color-neutral-200, #e5e5e5);
+  margin-top: .3em;
+}
+:is(.dark,.scheme-congo) .anav-rail-pct-bottom {
+  border-color: var(--color-neutral-700);
+}
+
+/* ── Mobile FAB ───────────────────────────────── */
+.anav-mobile-fab {
+  display: none;
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 850;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: none;
+  background: #3b82f6;
+  color: #fff;
+  font-size: 1.5em;
+  cursor: pointer;
+  box-shadow: 0 3px 12px rgba(59,130,246,.4);
+  transition: transform .15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.anav-mobile-fab:hover { transform: scale(1.1); }
+.anav-mobile-fab:active { transform: scale(.95); }
+
+/* ── Mobile overlay backdrop ──────────────────── */
+.anav-mobile-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 799;
+  background: rgba(0,0,0,.35);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+.anav-mobile-backdrop.active { display: block; }
+
+/* ── Responsive ───────────────────────────────── */
+@media (max-width: 1100px) {
+  .anav-rail {
+    display: none;
+    position: fixed;
+    top: auto;
+    bottom: 80px;
+    right: 12px;
+    left: 12px;
+    width: auto;
+    max-height: 65vh;
+    border-radius: .75rem;
+    transform: translateY(20px);
+    transition: opacity .25s, transform .25s;
+  }
+  .anav-rail-inner {
+    border-radius: .75rem;
+    max-height: 65vh;
+    padding: .6em 0;
+  }
+  .anav-rail.anav-rail-open {
+    display: block;
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+  }
+  .anav-rail-title {
+    font-size: .85em;
+    padding: .5em 1em;
+  }
+  .anav-rail-items {
+    font-size: .9em;
+  }
+  .anav-rail-part {
+    padding: .5em 1em;
+    font-size: 1.05em;
+  }
+  .anav-rail-link {
+    padding: .45em 1em .45em 1.6em;
+    line-height: 1.6;
+  }
+  .anav-rail-pct-bottom {
+    font-size: .85em;
+    padding: .6em 1em .4em;
+  }
+  .anav-mobile-fab {
+    display: block;
+  }
+  /* Breadcrumb adjustments for mobile */
+  .anav-breadcrumb {
+    font-size: .78em;
+    padding: .35em .7em;
+    gap: .3em;
+  }
+  .anav-bc-section {
+    max-width: 40vw;
+  }
+  .anav-progress-track {
+    height: 4px;
+  }
+}
+
+@media (max-width: 500px) {
+  .anav-breadcrumb {
+    font-size: .72em;
+    padding: .3em .5em;
+    gap: .2em;
+  }
+  .anav-bc-root {
+    display: none;
+  }
+  .anav-bc-root + .anav-bc-sep {
+    display: none;
+  }
+  .anav-bc-section {
+    max-width: 35vw;
+  }
+  .anav-rail {
+    bottom: 80px;
+    right: 8px;
+    left: 8px;
+  }
+  .anav-rail-link {
+    padding: .5em .8em .5em 1.4em;
+  }
+  .anav-mobile-fab {
+    bottom: 16px;
+    right: 16px;
+  }
+}
+
+/* ── Scroll offset for fixed header ──────────── */
+.anav-top.visible ~ * h1[id],
+.anav-top.visible ~ * h2[id],
+.anav-top.visible ~ * h3[id] {
+  scroll-margin-top: 50px;
+}
+</style>
+
+<script>
+(function(){
+  // Wait for full DOM
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initNav);
+  } else {
+    initNav();
+  }
+
+  function initNav() {
+    var topBar = document.getElementById('anav-top');
+    var rail = document.getElementById('anav-rail');
+    var progressBar = document.getElementById('anav-progress-bar');
+    var bcPart = document.getElementById('anav-bc-part');
+    var bcSection = document.getElementById('anav-bc-section');
+    var bcPct = document.getElementById('anav-bc-pct');
+    var railItems = document.getElementById('anav-rail-items');
+    var railPct = document.getElementById('anav-rail-pct');
+
+    // Find the article container
+    var article = document.querySelector('article') || document.querySelector('.prose') || document.querySelector('main');
+    if (!article) return;
+
+    // Scan headings from the article
+    var headings = article.querySelectorAll('h1, h2, h3');
+    if (headings.length < 3) return;
+
+    // Build structure: parts (h1/#) and sections (h2/##, h3/###)
+    var parts = [];
+    var allSections = []; // flat list for scroll spy
+    var partColors = ['#3b82f6','#8b5cf6','#22c55e','#f59e0b','#ef4444'];
+    var currentPart = -1;
+
+    headings.forEach(function(h) {
+      var level = parseInt(h.tagName.charAt(1));
+      var text = h.textContent.trim();
+      // Skip empty or very short
+      if (text.length < 2) return;
+
+      // Ensure heading has an id for scrolling
+      if (!h.id) {
+        h.id = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/,'');
+      }
+
+      if (level === 1) {
+        // Part-level heading
+        currentPart++;
+        parts.push({ name: text, el: h, id: h.id, sections: [], partIdx: currentPart });
+        allSections.push({ name: text, el: h, id: h.id, partIdx: currentPart, isPart: true });
+      } else if (level === 2) {
+        var entry = { name: text, el: h, id: h.id, partIdx: Math.max(0, currentPart), isPart: false, level: 2 };
+        if (currentPart >= 0) parts[currentPart].sections.push(entry);
+        allSections.push(entry);
+      } else if (level === 3) {
+        var entry3 = { name: text, el: h, id: h.id, partIdx: Math.max(0, currentPart), isPart: false, level: 3 };
+        if (currentPart >= 0) parts[currentPart].sections.push(entry3);
+        allSections.push(entry3);
+      }
+    });
+
+    if (allSections.length < 2) return;
+
+    // Build rail HTML
+    var railHTML = '';
+    parts.forEach(function(p, pi) {
+      var shortName = p.name.split('—')[0].trim();
+      if (shortName.length > 20) shortName = shortName.substring(0, 20) + '…';
+      railHTML += '<div class="anav-rail-part" data-part="' + pi + '" data-target="' + p.id + '">' + shortName + '</div>';
+      p.sections.forEach(function(s) {
+        var indent = s.level === 3 ? 'padding-left:1.8em;font-size:.9em;opacity:.8' : '';
+        var sName = s.name;
+        if (sName.length > 28) sName = sName.substring(0, 28) + '…';
+        railHTML += '<div class="anav-rail-link" data-target="' + s.id + '" style="' + indent + '">' + sName + '</div>';
+      });
+    });
+    railItems.innerHTML = railHTML;
+
+    // Click handlers for rail
+    railItems.querySelectorAll('[data-target]').forEach(function(el) {
+      el.addEventListener('click', function() {
+        var target = document.getElementById(el.getAttribute('data-target'));
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          closeMobileRail();
+        }
+      });
+    });
+
+    // Mobile FAB + backdrop handling
+    var fab = document.getElementById('anav-mobile-fab');
+    var backdrop = document.getElementById('anav-mobile-backdrop');
+
+    function openMobileRail() {
+      rail.classList.add('anav-rail-open');
+      backdrop.classList.add('active');
+      fab.textContent = '✕';
+    }
+    function closeMobileRail() {
+      rail.classList.remove('anav-rail-open');
+      backdrop.classList.remove('active');
+      fab.textContent = '☰';
+    }
+    function toggleMobileRail() {
+      if (rail.classList.contains('anav-rail-open')) {
+        closeMobileRail();
+      } else {
+        openMobileRail();
+      }
+    }
+
+    fab.addEventListener('click', toggleMobileRail);
+    backdrop.addEventListener('click', closeMobileRail);
+
+    // Swipe-down on the mobile rail to close
+    (function() {
+      var startY = 0;
+      var railInner = document.getElementById('anav-rail-inner');
+      railInner.addEventListener('touchstart', function(e) {
+        startY = e.touches[0].clientY;
+      }, { passive: true });
+      railInner.addEventListener('touchend', function(e) {
+        var dy = e.changedTouches[0].clientY - startY;
+        // swipe down > 60px closes
+        if (dy > 60 && railInner.scrollTop <= 0) {
+          closeMobileRail();
+        }
+      }, { passive: true });
+    })();
+
+    // Breadcrumb part click — scroll to part
+    bcPart.addEventListener('click', function() {
+      var partIdx = parseInt(bcPart.getAttribute('data-part') || '0');
+      if (parts[partIdx]) {
+        parts[partIdx].el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+
+    // Show threshold — show nav after scrolling past first heading
+    var showThreshold = 200;
+    var ticking = false;
+
+    function onScroll() {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(function() {
+        ticking = false;
+        updateNav();
+      });
+    }
+
+    function updateNav() {
+      var scrollY = window.scrollY || window.pageYOffset;
+      var docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      var pct = docHeight > 0 ? Math.min(100, Math.round((scrollY / docHeight) * 100)) : 0;
+
+      // Show/hide
+      var show = scrollY > showThreshold;
+      topBar.classList.toggle('visible', show);
+      rail.classList.toggle('visible', show);
+
+      // Progress bar
+      progressBar.style.width = pct + '%';
+      bcPct.textContent = pct + '%';
+      railPct.textContent = pct + '% read';
+
+      // Scroll spy — find current section
+      var currentSection = null;
+      var currentPartIdx = 0;
+      var currentLink = null;
+      var offset = 80; // px from top to count as "in view"
+
+      for (var i = allSections.length - 1; i >= 0; i--) {
+        var rect = allSections[i].el.getBoundingClientRect();
+        if (rect.top <= offset) {
+          currentSection = allSections[i];
+          break;
+        }
+      }
+
+      if (currentSection) {
+        currentPartIdx = currentSection.partIdx;
+
+        // Update breadcrumb
+        if (parts[currentPartIdx]) {
+          var partShort = parts[currentPartIdx].name.split('—')[0].trim();
+          bcPart.textContent = partShort;
+          bcPart.setAttribute('data-part', currentPartIdx);
+          bcPart.style.color = partColors[currentPartIdx] || '#3b82f6';
+        }
+        bcSection.textContent = currentSection.isPart ? '—' : currentSection.name;
+
+        // Update rail active state
+        railItems.querySelectorAll('.anav-rail-link,.anav-rail-part').forEach(function(el) {
+          el.classList.remove('active');
+        });
+        var activeLink = railItems.querySelector('[data-target="' + currentSection.id + '"]');
+        if (activeLink) {
+          activeLink.classList.add('active');
+          // Scroll rail to keep active item visible
+          var railInner = document.getElementById('anav-rail-inner');
+          var linkRect = activeLink.getBoundingClientRect();
+          var railRect = railInner.getBoundingClientRect();
+          if (linkRect.bottom > railRect.bottom || linkRect.top < railRect.top) {
+            activeLink.scrollIntoView({ block: 'nearest' });
+          }
+        }
+      }
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    // Initial update
+    setTimeout(updateNav, 100);
+  }
+})();
+</script>
