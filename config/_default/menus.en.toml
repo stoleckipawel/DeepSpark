@@ -11,26 +11,30 @@
 # ordered by weight from lowest to highest.
 
 [[main]]
-name = "Posts 📝"
+name = "Posts"
+pre = "pencil"
 pageRef = "posts"
+title = "Read articles on rendering architecture and GPU performance"
 weight = 10
 
 [[main]]
-name = "About 👋"
+name = "About"
+pre = "globe"
 pageRef = "about"
+title = "Learn more about the author and this site"
 weight = 20
 
 #[[main]]
 #name = "GitHub"
 #pre = "github"
-#title = "GitHub"
+#title = "GitHub profile"
 #url = "https://github.com/stoleckipawel"
 #weight = 30
 
 [[main]]
 name = "LinkedIn"
 pre = "linkedin"
-title = "LinkedIn"
+title = "Connect on LinkedIn"
 url = "https://www.linkedin.com/in/stoleckirendering/"
 weight = 40
 
