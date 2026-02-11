@@ -1,0 +1,32 @@
+<script>
+(function(){
+  if(typeof IntersectionObserver==='undefined')return;
+
+  /* ── Auto-discover diagram elements and add fg-reveal ── */
+  var autoSelectors=[
+    '.diagram-box','.diagram-bars','.diagram-flow','.diagram-card',
+    '.diagram-tree','.diagram-steps','.diagram-bitset','.diagram-tiles',
+    '.diagram-warn','.diagram-spectrum','.diagram-phases','.diagram-ftable',
+    '.diagram-struct'
+  ];
+  autoSelectors.forEach(function(sel){
+    document.querySelectorAll(sel).forEach(function(el){
+      if(!el.classList.contains('fg-reveal'))el.classList.add('fg-reveal');
+    });
+  });
+
+  /* ── Observe all fg-reveal and fg-compare elements ── */
+  var observer=new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting){
+        e.target.classList.add('visible');
+        observer.unobserve(e.target);
+      }
+    });
+  },{threshold:0.12,rootMargin:'0px 0px -30px 0px'});
+
+  document.querySelectorAll('.fg-reveal,.fg-compare,.fg-connector,.fg-grid-stagger').forEach(function(el){
+    observer.observe(el);
+  });
+})();
+</script>

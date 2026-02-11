@@ -21,7 +21,7 @@ showTableOfContents: false
 
 ## 🎯 Why You Want One
 
-<div style="margin:1.2em 0 1.5em;padding:1.3em 1.5em;border-radius:12px;border:1.5px solid rgba(99,102,241,.18);background:linear-gradient(135deg,rgba(99,102,241,.04),rgba(34,197,94,.03));">
+<div class="fg-reveal" style="margin:1.2em 0 1.5em;padding:1.3em 1.5em;border-radius:12px;border:1.5px solid rgba(99,102,241,.18);background:linear-gradient(135deg,rgba(99,102,241,.04),rgba(34,197,94,.03));">
   <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:.3em .8em;align-items:center;font-size:1em;line-height:1.6;">
     <span style="text-decoration:line-through;opacity:.4;text-align:right;">Passes run in whatever order you wrote them.</span>
     <span style="opacity:.35;">→</span>
@@ -40,7 +40,7 @@ showTableOfContents: false
 
 Frostbite introduced it at GDC 2017. UE5 ships it as **RDG**. Unity has its own in SRP. Every major renderer uses one — this series shows you why, walks you through building your own in C++, and maps every piece to what ships in production engines.
 
-<div style="margin:1.5em 0;border-radius:12px;overflow:hidden;border:1.5px solid rgba(99,102,241,.25);background:linear-gradient(135deg,rgba(99,102,241,.04),transparent);">
+<div class="fg-reveal" style="margin:1.5em 0;border-radius:12px;overflow:hidden;border:1.5px solid rgba(99,102,241,.25);background:linear-gradient(135deg,rgba(99,102,241,.04),transparent);">
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0;">
     <div style="padding:1em;text-align:center;border-right:1px solid rgba(99,102,241,.12);border-bottom:1px solid rgba(99,102,241,.12);">
       <div style="font-size:1.6em;margin-bottom:.15em;">�</div>
@@ -66,10 +66,10 @@ If you've watched VRAM spike from non-overlapping textures or chased a black scr
 
 ## 🔥 The Problem
 
-<div style="position:relative;margin:1.4em 0;padding-left:2.2em;border-left:3px solid var(--color-neutral-300,#d4d4d4);">
+<div class="fg-reveal" style="position:relative;margin:1.4em 0;padding-left:2.2em;border-left:3px solid var(--color-neutral-300,#d4d4d4);">
 
   <div style="margin-bottom:1.6em;">
-    <div style="position:absolute;left:-0.8em;width:1.4em;height:1.4em;border-radius:50%;background:#22c55e;display:flex;align-items:center;justify-content:center;font-size:.7em;color:#fff;font-weight:700;">1</div>
+    <div class="fg-dot-bounce" style="position:absolute;left:-0.8em;width:1.4em;height:1.4em;border-radius:50%;background:#22c55e;display:flex;align-items:center;justify-content:center;font-size:.7em;color:#fff;font-weight:700;">1</div>
     <div style="font-weight:800;font-size:1.05em;color:#22c55e;margin-bottom:.3em;">Month 1 — 3 passes, everything's fine</div>
     <div style="font-size:.92em;line-height:1.6;">
       Depth prepass → GBuffer → lighting. Two barriers, hand-placed. Two textures, both allocated at init. Code is clean, readable, correct.
@@ -80,7 +80,7 @@ If you've watched VRAM spike from non-overlapping textures or chased a black scr
   </div>
 
   <div style="margin-bottom:1.6em;">
-    <div style="position:absolute;left:-0.8em;width:1.4em;height:1.4em;border-radius:50%;background:#f59e0b;display:flex;align-items:center;justify-content:center;font-size:.7em;color:#fff;font-weight:700;">6</div>
+    <div class="fg-dot-bounce" style="position:absolute;left:-0.8em;width:1.4em;height:1.4em;border-radius:50%;background:#f59e0b;display:flex;align-items:center;justify-content:center;font-size:.7em;color:#fff;font-weight:700;">6</div>
     <div style="font-weight:800;font-size:1.05em;color:#f59e0b;margin-bottom:.3em;">Month 6 — 12 passes, cracks appear</div>
     <div style="font-size:.92em;line-height:1.6;">
       Same renderer, now with SSAO, SSR, bloom, TAA, shadow cascades. Three things going wrong simultaneously:
@@ -102,7 +102,7 @@ If you've watched VRAM spike from non-overlapping textures or chased a black scr
   </div>
 
   <div>
-    <div style="position:absolute;left:-0.8em;width:1.4em;height:1.4em;border-radius:50%;background:#ef4444;display:flex;align-items:center;justify-content:center;font-size:.65em;color:#fff;font-weight:700;">18</div>
+    <div class="fg-dot-bounce" style="position:absolute;left:-0.8em;width:1.4em;height:1.4em;border-radius:50%;background:#ef4444;display:flex;align-items:center;justify-content:center;font-size:.65em;color:#fff;font-weight:700;">18</div>
     <div style="font-weight:800;font-size:1.05em;color:#ef4444;margin-bottom:.3em;">Month 18 — 25 passes, nobody touches it</div>
     <div style="font-size:.92em;line-height:1.6;margin-bottom:.5em;">The renderer works, but:</div>
     <div style="display:grid;gap:.4em;">
@@ -181,20 +181,20 @@ A frame graph is a **directed acyclic graph (DAG)** — each node is a render pa
 You don't execute this graph directly. Every frame goes through three steps — first you **declare** all the passes and what they read/write, then the system **compiles** an optimized plan (ordering, memory, barriers), and finally it **executes** the result:
 
 <!-- 3-step lifecycle — distinct style from the DAG above -->
-<div style="margin:.8em auto 1.2em;max-width:560px;">
-  <div style="display:flex;align-items:stretch;gap:0;border-radius:10px;overflow:hidden;border:1.5px solid rgba(99,102,241,.2);">
-    <div style="flex:1;padding:.7em .6em;text-align:center;background:rgba(59,130,246,.06);border-right:1px solid rgba(99,102,241,.12);">
+<div class="fg-reveal" style="margin:.8em auto 1.2em;max-width:560px;">
+  <div class="fg-lifecycle" style="display:flex;align-items:stretch;gap:0;border-radius:10px;overflow:hidden;border:1.5px solid rgba(99,102,241,.2);">
+    <a href="#-the-declare-step" aria-label="Jump to Declare section" style="flex:1;padding:.7em .6em;text-align:center;background:rgba(59,130,246,.06);border-right:1px solid rgba(99,102,241,.12);text-decoration:none;color:inherit;transition:background .2s ease;cursor:pointer;" onmouseover="this.style.background='rgba(59,130,246,.14)'" onmouseout="this.style.background='rgba(59,130,246,.06)'">
       <div style="font-weight:800;font-size:.88em;letter-spacing:.04em;color:#3b82f6;">①&ensp;DECLARE</div>
       <div style="font-size:.75em;opacity:.6;margin-top:.2em;">passes &amp; dependencies</div>
-    </div>
-    <div style="flex:1;padding:.7em .6em;text-align:center;background:rgba(139,92,246,.06);border-right:1px solid rgba(99,102,241,.12);">
+    </a>
+    <a href="#-the-compile-step" aria-label="Jump to Compile section" style="flex:1;padding:.7em .6em;text-align:center;background:rgba(139,92,246,.06);border-right:1px solid rgba(99,102,241,.12);text-decoration:none;color:inherit;transition:background .2s ease;cursor:pointer;" onmouseover="this.style.background='rgba(139,92,246,.14)'" onmouseout="this.style.background='rgba(139,92,246,.06)'">
       <div style="font-weight:800;font-size:.88em;letter-spacing:.04em;color:#8b5cf6;">②&ensp;COMPILE</div>
       <div style="font-size:.75em;opacity:.6;margin-top:.2em;">order · aliases · barriers</div>
-    </div>
-    <div style="flex:1;padding:.7em .6em;text-align:center;background:rgba(34,197,94,.06);">
+    </a>
+    <a href="#-the-execute-step" aria-label="Jump to Execute section" style="flex:1;padding:.7em .6em;text-align:center;background:rgba(34,197,94,.06);text-decoration:none;color:inherit;transition:background .2s ease;cursor:pointer;" onmouseover="this.style.background='rgba(34,197,94,.14)'" onmouseout="this.style.background='rgba(34,197,94,.06)'">
       <div style="font-weight:800;font-size:.88em;letter-spacing:.04em;color:#22c55e;">③&ensp;EXECUTE</div>
       <div style="font-size:.75em;opacity:.6;margin-top:.2em;">record GPU commands</div>
-    </div>
+    </a>
   </div>
 </div>
 
@@ -227,7 +227,7 @@ Each frame starts on the CPU. You register passes, describe the resources they n
   </div>
 </div>
 
-<div style="margin:1.2em 0;padding:1.1em 1.3em;border-radius:10px;border:1.5px dashed rgba(99,102,241,.3);background:rgba(99,102,241,.04);display:flex;align-items:center;gap:1.2em;flex-wrap:wrap;">
+<div class="fg-reveal" style="margin:1.2em 0;padding:1.1em 1.3em;border-radius:10px;border:1.5px dashed rgba(99,102,241,.3);background:rgba(99,102,241,.04);display:flex;align-items:center;gap:1.2em;flex-wrap:wrap;">
   <div style="flex:1;min-width:180px;">
     <div style="font-size:1.15em;font-weight:800;margin:.1em 0;">Handle #3</div>
     <div style="font-size:.82em;opacity:.6;">1920×1080 · RGBA8 · render target</div>
@@ -242,8 +242,8 @@ Each frame starts on the CPU. You register passes, describe the resources they n
 
 When you declare a resource, the graph needs to know one thing: **does it live inside this frame, or does it come from outside?**
 
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:1em;margin:1.2em 0;">
-  <div style="border-radius:10px;border:1.5px solid rgba(59,130,246,.3);overflow:hidden;">
+<div class="fg-grid-stagger" style="display:grid;grid-template-columns:1fr 1fr;gap:1em;margin:1.2em 0;">
+  <div class="fg-hoverable" style="border-radius:10px;border:1.5px solid rgba(59,130,246,.3);overflow:hidden;">
     <div style="padding:.6em .9em;font-weight:800;font-size:.95em;background:rgba(59,130,246,.08);border-bottom:1px solid rgba(59,130,246,.15);color:#3b82f6;">⚡ Transient</div>
     <div style="padding:.7em .9em;font-size:.88em;line-height:1.7;">
       <strong>Lifetime:</strong> single frame<br>
@@ -253,7 +253,7 @@ When you declare a resource, the graph needs to know one thing: **does it live i
       <strong>Examples:</strong> GBuffer MRTs, SSAO scratch, bloom scratch
     </div>
   </div>
-  <div style="border-radius:10px;border:1.5px solid rgba(139,92,246,.3);overflow:hidden;">
+  <div class="fg-hoverable" style="border-radius:10px;border:1.5px solid rgba(139,92,246,.3);overflow:hidden;">
     <div style="padding:.6em .9em;font-weight:800;font-size:.95em;background:rgba(139,92,246,.08);border-bottom:1px solid rgba(139,92,246,.15);color:#8b5cf6;">📌 Imported</div>
     <div style="padding:.7em .9em;font-size:.88em;line-height:1.7;">
       <strong>Lifetime:</strong> across frames<br>
@@ -292,14 +292,13 @@ The declared DAG goes in, an optimized execution plan comes out. Three things ha
   </div>
 </div>
 
-<!-- Visual: the virtual handle from Declare is now resolved -->
-<div style="margin:1.2em 0;display:flex;align-items:center;gap:1em;flex-wrap:wrap;">
+<div class="fg-reveal" style="margin:1.2em 0;display:flex;align-items:center;gap:1em;flex-wrap:wrap;">
   <div style="flex:1;min-width:180px;padding:1em 1.2em;border-radius:10px;border:1.5px dashed rgba(99,102,241,.3);background:rgba(99,102,241,.04);">
     <div style="font-size:1.1em;font-weight:800;">Handle #3</div>
     <div style="font-size:.8em;opacity:.5;">1920×1080 · RGBA8</div>
     <div style="margin-top:.4em;font-size:.75em;padding:.25em .6em;border-radius:6px;background:rgba(245,158,11,.1);color:#f59e0b;font-weight:700;display:inline-block;">virtual</div>
   </div>
-  <div style="font-size:1.4em;opacity:.3;flex-shrink:0;">→</div>
+  <div class="fg-resolve-arrow" style="font-size:1.4em;opacity:.3;flex-shrink:0;">→</div>
   <div style="flex:1;min-width:180px;padding:1em 1.2em;border-radius:10px;border:1.5px solid rgba(34,197,94,.3);background:rgba(34,197,94,.04);">
     <div style="font-size:1.1em;font-weight:800;">Handle #3 <span style="opacity:.35;">→</span> <span style="color:#22c55e;">Pool slot 0</span></div>
     <div style="font-size:.8em;opacity:.5;">shares 8 MB with Handle #7</div>
@@ -337,7 +336,7 @@ The plan is ready — now the GPU gets involved. This phase walks the compiled p
   </div>
 </div>
 
-<div style="margin:1.2em 0;padding:1em 1.2em;border-radius:10px;border:1.5px solid rgba(34,197,94,.2);background:rgba(34,197,94,.04);font-size:.92em;line-height:1.6;">
+<div class="fg-reveal" style="margin:1.2em 0;padding:1em 1.2em;border-radius:10px;border:1.5px solid rgba(34,197,94,.2);background:rgba(34,197,94,.04);font-size:.92em;line-height:1.6;">
   Each execute lambda sees a <strong>fully resolved environment</strong> — barriers already placed, memory already allocated, resources ready to bind. The lambda just records draw calls, dispatches, and copies. All the intelligence lives in the compile step.
 </div>
 
@@ -347,8 +346,8 @@ The plan is ready — now the GPU gets involved. This phase walks the compiled p
 
 How often should the graph recompile? Three approaches, each a valid tradeoff:
 
-<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1em;margin:1.2em 0;">
-  <div style="border-radius:10px;border:1.5px solid #22c55e;overflow:hidden;">
+<div class="fg-grid-stagger" style="display:grid;grid-template-columns:repeat(3,1fr);gap:1em;margin:1.2em 0;">
+  <div class="fg-hoverable" style="border-radius:10px;border:1.5px solid #22c55e;overflow:hidden;">
     <div style="padding:.5em .8em;background:rgba(34,197,94,.1);font-weight:800;font-size:.95em;border-bottom:1px solid rgba(34,197,94,.2);">
       🔄 Dynamic
     </div>
@@ -359,7 +358,7 @@ How often should the graph recompile? Three approaches, each a valid tradeoff:
       <span style="opacity:.6;font-size:.9em;">Used by: Frostbite</span>
     </div>
   </div>
-  <div style="border-radius:10px;border:1.5px solid #3b82f6;overflow:hidden;">
+  <div class="fg-hoverable" style="border-radius:10px;border:1.5px solid #3b82f6;overflow:hidden;">
     <div style="padding:.5em .8em;background:rgba(59,130,246,.1);font-weight:800;font-size:.95em;border-bottom:1px solid rgba(59,130,246,.2);">
       ⚡ Hybrid
     </div>
@@ -370,7 +369,7 @@ How often should the graph recompile? Three approaches, each a valid tradeoff:
       <span style="opacity:.6;font-size:.9em;">Used by: UE5</span>
     </div>
   </div>
-  <div style="border-radius:10px;border:1.5px solid var(--color-neutral-400,#9ca3af);overflow:hidden;">
+  <div class="fg-hoverable" style="border-radius:10px;border:1.5px solid var(--color-neutral-400,#9ca3af);overflow:hidden;">
     <div style="padding:.5em .8em;background:rgba(156,163,175,.1);font-weight:800;font-size:.95em;border-bottom:1px solid rgba(156,163,175,.2);">
       🔒 Static
     </div>
@@ -389,7 +388,7 @@ Most engines use **dynamic** or **hybrid**. The compile is so cheap that caching
 
 ## 💰 The Payoff
 
-<div style="margin:1.2em 0;display:grid;grid-template-columns:1fr 1fr;gap:0;border-radius:10px;overflow:hidden;border:2px solid rgba(99,102,241,.25);box-shadow:0 2px 8px rgba(0,0,0,.08);">
+<div class="fg-compare" style="margin:1.2em 0;display:grid;grid-template-columns:1fr 1fr;gap:0;border-radius:10px;overflow:hidden;border:2px solid rgba(99,102,241,.25);box-shadow:0 2px 8px rgba(0,0,0,.08);">
   <div style="padding:.6em 1em;font-weight:800;font-size:.95em;background:rgba(239,68,68,.1);border-bottom:1.5px solid rgba(99,102,241,.15);border-right:1.5px solid rgba(99,102,241,.15);color:#ef4444;">❌ Without Graph</div>
   <div style="padding:.6em 1em;font-weight:800;font-size:.95em;background:rgba(34,197,94,.1);border-bottom:1.5px solid rgba(99,102,241,.15);color:#22c55e;">✅ With Graph</div>
 
@@ -436,7 +435,7 @@ Most engines use **dynamic** or **hybrid**. The compile is so cheap that caching
   </div>
 </div>
 
-<div style="margin:1.2em 0;padding:.8em 1em;border-radius:8px;background:linear-gradient(135deg,rgba(34,197,94,.06),rgba(59,130,246,.06));border:1px solid rgba(34,197,94,.2);font-size:.92em;line-height:1.6;">
+<div class="fg-reveal" style="margin:1.2em 0;padding:.8em 1em;border-radius:8px;background:linear-gradient(135deg,rgba(34,197,94,.06),rgba(59,130,246,.06));border:1px solid rgba(34,197,94,.2);font-size:.92em;line-height:1.6;">
 🏭 <strong>Not theoretical.</strong> Frostbite reported <strong>50% VRAM reduction</strong> from aliasing at GDC 2017. UE5's RDG ships the same optimization today — every <code>FRDGTexture</code> marked as transient goes through the same aliasing pipeline we build in <a href="/posts/frame-graph-build-it/">Part II</a>.
 </div>
 
@@ -448,12 +447,12 @@ The core graph — scheduling, barriers, aliasing — covers most of what a rend
 
 ### 🔗 Pass Merging
 
-<div style="margin:0 0 1.2em;padding:.85em 1.1em;border-radius:10px;border:1px solid rgba(99,102,241,.15);background:linear-gradient(135deg,rgba(99,102,241,.04),transparent);font-size:.92em;line-height:1.65;">
+<div class="fg-reveal" style="margin:0 0 1.2em;padding:.85em 1.1em;border-radius:10px;border:1px solid rgba(99,102,241,.15);background:linear-gradient(135deg,rgba(99,102,241,.04),transparent);font-size:.92em;line-height:1.65;">
 Every render pass boundary has a cost — the GPU resolves attachments, flushes caches, stores intermediate results to memory, and sets up state for the next pass. When two adjacent passes share the same render targets, that boundary is pure overhead. <strong>Pass merging</strong> fuses compatible passes into a single API render pass, eliminating the round-trip entirely.
 </div>
 
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:1em;margin:1.2em 0">
-  <div style="border-radius:10px;border:1.5px solid rgba(239,68,68,.2);background:rgba(239,68,68,.03);padding:1em 1.1em;">
+<div class="fg-grid-stagger" style="display:grid;grid-template-columns:1fr 1fr;gap:1em;margin:1.2em 0">
+  <div class="fg-hoverable" style="border-radius:10px;border:1.5px solid rgba(239,68,68,.2);background:rgba(239,68,68,.03);padding:1em 1.1em;">
     <div style="font-weight:800;font-size:.85em;text-transform:uppercase;letter-spacing:.04em;color:#ef4444;margin-bottom:.6em;">Without merging</div>
     <div style="font-size:.88em;line-height:1.7;font-family:ui-monospace,monospace;">
       <strong>Pass A</strong> GBuffer<br>
@@ -468,7 +467,7 @@ Every render pass boundary has a cost — the GPU resolves attachments, flushes 
     </div>
     <div style="margin-top:.7em;padding-top:.6em;border-top:1px solid rgba(239,68,68,.12);font-size:.82em;opacity:.7">2 render passes, 1 unnecessary round-trip</div>
   </div>
-  <div style="border-radius:10px;border:1.5px solid rgba(34,197,94,.25);background:rgba(34,197,94,.03);padding:1em 1.1em;">
+  <div class="fg-hoverable" style="border-radius:10px;border:1.5px solid rgba(34,197,94,.25);background:rgba(34,197,94,.03);padding:1em 1.1em;">
     <div style="font-weight:800;font-size:.85em;text-transform:uppercase;letter-spacing:.04em;color:#22c55e;margin-bottom:.6em;">With merging</div>
     <div style="font-size:.88em;line-height:1.7;font-family:ui-monospace,monospace;">
       <strong>Pass A+B</strong> merged<br>
@@ -481,7 +480,7 @@ Every render pass boundary has a cost — the GPU resolves attachments, flushes 
   </div>
 </div>
 
-<div style="margin:1.2em 0;padding:.75em 1em;border-radius:8px;background:rgba(59,130,246,.04);border:1px solid rgba(59,130,246,.1);font-size:.88em;line-height:1.6;">
+<div class="fg-reveal" style="margin:1.2em 0;padding:.75em 1em;border-radius:8px;background:rgba(59,130,246,.04);border:1px solid rgba(59,130,246,.1);font-size:.88em;line-height:1.6;">
 <strong>When can two passes merge?</strong> Three conditions, all required:<br>
 <span style="display:inline-block;width:1.4em;text-align:center;font-weight:700;color:#3b82f6;">①</span> Same render target dimensions<br>
 <span style="display:inline-block;width:1.4em;text-align:center;font-weight:700;color:#3b82f6;">②</span> Second pass reads the first's output at the <strong>current pixel only</strong> (no arbitrary UV sampling)<br>
@@ -610,30 +609,30 @@ Drag the BEGIN marker in the interactive tool below to see how the overlap gap c
 
 Worth it when the gap spans **2+ passes**. If begin and end are adjacent, a split barrier degenerates into a regular barrier with extra API overhead. Vulkan uses `vkCmdSetEvent2` / `vkCmdWaitEvents2`; D3D12 uses `BARRIER_FLAG_BEGIN_ONLY` / `BARRIER_FLAG_END_ONLY`.
 
-<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.6em;margin:1.2em 0;">
-  <div style="border-radius:8px;border:1.5px solid rgba(239,68,68,.2);background:rgba(239,68,68,.03);padding:.7em .8em;text-align:center;">
+<div class="fg-grid-stagger" style="display:grid;grid-template-columns:repeat(4,1fr);gap:.6em;margin:1.2em 0;">
+  <div class="fg-hoverable" style="border-radius:8px;border:1.5px solid rgba(239,68,68,.2);background:rgba(239,68,68,.03);padding:.7em .8em;text-align:center;">
     <div style="font-weight:800;font-size:1.1em;color:#ef4444;">0</div>
     <div style="font-size:.78em;font-weight:600;margin:.2em 0;">passes gap</div>
     <div style="font-size:.78em;opacity:.7;">Regular barrier — no benefit from splitting</div>
   </div>
-  <div style="border-radius:8px;border:1.5px solid rgba(234,179,8,.2);background:rgba(234,179,8,.03);padding:.7em .8em;text-align:center;">
+  <div class="fg-hoverable" style="border-radius:8px;border:1.5px solid rgba(234,179,8,.2);background:rgba(234,179,8,.03);padding:.7em .8em;text-align:center;">
     <div style="font-weight:800;font-size:1.1em;color:#eab308;">1</div>
     <div style="font-size:.78em;font-weight:600;margin:.2em 0;">pass gap</div>
     <div style="font-size:.78em;opacity:.7;">Marginal overlap — maybe worth it</div>
   </div>
-  <div style="border-radius:8px;border:1.5px solid rgba(34,197,94,.25);background:rgba(34,197,94,.03);padding:.7em .8em;text-align:center;">
+  <div class="fg-hoverable" style="border-radius:8px;border:1.5px solid rgba(34,197,94,.25);background:rgba(34,197,94,.03);padding:.7em .8em;text-align:center;">
     <div style="font-weight:800;font-size:1.1em;color:#22c55e;">2+</div>
     <div style="font-size:.78em;font-weight:600;margin:.2em 0;">passes gap</div>
     <div style="font-size:.78em;opacity:.7;">Split — measurable GPU overlap</div>
   </div>
-  <div style="border-radius:8px;border:1.5px solid rgba(99,102,241,.2);background:rgba(99,102,241,.03);padding:.7em .8em;text-align:center;">
+  <div class="fg-hoverable" style="border-radius:8px;border:1.5px solid rgba(99,102,241,.2);background:rgba(99,102,241,.03);padding:.7em .8em;text-align:center;">
     <div style="font-weight:800;font-size:1.1em;color:#6366f1;">⚡</div>
     <div style="font-size:.78em;font-weight:600;margin:.2em 0;">cross-queue</div>
     <div style="font-size:.78em;opacity:.7;">Use a fence instead — can't split across queues</div>
   </div>
 </div>
 
-<div style="margin:1.2em 0;padding:.8em 1em;border-radius:8px;background:linear-gradient(135deg,rgba(34,197,94,.06),rgba(59,130,246,.06));border:1px solid rgba(34,197,94,.2);font-size:.92em;line-height:1.6;">
+<div class="fg-reveal" style="margin:1.2em 0;padding:.8em 1em;border-radius:8px;background:linear-gradient(135deg,rgba(34,197,94,.06),rgba(59,130,246,.06));border:1px solid rgba(34,197,94,.2);font-size:.92em;line-height:1.6;">
 <span style="opacity:.7;font-size:.9em;">That's all the theory. <a href="/posts/frame-graph-build-it/">Part II</a> implements the core (barriers, culling, aliasing) in ~300 lines of C++. <a href="/posts/frame-graph-production/">Part III</a> shows how production engines deploy all of these at scale.</span>
 </div>
 

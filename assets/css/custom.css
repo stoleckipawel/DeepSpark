@@ -1198,6 +1198,361 @@
   line-height: 1.7;
 }
 
+/* ── Article Scroll-Reveal Animations ────────────── */
+
+/* Base: elements start invisible, fade + slide up on scroll */
+.fg-reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.65s ease-out, transform 0.65s ease-out;
+}
+.fg-reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Staggered delays for grouped elements */
+.fg-delay-1 { transition-delay: .1s; }
+.fg-delay-2 { transition-delay: .2s; }
+.fg-delay-3 { transition-delay: .3s; }
+.fg-delay-4 { transition-delay: .4s; }
+.fg-delay-5 { transition-delay: .5s; }
+
+/* ── Flow diagram: nodes cascade left to right ── */
+.diagram-flow.fg-reveal .df-step,
+.diagram-flow.fg-reveal .df-arrow {
+  opacity: 0;
+  transform: translateX(-14px);
+  transition: opacity 0.45s ease-out, transform 0.45s ease-out;
+}
+.diagram-flow.fg-reveal.visible .df-step,
+.diagram-flow.fg-reveal.visible .df-arrow {
+  opacity: 1;
+  transform: translateX(0);
+}
+.diagram-flow.fg-reveal.visible > :nth-child(1) { transition-delay: 0s; }
+.diagram-flow.fg-reveal.visible > :nth-child(2) { transition-delay: .12s; }
+.diagram-flow.fg-reveal.visible > :nth-child(3) { transition-delay: .24s; }
+.diagram-flow.fg-reveal.visible > :nth-child(4) { transition-delay: .36s; }
+.diagram-flow.fg-reveal.visible > :nth-child(5) { transition-delay: .48s; }
+
+/* Arrow pulse — perpetual after appearing */
+@keyframes fg-arrow-pulse {
+  0%, 100% { opacity: .35; }
+  50% { opacity: 1; }
+}
+.diagram-flow.fg-reveal.visible .df-arrow::after {
+  animation: fg-arrow-pulse 2.2s ease-in-out infinite;
+}
+
+/* ── Bar chart: bars grow from left on scroll ── */
+.diagram-bars.fg-reveal .db-bar {
+  transform-origin: left center;
+  transform: scaleX(0);
+  transition: transform 0.75s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.diagram-bars.fg-reveal.visible .db-bar {
+  transform: scaleX(1);
+}
+/* Row stagger — Passes / Barriers / VRAM / Aliasable */
+.diagram-bars.fg-reveal.visible > div:nth-child(n+5):nth-child(-n+7) .db-bar { transition-delay: 0s; }
+.diagram-bars.fg-reveal.visible > div:nth-child(n+8):nth-child(-n+10) .db-bar { transition-delay: .14s; }
+.diagram-bars.fg-reveal.visible > div:nth-child(n+11):nth-child(-n+13) .db-bar { transition-delay: .28s; }
+.diagram-bars.fg-reveal.visible > div:nth-child(n+14):nth-child(-n+16) .db-bar { transition-delay: .42s; }
+
+/* ── Pipeline stages (dp-stage): stagger left-to-right ── */
+.diagram-box.fg-reveal .dp-stage {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+}
+.diagram-box.fg-reveal.visible .dp-stage {
+  opacity: 1;
+  transform: translateY(0);
+}
+.diagram-box.fg-reveal.visible .dp-stage:nth-child(1) { transition-delay: .08s; }
+.diagram-box.fg-reveal.visible .dp-stage:nth-child(2) { transition-delay: .22s; }
+.diagram-box.fg-reveal.visible .dp-stage:nth-child(3) { transition-delay: .36s; }
+
+/* ── Diagram-box entrance glow ── */
+@keyframes fg-box-glow {
+  0%   { box-shadow: 0 0 0 0 rgba(99,102,241,.12); }
+  50%  { box-shadow: 0 0 24px 2px rgba(99,102,241,.08); }
+  100% { box-shadow: none; }
+}
+.diagram-box.fg-reveal.visible {
+  animation: fg-box-glow 1.4s ease-out .35s;
+}
+
+/* ── Split barrier steps: sequential slide ── */
+.diagram-steps.fg-reveal .ds-step {
+  opacity: 0;
+  transform: translateX(-10px);
+  transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+}
+.diagram-steps.fg-reveal.visible .ds-step {
+  opacity: 1;
+  transform: translateX(0);
+}
+.diagram-steps.fg-reveal.visible .ds-step:nth-child(1) { transition-delay: 0s; }
+.diagram-steps.fg-reveal.visible .ds-step:nth-child(2) { transition-delay: .12s; }
+.diagram-steps.fg-reveal.visible .ds-step:nth-child(3) { transition-delay: .22s; }
+.diagram-steps.fg-reveal.visible .ds-step:nth-child(4) { transition-delay: .32s; }
+
+/* ── Decision tree: branches cascade down ── */
+.diagram-tree.fg-reveal .dt-branch {
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+}
+.diagram-tree.fg-reveal.visible .dt-branch {
+  opacity: 1;
+  transform: translateY(0);
+}
+.diagram-tree.fg-reveal.visible > .dt-branch { transition-delay: .12s; }
+.diagram-tree.fg-reveal.visible .dt-branch .dt-branch { transition-delay: .28s; }
+.diagram-tree.fg-reveal.visible .dt-branch .dt-branch .dt-branch { transition-delay: .44s; }
+.diagram-tree.fg-reveal.visible .dt-branch .dt-branch .dt-branch .dt-branch { transition-delay: .6s; }
+
+/* ── Bitset table: row highlight sweep ── */
+@keyframes fg-row-sweep {
+  0%  { background: transparent; }
+  35% { background: rgba(34,197,94,.06); }
+  100% { background: transparent; }
+}
+.diagram-bitset.fg-reveal.visible tr {
+  animation: fg-row-sweep 0.9s ease-out backwards;
+}
+.diagram-bitset.fg-reveal.visible tr:nth-child(2) { animation-delay: .08s; }
+.diagram-bitset.fg-reveal.visible tr:nth-child(3) { animation-delay: .16s; }
+.diagram-bitset.fg-reveal.visible tr:nth-child(4) { animation-delay: .24s; }
+.diagram-bitset.fg-reveal.visible tr:nth-child(5) { animation-delay: .32s; }
+.diagram-bitset.fg-reveal.visible tr:nth-child(6) { animation-delay: .40s; }
+
+/* ── Warning box shimmer ── */
+@keyframes fg-warn-shimmer {
+  0%   { border-left-color: rgba(245,158,11,.3); }
+  50%  { border-left-color: rgba(245,158,11,.7); }
+  100% { border-left-color: rgba(245,158,11,.3); }
+}
+.diagram-warn.fg-reveal.visible {
+  animation: fg-warn-shimmer 2.5s ease-in-out 1;
+}
+
+/* ── Tiles (pass merging comparison): stagger columns ── */
+.diagram-tiles.fg-reveal .dt-col {
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+}
+.diagram-tiles.fg-reveal.visible .dt-col {
+  opacity: 1;
+  transform: translateY(0);
+}
+.diagram-tiles.fg-reveal.visible .dt-col:nth-child(1) { transition-delay: .05s; }
+.diagram-tiles.fg-reveal.visible .dt-col:nth-child(2) { transition-delay: .2s; }
+
+/* ── Comparison table (Without/With): row pairs slide in ── */
+.fg-compare {
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+.fg-compare.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.fg-compare > div {
+  opacity: 0;
+  transform: translateX(-8px);
+  transition: opacity 0.35s ease-out, transform 0.35s ease-out;
+}
+.fg-compare.visible > div {
+  opacity: 1;
+  transform: translateX(0);
+}
+.fg-compare.visible > div:nth-child(-n+2) { transition-delay: .06s; }
+.fg-compare.visible > div:nth-child(n+3):nth-child(-n+4) { transition-delay: .12s; }
+.fg-compare.visible > div:nth-child(n+5):nth-child(-n+6) { transition-delay: .2s; }
+.fg-compare.visible > div:nth-child(n+7):nth-child(-n+8) { transition-delay: .28s; }
+.fg-compare.visible > div:nth-child(n+9):nth-child(-n+10) { transition-delay: .36s; }
+.fg-compare.visible > div:nth-child(n+11):nth-child(-n+12) { transition-delay: .42s; }
+.fg-compare.visible > div:nth-child(n+13) { transition-delay: .48s; }
+
+/* ── Interactive widget markers ── */
+/* Pulsing glow to draw attention */
+.interactive-widget {
+  animation: fg-widget-glow 4s ease-in-out infinite;
+}
+@keyframes fg-widget-glow {
+  0%, 100% { box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+  50%      { box-shadow: 0 2px 24px rgba(99,102,241,.18), 0 0 0 1px rgba(99,102,241,.1); }
+}
+:is(.dark,.scheme-congo) .interactive-widget {
+  animation: fg-widget-glow-dark 4s ease-in-out infinite;
+}
+@keyframes fg-widget-glow-dark {
+  0%, 100% { box-shadow: 0 2px 16px rgba(0,0,0,.25); }
+  50%      { box-shadow: 0 2px 28px rgba(99,102,241,.22), 0 0 0 1px rgba(99,102,241,.12); }
+}
+/* Badge on the header */
+.widget-header {
+  position: relative;
+}
+.widget-header::after {
+  content: '⚡ INTERACTIVE';
+  position: absolute;
+  top: .65em;
+  right: .8em;
+  padding: 2px 9px;
+  border-radius: 5px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  font-size: .62em;
+  font-weight: 800;
+  letter-spacing: .06em;
+  box-shadow: 0 2px 8px rgba(99,102,241,.25);
+  animation: fg-badge-shimmer 3s ease-in-out infinite;
+}
+@keyframes fg-badge-shimmer {
+  0%, 100% { opacity: .85; }
+  50%      { opacity: 1; box-shadow: 0 2px 12px rgba(99,102,241,.4); }
+}
+
+/* Animated border-top gradient on widget header */
+.widget-header {
+  border-top-width: 3px;
+  border-top-style: solid;
+  border-image: linear-gradient(90deg, #3b82f6, #8b5cf6, #22c55e) 1;
+  background-size: 200% 100%;
+}
+
+/* ── Card hover lift effect ── */
+.fg-hoverable {
+  transition: transform .22s ease, box-shadow .22s ease;
+}
+.fg-hoverable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0,0,0,.1);
+}
+:is(.dark,.scheme-congo) .fg-hoverable:hover {
+  box-shadow: 0 6px 20px rgba(0,0,0,.25);
+}
+
+/* ── Lifecycle step shimmer (Declare/Compile/Execute clickable bar) ── */
+@keyframes fg-lifecycle-shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+.fg-lifecycle {
+  position: relative;
+}
+.fg-lifecycle::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,.04) 45%, rgba(255,255,255,.08) 50%, rgba(255,255,255,.04) 55%, transparent 100%);
+  background-size: 200% 100%;
+  animation: fg-lifecycle-shimmer 4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ── Section flow connectors ── */
+.fg-connector {
+  height: 28px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  transition: opacity .6s ease-out;
+}
+.fg-connector.visible {
+  opacity: .2;
+}
+.fg-connector::after {
+  content: '┊';
+  font-size: 1.1em;
+  letter-spacing: .2em;
+  animation: fg-thread-pulse 2.8s ease-in-out infinite;
+}
+@keyframes fg-thread-pulse {
+  0%, 100% { opacity: .25; }
+  50%      { opacity: .75; }
+}
+
+/* ── Month timeline dots: bounce in ── */
+.fg-dot-bounce {
+  opacity: 0;
+  transform: scale(0);
+  transition: opacity 0.35s ease-out, transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.fg-reveal.visible .fg-dot-bounce {
+  opacity: 1;
+  transform: scale(1);
+}
+.fg-reveal.visible .fg-dot-bounce:nth-of-type(1) { transition-delay: .1s; }
+.fg-reveal.visible .fg-dot-bounce:nth-of-type(2) { transition-delay: .3s; }
+.fg-reveal.visible .fg-dot-bounce:nth-of-type(3) { transition-delay: .5s; }
+
+/* ── Grid children stagger (for 2-col and 3-col grids) ── */
+.fg-grid-stagger > * {
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.45s ease-out, transform 0.45s ease-out;
+}
+.fg-grid-stagger.visible > *:nth-child(1) { opacity: 1; transform: translateY(0); transition-delay: .05s; }
+.fg-grid-stagger.visible > *:nth-child(2) { opacity: 1; transform: translateY(0); transition-delay: .15s; }
+.fg-grid-stagger.visible > *:nth-child(3) { opacity: 1; transform: translateY(0); transition-delay: .25s; }
+.fg-grid-stagger.visible > *:nth-child(4) { opacity: 1; transform: translateY(0); transition-delay: .35s; }
+
+/* ── Virtual → Aliased resolution arrow pulse ── */
+@keyframes fg-resolve-pulse {
+  0%, 100% { opacity: .2; transform: scale(1); }
+  50%      { opacity: .5; transform: scale(1.15); }
+}
+.fg-resolve-arrow {
+  animation: fg-resolve-pulse 2.5s ease-in-out infinite;
+}
+
+/* ── Accessibility: honor reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .fg-reveal,
+  .fg-compare,
+  .fg-connector {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+  .diagram-flow.fg-reveal .df-step,
+  .diagram-flow.fg-reveal .df-arrow,
+  .diagram-box.fg-reveal .dp-stage,
+  .diagram-bars.fg-reveal .db-bar,
+  .diagram-steps.fg-reveal .ds-step,
+  .diagram-tree.fg-reveal .dt-branch,
+  .diagram-tiles.fg-reveal .dt-col,
+  .fg-compare > div,
+  .fg-grid-stagger > *,
+  .fg-dot-bounce {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+    animation: none !important;
+  }
+  .diagram-bitset.fg-reveal.visible tr,
+  .diagram-box.fg-reveal.visible,
+  .diagram-warn.fg-reveal.visible,
+  .interactive-widget,
+  :is(.dark,.scheme-congo) .interactive-widget,
+  .widget-header::after,
+  .diagram-flow.fg-reveal.visible .df-arrow::after,
+  .fg-lifecycle::after,
+  .fg-connector::after,
+  .fg-resolve-arrow {
+    animation: none !important;
+  }
+}
+
 /* ── Mobile responsive overrides ──────────────── */
 @media (max-width: 768px) {
   /* Diagram bars: stack into 2 columns on small screens */
