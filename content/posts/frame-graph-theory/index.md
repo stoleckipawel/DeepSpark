@@ -11,6 +11,10 @@ showTableOfContents: false
 
 {{< article-nav >}}
 
+<div style="margin:0 0 1.5em;padding:.7em 1em;border-radius:8px;background:rgba(99,102,241,.04);border:1px solid rgba(99,102,241,.12);font-size:.88em;line-height:1.6;opacity:.85;">
+📖 <strong>Part I of III.</strong>&ensp; <em>Theory</em> → <a href="/posts/frame-graph-build-it/">Build It</a> → <a href="/posts/frame-graph-production/">Production Engines</a>
+</div>
+
 *What a render graph is, what problems it solves, and why every major engine uses one.*
 
 ---
@@ -34,7 +38,7 @@ showTableOfContents: false
   </div>
 </div>
 
-Frostbite introduced it at GDC 2017. UE5 ships it as **RDG**. Unity has its own in SRP. Every major renderer uses one — this article shows you why, and walks you through building your own.
+Frostbite introduced it at GDC 2017. UE5 ships it as **RDG**. Unity has its own in SRP. Every major renderer uses one — this series shows you why, walks you through building your own in C++, and maps every piece to what ships in production engines.
 
 <div style="margin:1.5em 0;border-radius:12px;overflow:hidden;border:1.5px solid rgba(99,102,241,.25);background:linear-gradient(135deg,rgba(99,102,241,.04),transparent);">
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0;">
@@ -434,7 +438,7 @@ Most engines use **dynamic** or **hybrid**. The compile is so cheap that caching
 
 <div style="margin:1.2em 0;padding:.8em 1em;border-radius:8px;background:linear-gradient(135deg,rgba(34,197,94,.06),rgba(59,130,246,.06));border:1px solid rgba(34,197,94,.2);font-size:.92em;line-height:1.6;">
 🏭 <strong>Not theoretical.</strong> Frostbite reported <strong>50% VRAM reduction</strong> from aliasing at GDC 2017. UE5's RDG ships the same optimization today — every <code>FRDGTexture</code> marked as transient goes through the same aliasing pipeline we build in <a href="/posts/frame-graph-build-it/">Part II</a>.<br>
-<span style="opacity:.7;font-size:.9em;">Part II gives you automatic lifetimes + aliasing and automatic barriers. After that, we map everything to UE5's RDG.</span>
+<span style="opacity:.7;font-size:.9em;">Next up: Part II implements all of this in ~300 lines of C++ — automatic barriers, pass culling, and memory aliasing — then maps each piece to UE5's RDG.</span>
 </div>
 
 ---

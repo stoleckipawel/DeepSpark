@@ -26,38 +26,27 @@
           </div>
         </div>
       </div>
-      <div class="topo-right">
+      <div class="topo-bottom-rules">
         <div class="topo-rules" id="topo-rules">
-          <div class="topo-rule-title">Algorithm Rules</div>
           <div class="topo-rule" id="topo-rule-1">
             <div class="topo-rule-num">1</div>
-            <div class="topo-rule-body">
-              <strong>Init:</strong> Count incoming edges per pass. Passes with <strong>0 incoming</strong> edges go to queue.
-            </div>
+            <div class="topo-rule-body"><strong>Init</strong> — count in-edges; 0 → queue</div>
           </div>
           <div class="topo-rule" id="topo-rule-2">
             <div class="topo-rule-num">2</div>
-            <div class="topo-rule-body">
-              <strong>Pop:</strong> Take front of queue → add to sorted output. This pass is <em>scheduled</em>.
-            </div>
+            <div class="topo-rule-body"><strong>Pop</strong> front → sorted output</div>
           </div>
           <div class="topo-rule" id="topo-rule-3">
             <div class="topo-rule-num">3</div>
-            <div class="topo-rule-body">
-              <strong>Consume edges:</strong> Remove all outgoing edges from the popped pass. Decrement each successor's in-degree.
-            </div>
+            <div class="topo-rule-body"><strong>Consume</strong> outgoing edges, decrement successors</div>
           </div>
           <div class="topo-rule" id="topo-rule-4">
             <div class="topo-rule-num">4</div>
-            <div class="topo-rule-body">
-              <strong>Check:</strong> Any successor now at in-degree <strong>0</strong>? → add to queue (all its deps are satisfied).
-            </div>
+            <div class="topo-rule-body"><strong>Enqueue</strong> successors at in-degree 0</div>
           </div>
           <div class="topo-rule" id="topo-rule-5">
             <div class="topo-rule-num">5</div>
-            <div class="topo-rule-body">
-              <strong>Repeat</strong> from rule 2 until queue is empty. If output &lt; pass count → <span style="color:#ef4444">cycle detected</span>.
-            </div>
+            <div class="topo-rule-body"><strong>Repeat</strong> 2–4; output &lt; passes → <span style="color:#ef4444">cycle</span></div>
           </div>
         </div>
       </div>
@@ -71,22 +60,23 @@
 </div>
 
 <style>
-.topo-layout{display:flex;gap:1em;align-items:flex-start;flex-wrap:wrap}
-.topo-left{flex:1;min-width:320px}
-.topo-right{width:240px;flex-shrink:0}
-@media(max-width:700px){.topo-right{width:100%}}
+.topo-layout{display:flex;flex-direction:column;gap:.75em}
+.topo-left{width:100%}
+.topo-bottom-rules{width:100%}
+.topo-rules{display:grid;grid-template-columns:repeat(5,1fr);gap:0;border:1px solid var(--color-neutral-300,#d4d4d4);border-radius:.5rem;overflow:hidden;font-size:.78em}
+:is(.dark,.scheme-congo) .topo-rules{border-color:var(--color-neutral-700)}
+@media(max-width:700px){.topo-rules{grid-template-columns:1fr;}}
+.topo-rule{display:flex;gap:.4em;padding:.45em .6em;border-right:1px solid var(--color-neutral-200,#e5e5e5);transition:background .3s,border-color .3s;line-height:1.4;align-items:flex-start}
+:is(.dark,.scheme-congo) .topo-rule{border-color:var(--color-neutral-800)}
+.topo-rule:last-child{border-right:none}
+@media(max-width:700px){.topo-rule{border-right:none;border-bottom:1px solid var(--color-neutral-200,#e5e5e5)}.topo-rule:last-child{border-bottom:none}}
 .topo-state-bar{display:flex;gap:.75em;flex-wrap:wrap;font-family:ui-monospace,monospace;font-size:.78em;margin-top:.3em}
 .topo-state-section{display:flex;align-items:baseline;gap:.4em}
 .topo-state-label{font-weight:700;opacity:.5;text-transform:uppercase;font-size:.8em;letter-spacing:.05em}
 .topo-state-value{font-weight:600}
 .topo-rules{border:1px solid var(--color-neutral-300,#d4d4d4);border-radius:.5rem;overflow:hidden;font-size:.78em}
 :is(.dark,.scheme-congo) .topo-rules{border-color:var(--color-neutral-700)}
-.topo-rule-title{padding:.4em .7em;font-weight:700;font-size:.85em;text-transform:uppercase;letter-spacing:.06em;opacity:.5;background:var(--color-neutral-100,#f5f5f5);border-bottom:1px solid var(--color-neutral-200,#e5e5e5)}
-:is(.dark,.scheme-congo) .topo-rule-title{background:var(--color-neutral-900);border-color:var(--color-neutral-700)}
-.topo-rule{display:flex;gap:.5em;padding:.45em .7em;border-bottom:1px solid var(--color-neutral-200,#e5e5e5);transition:background .3s,border-color .3s;line-height:1.5}
-:is(.dark,.scheme-congo) .topo-rule{border-color:var(--color-neutral-800)}
-.topo-rule:last-child{border-bottom:none}
-.topo-rule-num{width:20px;height:20px;border-radius:50%;background:var(--color-neutral-300,#d4d4d4);color:var(--color-neutral-700);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85em;flex-shrink:0;margin-top:1px;transition:background .3s,color .3s}
+.topo-rule-num{width:18px;height:18px;border-radius:50%;background:var(--color-neutral-300,#d4d4d4);color:var(--color-neutral-700);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.8em;flex-shrink:0;margin-top:1px;transition:background .3s,color .3s}
 :is(.dark,.scheme-congo) .topo-rule-num{background:var(--color-neutral-700);color:var(--color-neutral-400)}
 .topo-rule-body{flex:1}
 .topo-rule.active{background:rgba(59,130,246,.12)}

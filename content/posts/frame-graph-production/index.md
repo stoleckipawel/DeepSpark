@@ -11,9 +11,15 @@ showTableOfContents: false
 
 {{< article-nav >}}
 
+<div style="margin:0 0 1.5em;padding:.7em 1em;border-radius:8px;background:rgba(99,102,241,.04);border:1px solid rgba(99,102,241,.12);font-size:.88em;line-height:1.6;opacity:.85;">
+📖 <strong>Part III of III.</strong>&ensp; <a href="/posts/frame-graph-theory/">Theory</a> → <a href="/posts/frame-graph-build-it/">Build It</a> → <em>Production Engines</em>
+</div>
+
 <div style="border-left:4px solid #6366f1;background:linear-gradient(135deg,rgba(99,102,241,.06),transparent);border-radius:0 10px 10px 0;padding:1em 1.3em;margin:1em 0;font-size:.95em;font-style:italic;line-height:1.55">
 How UE5, Frostbite, and Unity implement the same ideas at scale — what they added, what they compromised, and where they still differ.
 </div>
+
+[Part II](/posts/frame-graph-build-it/) left us with a working frame graph — automatic barriers, pass culling, and memory aliasing in ~300 lines of C++. That's a solid MVP, but production engines face problems we didn't: parallel command recording, subpass merging for mobile GPUs, async compute scheduling, and managing thousands of passes across legacy codebases. This article examines how three major engines solved those problems, then lays out an upgrade roadmap for taking the MVP further.
 
 ---
 
@@ -191,34 +197,27 @@ Frostbite's frame graph (O'Donnell & Barczak, GDC 2017: *"FrameGraph: Extensible
 
 ## Upgrade Roadmap
 
-You've built the MVP in [Part II](/posts/frame-graph-build-it/). Here's what to add, in what order, and why.
+The MVP from [Part II](/posts/frame-graph-build-it/) already handles automatic barriers, pass culling, and basic memory aliasing. Here's what to add next, in what order, and why — bridging the gap between our prototype and what ships in production.
 
-### 1. Memory aliasing
+### 1. Production-grade memory aliasing
 **Priority: HIGH · Difficulty: Medium**
 
-Biggest bang-for-buck. Reduces VRAM usage 30–50% for transient resources. The core idea is **interval-graph coloring** — assign physical memory to virtual resources such that no two overlapping lifetimes share an allocation.
-
-**How the algorithm works:**
-
-After topological sort gives you a linear pass order, walk the pass list and record each transient resource's **first use** (birth) and **last use** (death). This gives you a set of intervals — one per resource. Now you need to pack those intervals into the fewest physical allocations, where no two intervals sharing an allocation overlap.
+[Part II's MVP v3](/posts/frame-graph-build-it/) implements the core algorithm — lifetime scanning, greedy free-list allocation, and interval-graph coloring. That's enough to prove the 30–50% VRAM savings. But production engines refine it in three ways our MVP skips:
 
 <div class="diagram-steps">
   <div class="ds-step">
     <div class="ds-num">1</div>
-    <div><strong>Process GBuf</strong> (16MB, pass 2–4): free list empty → no match → allocate <strong>Block A</strong> (16MB). Free list: [A: 16MB, avail after pass 4]</div>
+    <div><strong>Placed resources / heap sub-allocation.</strong> Our MVP assigns logical "blocks" — production engines allocate <code>ID3D12Heap</code> (D3D12) or <code>VkDeviceMemory</code> (Vulkan) and bind resources at offsets within them. This is what makes aliasing real on the GPU. Without placed resources, each allocation gets its own memory and aliasing is impossible.</div>
   </div>
   <div class="ds-step">
     <div class="ds-num">2</div>
-    <div><strong>Process SSAO</strong> (2MB, pass 3–5): Block A avail after 4, but SSAO starts at 3 → <span style="color:#ef4444;font-weight:600">overlap!</span> → allocate <strong>Block B</strong> (2MB). Free list: [A: avail after 4] [B: avail after 5]</div>
+    <div><strong>Power-of-two bucketing.</strong> Round resource sizes up to the nearest power of two before matching against the free list. Reduces fragmentation at the cost of slight over-allocation. UE5 does this in its transient allocator.</div>
   </div>
   <div class="ds-step">
     <div class="ds-num">3</div>
-    <div><strong>Process HDR</strong> (16MB, pass 5–7): Block A: 16MB, avail after 4, HDR starts at 5 → <span style="color:#22c55e;font-weight:600">✓ fits!</span> → reuse Block A. Free list: [A: avail after 7] [B: avail after 5]</div>
+    <div><strong>Cross-frame pooling.</strong> Instead of allocating and freeing heaps every frame, maintain a persistent pool sized to peak usage over the last N frames. Amortizes allocation cost to near zero. Both UE5 and Frostbite pool aggressively.</div>
   </div>
 </div>
-<div class="diagram-card dc-success" style="font-weight:600">Result: 3 virtual resources → 2 physical blocks (34 MB → 18 MB)</div>
-
-The greedy first-fit approach is provably optimal for interval graphs. For more aggressive packing, see **linear-scan register allocation** from compiler literature — same problem, different domain. Round up to power-of-two buckets to reduce fragmentation (UE5 does this).
 
 **What to watch out for:**
 
@@ -229,7 +228,7 @@ The greedy first-fit approach is provably optimal for interval graphs. For more 
   <div class="dw-row"><div class="dw-label">Imported res</div><div>survive across frames — <strong>never alias</strong>. Only transient resources qualify.</div></div>
 </div>
 
-UE5's transient allocator does exactly this. Add immediately after the MVP works.
+UE5's transient allocator does all three refinements. The core algorithm from Part II is correct — these additions make it production-ready.
 
 ### 2. Pass merging / subpass folding
 **Priority: HIGH on mobile · Difficulty: Medium**
@@ -481,7 +480,9 @@ Both Frostbite and UE5 support split barriers. Diminishing returns unless you're
 
 A render graph is not always the right answer. If your project has a fixed pipeline with 3–4 passes that will never change, the overhead of a graph compiler is wasted complexity. But the moment your renderer needs to *grow* — new passes, new platforms, new debug tools — the graph pays for itself in the first week.
 
-If you've made it this far, you now understand every major piece of UE5's RDG: the builder pattern, the two-phase pass declaration, transient resource aliasing, automatic barriers, pass culling, async compute flags, and the hybrid rebuild strategy. You can open `RenderGraphBuilder.h` and read it, not reverse-engineer it.
+Across these three articles, we covered the full arc: [Part I](/posts/frame-graph-theory/) laid out the theory — why manual resource management breaks at scale and how the declare/compile/execute lifecycle solves it. [Part II](/posts/frame-graph-build-it/) turned that theory into working C++ — three iterations from scaffolding to automatic barriers, pass culling, and memory aliasing. And this article mapped those ideas onto what ships in UE5, Frostbite, and Unity, then charted the path from MVP to production: placed-resource heaps, subpass merging, async compute, and split barriers.
+
+You can now open `RenderGraphBuilder.h` in UE5 and *read* it, not reverse-engineer it. You know what `FRDGBuilder::AddPass` builds, how the transient allocator aliases memory, why `ERDGPassFlags::AsyncCompute` exists, and where the RDG boundary with legacy code still leaks.
 
 The point isn't that every project needs a render graph. The point is that if you understand how they work, you'll make a better decision about whether *yours* does.
 

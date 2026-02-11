@@ -11,7 +11,13 @@ showTableOfContents: false
 
 {{< article-nav >}}
 
+<div style="margin:0 0 1.5em;padding:.7em 1em;border-radius:8px;background:rgba(99,102,241,.04);border:1px solid rgba(99,102,241,.12);font-size:.88em;line-height:1.6;opacity:.85;">
+📖 <strong>Part II of III.</strong>&ensp; <a href="/posts/frame-graph-theory/">Theory</a> → <em>Build It</em> → <a href="/posts/frame-graph-production/">Production Engines</a>
+</div>
+
 *Three iterations from blank file to working frame graph with automatic barriers and memory aliasing. Each version builds on the last — by the end you'll have something you can drop into a real renderer.*
+
+[Part I](/posts/frame-graph-theory/) covered what a frame graph is — the three-phase lifecycle (declare → compile → execute), the DAG, and why every major engine uses one. Now we implement it. Three C++ iterations, each adding a layer: v1 is scaffolding, v2 adds the dependency graph with automatic barriers and pass culling, v3 adds lifetime analysis and memory aliasing.
 
 ---
 
@@ -48,31 +54,40 @@ These three ideas produce a natural pipeline — declare your intent, let the co
 <!-- Timeline: declaration → compile → execution -->
 <div class="diagram-phases">
   <div class="dph-col" style="border-color:#3b82f6">
-    <div class="dph-title" style="color:#3b82f6">Declaration time</div>
+    <div class="dph-title" style="color:#3b82f6">① Declaration <span style="font-weight:400;font-size:.75em;opacity:.7;">CPU</span></div>
     <div class="dph-body">
       <code>addPass(setup, execute)</code><br>
       ├ setup lambda runs<br>
-      &nbsp;&nbsp;• declare reads<br>
-      &nbsp;&nbsp;• declare writes<br>
+      &nbsp;&nbsp;• declare reads / writes<br>
       &nbsp;&nbsp;• request resources<br>
-      └ <strong>no GPU work here</strong>
+      └ <strong>no GPU work, no allocation</strong>
+      <div style="margin-top:.6em;padding:.35em .6em;border-radius:5px;background:rgba(59,130,246,.08);font-size:.82em;line-height:1.4;border:1px solid rgba(59,130,246,.12);">
+        Resources are <strong>virtual</strong> — just a description + handle index. Zero bytes allocated.
+      </div>
     </div>
   </div>
   <div class="dph-col" style="border-color:#8b5cf6">
-    <div class="dph-title" style="color:#8b5cf6">Graph Compiler</div>
+    <div class="dph-title" style="color:#8b5cf6">② Compile <span style="font-weight:400;font-size:.75em;opacity:.7;">CPU</span></div>
     <div class="dph-body">
-      • sort<br>
-      • alias<br>
-      • barrier
+      ├ <strong>sort</strong> — topo order (Kahn's)<br>
+      ├ <strong>cull</strong> — remove dead passes<br>
+      ├ <strong>alias</strong> — map virtual → physical<br>
+      └ <strong>barrier</strong> — emit transitions
+      <div style="margin-top:.6em;padding:.35em .6em;border-radius:5px;background:rgba(139,92,246,.08);font-size:.82em;line-height:1.4;border:1px solid rgba(139,92,246,.12);">
+        Memory <strong>allocated &amp; reused</strong> here — non-overlapping lifetimes share the same heap.
+      </div>
     </div>
   </div>
   <div class="dph-col" style="border-color:#22c55e">
-    <div class="dph-title" style="color:#22c55e">Execution time</div>
+    <div class="dph-title" style="color:#22c55e">③ Execute <span style="font-weight:400;font-size:.75em;opacity:.7;">GPU</span></div>
     <div class="dph-body">
-      execute lambda runs here<br>
-      → record draw/dispatch<br>
-      &nbsp;&nbsp;actual GPU cmds<br><br>
-      <em>barriers already<br>inserted by compiler</em>
+      for each pass in sorted order:<br>
+      ├ insert pre-computed barriers<br>
+      └ call execute lambda<br>
+      &nbsp;&nbsp;→ draw / dispatch / copy
+      <div style="margin-top:.6em;padding:.35em .6em;border-radius:5px;background:rgba(34,197,94,.08);font-size:.82em;line-height:1.4;border:1px solid rgba(34,197,94,.12);">
+        Lambdas see a <strong>fully resolved</strong> environment — memory bound, barriers placed, resources ready.
+      </div>
     </div>
   </div>
 </div>
@@ -88,8 +103,13 @@ If you've worked with UE5's RDG, our API maps directly:
   <span style="opacity:.5;">ours</span> <code>execute lambda</code> &ensp;→&ensp; <span style="opacity:.5;">UE5</span> <code>execute lambda</code> <span style="font-family:inherit;opacity:.5;">(same concept)</span>
 </div>
 
-<div style="margin:1em 0;padding:.7em 1em;border-radius:8px;border-left:4px solid #f59e0b;background:rgba(245,158,11,.05);font-size:.9em;line-height:1.6;">
-⚠️ <strong>UE5's macro tradeoff:</strong> The <code>BEGIN_SHADER_PARAMETER_STRUCT</code> approach is opaque, hard to debug, and impossible to compose dynamically. Our explicit two-lambda API is simpler and more flexible — UE5 traded that flexibility for compile-time validation and reflection.
+<div style="margin:1em 0;display:grid;grid-template-columns:1fr 1fr;gap:0;border-radius:8px;overflow:hidden;border:1px solid rgba(245,158,11,.25);font-size:.85em;">
+  <div style="padding:.6em .8em;background:rgba(245,158,11,.06);border-right:1px solid rgba(245,158,11,.15);border-bottom:1px solid rgba(245,158,11,.15);font-weight:700;color:#f59e0b;">UE5 macros</div>
+  <div style="padding:.6em .8em;background:rgba(59,130,246,.06);border-bottom:1px solid rgba(245,158,11,.15);font-weight:700;color:#3b82f6;">Our two-lambda API</div>
+  <div style="padding:.5em .8em;border-right:1px solid rgba(245,158,11,.15);line-height:1.5;"><span style="color:#22c55e">✓</span> Auto dependency extraction — can't forget a read/write</div>
+  <div style="padding:.5em .8em;line-height:1.5;"><span style="color:#22c55e">✓</span> Transparent — step through in any debugger</div>
+  <div style="padding:.5em .8em;border-right:1px solid rgba(245,158,11,.15);line-height:1.5;"><span style="color:#ef4444">✗</span> Harder to debug &amp; compose dynamically</div>
+  <div style="padding:.5em .8em;line-height:1.5;"><span style="color:#ef4444">✗</span> Manual — you wire the edges yourself</div>
 </div>
 
 ### Putting it together
@@ -179,7 +199,16 @@ This compiles and runs. It doesn't *do* anything on the GPU yet — the execute 
 🎯 <strong>Goal:</strong> Automatic pass ordering, dead-pass culling, and barrier insertion — the core value of a render graph.
 </div>
 
-**Resource versioning:** A resource can be written by pass A, read by pass B, then written *again* by pass C. To keep edges correct, each write creates a new **version** of the resource. Pass B's read depends on version 1 (A's write), not version 2 (C's write). Without versioning, the dependency graph would be ambiguous — this is the "rename on write" pattern.
+<div style="margin:1em 0;display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-radius:8px;overflow:hidden;border:1px solid rgba(99,102,241,.2);font-size:.8em;text-align:center;">
+  <div style="padding:.5em;background:rgba(59,130,246,.06);border-right:1px solid rgba(99,102,241,.12);font-weight:700;color:#3b82f6;">① Versioning</div>
+  <div style="padding:.5em;background:rgba(139,92,246,.06);border-right:1px solid rgba(99,102,241,.12);font-weight:700;color:#8b5cf6;">② Topo Sort</div>
+  <div style="padding:.5em;background:rgba(245,158,11,.06);border-right:1px solid rgba(99,102,241,.12);font-weight:700;color:#f59e0b;">③ Pass Culling</div>
+  <div style="padding:.5em;background:rgba(239,68,68,.06);font-weight:700;color:#ef4444;">④ Barriers</div>
+</div>
+
+### ① Resource versioning & the dependency graph
+
+A resource can be written by pass A, read by pass B, then written *again* by pass C. To keep edges correct, each write creates a new **version** of the resource. Pass B's read depends on version 1 (A's write), not version 2 (C's write). Without versioning, the dependency graph would be ambiguous — this is the "rename on write" pattern.
 
 <div class="diagram-version">
   <div class="dv-row">
@@ -206,25 +235,31 @@ This compiles and runs. It doesn't *do* anything on the GPU yet — the execute 
   </div>
 </div>
 
-**Resource tracking:** Each resource version tracks who wrote it and who reads it. On write, create a new version and record the pass. On read, record the pass and add a dependency edge from the writer. In practice, most resources have 1 writer and 1–3 readers.
+Each resource version tracks who wrote it and who reads it. On write, create a new version and record the pass. On read, add a dependency edge from the writer. The dependency graph is an adjacency list — for 25 passes you'll typically have 30–50 edges.
 
-**Dependency graph:** Stored as an adjacency list — for each pass, a list of passes that must come after it. For 25 passes you'll typically have 30–50 edges.
+---
 
-**Topological sort (Kahn's algorithm):**
+### ② Topological sort (Kahn's algorithm)
 
-The algorithm counts incoming edges (in-degree) for every pass. Passes with zero in-degree have no unsatisfied dependencies — they're ready to run. Step through the interactive demo below to see how the queue drains, in-degrees decrement, and a valid execution order emerges:
+The algorithm counts incoming edges (in-degree) for every pass. Passes with zero in-degree have no unsatisfied dependencies — they're ready to run. Step through the interactive demo to see how the queue drains:
 
 {{< interactive-toposort >}}
 
 Runs in O(V + E). Kahn's is preferred over DFS-based topo-sort because cycle detection falls out naturally — if the sorted output is shorter than the pass count, a cycle exists.
 
-**Pass culling:** Walk backwards from the final output (present/backbuffer). Mark every reachable pass. Any unmarked pass is dead — remove it and release its resource declarations. This is ~10 lines but immediately useful: disable SSAO by not reading its output, and the pass (and all its resources) vanishes automatically. Complexity: O(V + E). Try disabling edges in the interactive graph below and watch passes get culled in real time:
+---
+
+### ③ Pass culling
+
+Walk backwards from the final output (present/backbuffer). Mark every reachable pass. Any unmarked pass is dead — remove it and release its resource declarations. Disable SSAO by not reading its output, and the pass (and all its resources) vanishes automatically. Complexity: O(V + E). Try disabling edges below:
 
 {{< interactive-dag >}}
 
-**Barrier insertion:** Walk the sorted order. For each pass, check each resource against a state table tracking its current pipeline stage, access flags, and image layout. If usage changed, emit a barrier.
+---
 
-Here's what that looks like in practice — every one of these is a barrier your graph inserts automatically, but you'd have to place by hand without one:
+### ④ Barrier insertion
+
+Walk the sorted order. For each pass, check each resource against a state table tracking its current pipeline stage, access flags, and image layout. If usage changed, emit a barrier. Every one of these is a barrier your graph inserts automatically:
 
 <div class="barrier-zoo-grid">
   <div class="bz-header">Barrier zoo — the transitions a real frame actually needs</div>
@@ -276,9 +311,11 @@ Here's what that looks like in practice — every one of these is a barrier your
 
 {{< interactive-barriers >}}
 
-A 25-pass frame needs 30–50 of these. Miss one: corruption or device lost. Add a redundant one: GPU stall for nothing. Get the source/dest stages wrong: validation errors or subtle frame-order bugs that only show on a different vendor's driver. This is exactly why you don't want to place them by hand — the graph sees every read/write edge and emits the *exact* set.
+A 25-pass frame needs 30–50 of these. Miss one: corruption or device lost. Add a redundant one: GPU stall for nothing. The graph sees every read/write edge and emits the *exact* set.
 
-**Diff from v1 — what changes in the code:**
+---
+
+### Putting it together — v1 → v2 diff
 
 We need four new pieces: (1) resource versioning with read/write tracking, (2) adjacency list for the DAG, (3) topological sort, (4) pass culling, and (5) barrier insertion. Additions marked with `// NEW v2` in the source:
 
@@ -352,7 +389,7 @@ Remove GBuffer's read of `depth` and the depth prepass gets culled automatically
 </div>
 
 <div style="margin:1em 0;padding:.7em 1em;border-radius:8px;border-left:4px solid #f59e0b;background:rgba(245,158,11,.05);font-size:.9em;line-height:1.6;">
-⚠️ <strong>Caveat:</strong> UE5's migration to RDG is <em>incomplete</em>. Large parts of the renderer still use legacy immediate-mode <code>FRHICommandList</code> calls outside the graph. These "untracked" resources bypass RDG's barrier and aliasing systems entirely — you get the graph's benefits only for passes that have been ported. Legacy passes still need manual barriers at the RDG boundary. This is the cost of retrofitting a graph onto a 25-year-old codebase.
+⚠️ <strong>Caveat:</strong> UE5's migration to RDG is <em>incomplete</em> — large parts of the renderer still use legacy immediate-mode <code>FRHICommandList</code> calls outside the graph, requiring manual barriers at the RDG boundary. We cover RDG's architecture, tradeoffs, and limitations in detail in <a href="/posts/frame-graph-production/">Part III</a>.
 </div>
 
 ---
