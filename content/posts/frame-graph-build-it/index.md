@@ -21,7 +21,7 @@ showTableOfContents: false
 
 ---
 
-## API Design
+## 🏗️ API Design
 
 We start from the API you *want* to write — a minimal `FrameGraph` that declares a depth prepass, GBuffer pass, and lighting pass in ~20 lines of C++.
 
@@ -142,7 +142,7 @@ Three passes, declared as lambdas. The graph handles the rest — ordering, barr
 
 ---
 
-## MVP v1 — Declare & Execute
+## 🧱 MVP v1 — Declare & Execute
 
 **Data structures:**
 
@@ -170,15 +170,10 @@ Three passes, declared as lambdas. The graph handles the rest — ordering, barr
 
 **Flow:** Declare passes in order → execute in order. No dependency tracking yet. Resources are created eagerly.
 
-**Buildable C++ — the full MVP v1** ([frame_graph_v1.h](frame_graph_v1.h)):
+{{< include-code file="frame_graph_v1.h" lang="cpp" compact="true" >}}
+{{< include-code file="example_v1.cpp" lang="cpp" compile="true" deps="frame_graph_v1.h" compact="true" >}}
 
-{{< include-code file="frame_graph_v1.h" lang="cpp" >}}
-
-**Usage** — three passes wired together ([example_v1.cpp](example_v1.cpp)):
-
-{{< include-code file="example_v1.cpp" lang="cpp" compile="true" deps="frame_graph_v1.h" >}}
-
-This compiles and runs. It doesn't *do* anything on the GPU yet — the execute lambdas are stubs — but the scaffolding is real. Every piece we add in v2 and v3 goes into this same `FrameGraph` class.
+Compiles and runs — the execute lambdas are stubs, but the scaffolding is real. Every piece we add in v2 and v3 goes into this same `FrameGraph` class.
 
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8em;margin:1em 0;">
   <div style="padding:.7em 1em;border-radius:8px;border-left:4px solid #22c55e;background:rgba(34,197,94,.05);font-size:.9em;line-height:1.5;">
@@ -193,20 +188,40 @@ This compiles and runs. It doesn't *do* anything on the GPU yet — the execute 
 
 ---
 
-## MVP v2 — Dependencies & Barriers
+## 🔗 MVP v2 — Dependencies & Barriers
 
 <div style="margin:1em 0;padding:.7em 1em;border-radius:8px;border-left:4px solid #3b82f6;background:rgba(59,130,246,.04);font-size:.92em;line-height:1.6;">
 🎯 <strong>Goal:</strong> Automatic pass ordering, dead-pass culling, and barrier insertion — the core value of a render graph.
 </div>
 
-<div style="margin:1em 0;display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-radius:8px;overflow:hidden;border:1px solid rgba(99,102,241,.2);font-size:.8em;text-align:center;">
-  <div style="padding:.5em;background:rgba(59,130,246,.06);border-right:1px solid rgba(99,102,241,.12);font-weight:700;color:#3b82f6;">① Versioning</div>
-  <div style="padding:.5em;background:rgba(139,92,246,.06);border-right:1px solid rgba(99,102,241,.12);font-weight:700;color:#8b5cf6;">② Topo Sort</div>
-  <div style="padding:.5em;background:rgba(245,158,11,.06);border-right:1px solid rgba(99,102,241,.12);font-weight:700;color:#f59e0b;">③ Pass Culling</div>
-  <div style="padding:.5em;background:rgba(239,68,68,.06);font-weight:700;color:#ef4444;">④ Barriers</div>
+Four pieces, each feeding the next:
+
+<div style="margin:.8em 0 1.2em;display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-radius:10px;overflow:hidden;border:1.5px solid rgba(99,102,241,.2);">
+  <a href="#v2-versioning" style="padding:.7em .6em .5em;background:rgba(59,130,246,.05);border-right:1px solid rgba(99,102,241,.12);text-decoration:none;text-align:center;transition:background .15s;" onmouseover="this.style.background='rgba(59,130,246,.12)'" onmouseout="this.style.background='rgba(59,130,246,.05)'">
+    <div style="font-size:1.2em;margin-bottom:.15em;">🔀</div>
+    <div style="font-weight:800;font-size:.85em;color:#3b82f6;">Versioning</div>
+    <div style="font-size:.72em;opacity:.6;margin-top:.15em;line-height:1.3;">reads/writes → edges</div>
+  </a>
+  <a href="#v2-toposort" style="padding:.7em .6em .5em;background:rgba(139,92,246,.05);border-right:1px solid rgba(99,102,241,.12);text-decoration:none;text-align:center;transition:background .15s;" onmouseover="this.style.background='rgba(139,92,246,.12)'" onmouseout="this.style.background='rgba(139,92,246,.05)'">
+    <div style="font-size:1.2em;margin-bottom:.15em;">📦</div>
+    <div style="font-weight:800;font-size:.85em;color:#8b5cf6;">Topo Sort</div>
+    <div style="font-size:.72em;opacity:.6;margin-top:.15em;line-height:1.3;">edges → execution order</div>
+  </a>
+  <a href="#v2-culling" style="padding:.7em .6em .5em;background:rgba(245,158,11,.05);border-right:1px solid rgba(99,102,241,.12);text-decoration:none;text-align:center;transition:background .15s;" onmouseover="this.style.background='rgba(245,158,11,.12)'" onmouseout="this.style.background='rgba(245,158,11,.05)'">
+    <div style="font-size:1.2em;margin-bottom:.15em;">✂️</div>
+    <div style="font-weight:800;font-size:.85em;color:#f59e0b;">Pass Culling</div>
+    <div style="font-size:.72em;opacity:.6;margin-top:.15em;line-height:1.3;">kill unreachable passes</div>
+  </a>
+  <a href="#v2-barriers" style="padding:.7em .6em .5em;background:rgba(239,68,68,.05);text-decoration:none;text-align:center;transition:background .15s;" onmouseover="this.style.background='rgba(239,68,68,.12)'" onmouseout="this.style.background='rgba(239,68,68,.05)'">
+    <div style="font-size:1.2em;margin-bottom:.15em;">🚧</div>
+    <div style="font-weight:800;font-size:.85em;color:#ef4444;">Barriers</div>
+    <div style="font-size:.72em;opacity:.6;margin-top:.15em;line-height:1.3;">emit GPU transitions</div>
+  </a>
 </div>
 
-### ① Resource versioning & the dependency graph
+<span id="v2-versioning"></span>
+
+### 🔀 Resource versioning & the dependency graph
 
 A resource can be written by pass A, read by pass B, then written *again* by pass C. To keep edges correct, each write creates a new **version** of the resource. Pass B's read depends on version 1 (A's write), not version 2 (C's write). Without versioning, the dependency graph would be ambiguous — this is the "rename on write" pattern.
 
@@ -239,7 +254,9 @@ Each resource version tracks who wrote it and who reads it. On write, create a n
 
 ---
 
-### ② Topological sort (Kahn's algorithm)
+<span id="v2-toposort"></span>
+
+### 📦 Topological sort (Kahn's algorithm)
 
 The algorithm counts incoming edges (in-degree) for every pass. Passes with zero in-degree have no unsatisfied dependencies — they're ready to run. Step through the interactive demo to see how the queue drains:
 
@@ -249,15 +266,30 @@ Runs in O(V + E). Kahn's is preferred over DFS-based topo-sort because cycle det
 
 ---
 
-### ③ Pass culling
+<span id="v2-culling"></span>
 
-Walk backwards from the final output (present/backbuffer). Mark every reachable pass. Any unmarked pass is dead — remove it and release its resource declarations. Disable SSAO by not reading its output, and the pass (and all its resources) vanishes automatically. Complexity: O(V + E). Try disabling edges below:
+### ✂️ Pass culling
+
+<div style="display:grid;grid-template-columns:auto 1fr;gap:.6em .9em;align-items:start;margin:.8em 0 1.2em;padding:.8em 1em;border-radius:10px;background:linear-gradient(135deg,rgba(245,158,11,.06),transparent);border:1px solid rgba(245,158,11,.18);font-size:.9em;line-height:1.6;">
+  <span style="font-size:1.3em;line-height:1;">🔙</span>
+  <span><strong>Algorithm:</strong> Walk backwards from the final output (present / backbuffer). Mark every reachable pass as <em>alive</em>.</span>
+  <span style="font-size:1.3em;line-height:1;">💀</span>
+  <span><strong>Result:</strong> Any unmarked pass is dead — removed along with all its resource declarations. No <code>#ifdef</code>, no flag.</span>
+  <span style="font-size:1.3em;line-height:1;">⏱️</span>
+  <span><strong>Cost:</strong> O(V + E) — one linear walk over the graph.</span>
+</div>
+
+Disable edges in the interactive DAG, then compile both C++ variants below to see culling happen for real:
 
 {{< interactive-dag >}}
 
+{{< compile-compare fileA="example_v2_ssao_alive.cpp" fileB="example_v2_ssao_dead.cpp" labelA="SSAO Connected (alive)" labelB="SSAO Disconnected (culled)" deps="frame_graph_v2.h" >}}
+
 ---
 
-### ④ Barrier insertion
+<span id="v2-barriers"></span>
+
+### 🚧 Barrier insertion
 
 Walk the sorted order. For each pass, check each resource against a state table tracking its current pipeline stage, access flags, and image layout. If usage changed, emit a barrier. Every one of these is a barrier your graph inserts automatically:
 
@@ -356,121 +388,108 @@ We need four new pieces: (1) resource versioning with read/write tracking, (2) a
 +    std::vector<ResourceEntry> entries_;  // now with versioning
 {{< /code-diff >}}
 
-Full updated source ([frame_graph_v2.h](frame_graph_v2.h)):
+Full updated source:
 
-{{< include-code file="frame_graph_v2.h" lang="cpp" >}}
+{{< include-code file="frame_graph_v2.h" lang="cpp" compact="true" >}}
+{{< include-code file="example_v2.cpp" lang="cpp" compile="true" deps="frame_graph_v2.h" compact="true" >}}
 
-**Usage — same passes, now with declared dependencies** ([example_v2.cpp](example_v2.cpp)):
+That's three of the four intro promises delivered — automatic ordering, barrier insertion, and dead-pass culling. The only piece missing: resources still live for the entire frame. Version 3 fixes that with lifetime analysis and memory aliasing.
 
-{{< include-code file="example_v2.cpp" lang="cpp" compile="true" deps="frame_graph_v2.h" >}}
-
-Remove GBuffer's read of `depth` and the depth prepass gets culled automatically — no `#ifdef`, no flag. That's the graph working for you.
-
-<div style="margin:1.5em 0 .8em;padding:.8em 1.2em;border-radius:10px;background:linear-gradient(135deg,rgba(139,92,246,.08),rgba(59,130,246,.08));border:2px solid rgba(139,92,246,.2);position:relative;">
-<div style="font-size:1.1em;font-weight:800;margin-bottom:.3em;">🎯 See culling in action</div>
-<div style="font-size:.92em;line-height:1.6;color:var(--color-neutral-700,#374151);">Compare these two variants — identical pipeline, but in variant B, Lighting doesn't read SSAO's output. The graph automatically <strong>culls the dead pass</strong> and releases its resources:</div>
-</div>
-
-{{< compile-compare fileA="example_v2_ssao_alive.cpp" fileB="example_v2_ssao_dead.cpp" labelA="SSAO Connected (alive)" labelB="SSAO Disconnected (culled)" deps="frame_graph_v2.h" >}}
-
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:.8em;margin:1em 0;">
-  <div style="padding:.7em 1em;border-radius:8px;border-left:4px solid #22c55e;background:rgba(34,197,94,.05);font-size:.9em;line-height:1.5;">
-    <strong style="color:#22c55e;">✓ What it proves</strong><br>
-    Automatic barriers from declared dependencies. Pass reordering is safe. Dead passes are culled. Three of the four intro promises delivered.
-  </div>
-  <div style="padding:.7em 1em;border-radius:8px;border-left:4px solid #ef4444;background:rgba(239,68,68,.05);font-size:.9em;line-height:1.5;">
-    <strong style="color:#ef4444;">✗ What it lacks</strong><br>
-    Resources still live for the entire frame. Version 3 adds lifetime analysis and memory aliasing.
-  </div>
-</div>
-
-<div style="margin:1.2em 0;padding:.8em 1em;border-radius:8px;background:rgba(139,92,246,.05);border:1px solid rgba(139,92,246,.15);font-size:.9em;line-height:1.6;">
-<strong style="color:#8b5cf6;">🎮 UE5 does exactly this.</strong> When you call <code>FRDGBuilder::AddPass</code> with <code>ERDGPassFlags::Raster</code> or <code>ERDGPassFlags::Compute</code>, RDG builds the same dependency graph from your declared reads/writes, topologically sorts it, culls dead passes, and inserts barriers — all before recording a single GPU command.
-</div>
-
-<div style="margin:1em 0;padding:.7em 1em;border-radius:8px;border-left:4px solid #f59e0b;background:rgba(245,158,11,.05);font-size:.9em;line-height:1.6;">
-⚠️ <strong>Caveat:</strong> UE5's migration to RDG is <em>incomplete</em> — large parts of the renderer still use legacy immediate-mode <code>FRHICommandList</code> calls outside the graph, requiring manual barriers at the RDG boundary. We cover RDG's architecture, tradeoffs, and limitations in detail in <a href="/posts/frame-graph-production/">Part III</a>.
-</div>
+UE5's RDG does the same thing. When you call `FRDGBuilder::AddPass`, RDG builds the dependency graph from your declared reads/writes, topologically sorts it, culls dead passes, and inserts barriers — all before recording a single GPU command. The migration is incomplete, though — large parts of UE5's renderer still use legacy `FRHICommandList` calls outside the graph, requiring manual barriers at the RDG boundary. More on that in [Part III](/posts/frame-graph-production/).
 
 ---
 
-## MVP v3 — Lifetimes & Aliasing
+## 💾 MVP v3 — Lifetimes & Aliasing
 
-<div style="margin:1em 0;padding:.7em 1em;border-radius:8px;border-left:4px solid #22c55e;background:rgba(34,197,94,.04);font-size:.92em;line-height:1.6;">
-🎯 <strong>Goal:</strong> The final piece — 30–50% VRAM savings by reusing physical memory across transient resources whose lifetimes don't overlap.
+V2 gives us ordering, culling, and barriers — but every transient resource lives for the entire frame. A 1080p deferred pipeline allocates ~52 MB of transient textures that are each used for only 2–3 passes. If their lifetimes don't overlap, they can share physical memory. That's aliasing, and it typically saves 30–50% VRAM.
+
+The algorithm has three steps. First, **scan lifetimes**: walk the sorted pass list and record each transient resource's `firstUsePass` and `lastUsePass` (imported resources are excluded — they're externally owned). Second, **track refcounts**: increment at first use, decrement at last use; when a resource's refcount hits zero, its physical memory becomes available. Third, **free-list scan**: sort resources by first-use, then greedily try to fit each one into an existing physical block that's compatible (same memory type, large enough, available after the previous user finished). Fit → reuse. No fit → allocate a new block. This is greedy interval-coloring — the same approach Frostbite described at GDC 2017.
+
+Here's a concrete example. Six transient resources in a 1080p deferred pipeline:
+
+<div style="overflow-x:auto;margin:1em 0;">
+<table style="width:100%;border-collapse:collapse;font-size:.88em;border-radius:8px;overflow:hidden;">
+  <thead>
+    <tr style="background:rgba(139,92,246,.1);">
+      <th style="padding:.5em .8em;text-align:left;font-weight:700;border-bottom:2px solid rgba(139,92,246,.2);">Virtual Resource</th>
+      <th style="padding:.5em .8em;text-align:center;font-weight:700;border-bottom:2px solid rgba(139,92,246,.2);">Format</th>
+      <th style="padding:.5em .8em;text-align:center;font-weight:700;border-bottom:2px solid rgba(139,92,246,.2);">Size</th>
+      <th style="padding:.5em .8em;text-align:center;font-weight:700;border-bottom:2px solid rgba(139,92,246,.2);">Lifetime</th>
+      <th style="padding:.5em .8em;text-align:center;font-weight:700;border-bottom:2px solid rgba(139,92,246,.2);">Shares with</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr style="background:rgba(59,130,246,.06);">
+      <td style="padding:.4em .8em;border-bottom:1px solid rgba(127,127,127,.1);">GBuffer Albedo</td>
+      <td style="padding:.4em .8em;text-align:center;font-family:monospace;border-bottom:1px solid rgba(127,127,127,.1);">RGBA8</td>
+      <td style="padding:.4em .8em;text-align:center;border-bottom:1px solid rgba(127,127,127,.1);">8 MB</td>
+      <td style="padding:.4em .8em;text-align:center;font-family:monospace;border-bottom:1px solid rgba(127,127,127,.1);">P2–P4</td>
+      <td style="padding:.4em .8em;text-align:center;color:#3b82f6;font-weight:600;border-bottom:1px solid rgba(127,127,127,.1);">HDR Lighting ↓</td>
+    </tr>
+    <tr style="background:rgba(139,92,246,.06);">
+      <td style="padding:.4em .8em;border-bottom:1px solid rgba(127,127,127,.1);">GBuffer Normals</td>
+      <td style="padding:.4em .8em;text-align:center;font-family:monospace;border-bottom:1px solid rgba(127,127,127,.1);">RGB10A2</td>
+      <td style="padding:.4em .8em;text-align:center;border-bottom:1px solid rgba(127,127,127,.1);">8 MB</td>
+      <td style="padding:.4em .8em;text-align:center;font-family:monospace;border-bottom:1px solid rgba(127,127,127,.1);">P2–P4</td>
+      <td style="padding:.4em .8em;text-align:center;color:#8b5cf6;font-weight:600;border-bottom:1px solid rgba(127,127,127,.1);">Bloom Scratch ↓</td>
+    </tr>
+    <tr style="background:rgba(34,197,94,.06);">
+      <td style="padding:.4em .8em;border-bottom:1px solid rgba(127,127,127,.1);">SSAO Scratch</td>
+      <td style="padding:.4em .8em;text-align:center;font-family:monospace;border-bottom:1px solid rgba(127,127,127,.1);">R8</td>
+      <td style="padding:.4em .8em;text-align:center;border-bottom:1px solid rgba(127,127,127,.1);">2 MB</td>
+      <td style="padding:.4em .8em;text-align:center;font-family:monospace;border-bottom:1px solid rgba(127,127,127,.1);">P3–P4</td>
+      <td style="padding:.4em .8em;text-align:center;color:#22c55e;font-weight:600;border-bottom:1px solid rgba(127,127,127,.1);">SSAO Result ↓</td>
+    </tr>
+    <tr style="background:rgba(34,197,94,.06);">
+      <td style="padding:.4em .8em;border-bottom:1px solid rgba(127,127,127,.1);">SSAO Result</td>
+      <td style="padding:.4em .8em;text-align:center;font-family:monospace;border-bottom:1px solid rgba(127,127,127,.1);">R8</td>
+      <td style="padding:.4em .8em;text-align:center;border-bottom:1px solid rgba(127,127,127,.1);">2 MB</td>
+      <td style="padding:.4em .8em;text-align:center;font-family:monospace;border-bottom:1px solid rgba(127,127,127,.1);">P4–P5</td>
+      <td style="padding:.4em .8em;text-align:center;color:#22c55e;font-weight:600;border-bottom:1px solid rgba(127,127,127,.1);">SSAO Scratch ↑</td>
+    </tr>
+    <tr style="background:rgba(59,130,246,.06);">
+      <td style="padding:.4em .8em;border-bottom:1px solid rgba(127,127,127,.1);">HDR Lighting</td>
+      <td style="padding:.4em .8em;text-align:center;font-family:monospace;border-bottom:1px solid rgba(127,127,127,.1);">RGBA16F</td>
+      <td style="padding:.4em .8em;text-align:center;border-bottom:1px solid rgba(127,127,127,.1);">16 MB</td>
+      <td style="padding:.4em .8em;text-align:center;font-family:monospace;border-bottom:1px solid rgba(127,127,127,.1);">P5–P6</td>
+      <td style="padding:.4em .8em;text-align:center;color:#3b82f6;font-weight:600;border-bottom:1px solid rgba(127,127,127,.1);">GBuffer Albedo ↑</td>
+    </tr>
+    <tr style="background:rgba(139,92,246,.06);">
+      <td style="padding:.4em .8em;">Bloom Scratch</td>
+      <td style="padding:.4em .8em;text-align:center;font-family:monospace;">RGBA16F</td>
+      <td style="padding:.4em .8em;text-align:center;">16 MB</td>
+      <td style="padding:.4em .8em;text-align:center;font-family:monospace;">P6–P7</td>
+      <td style="padding:.4em .8em;text-align:center;color:#8b5cf6;font-weight:600;">GBuffer Normals ↑</td>
+    </tr>
+  </tbody>
+</table>
 </div>
 
-<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.7em;margin:1.2em 0;">
-  <div style="border-radius:8px;border:1px solid var(--color-neutral-300,#d4d4d4);padding:.7em .8em;font-size:.88em;line-height:1.6;">
-    <div style="font-weight:700;color:#3b82f6;margin-bottom:.3em;">1. First/last use</div>
-    Walk sorted passes. For each transient resource, record <code>firstUsePass</code> and <code>lastUsePass</code>. Imported resources excluded.
+<div style="display:flex;align-items:center;gap:1em;margin:1em 0;padding:.6em 1em;border-radius:8px;background:linear-gradient(90deg,rgba(239,68,68,.06),rgba(34,197,94,.06));">
+  <div style="text-align:center;line-height:1.3;">
+    <div style="font-size:.75em;opacity:.6;text-transform:uppercase;letter-spacing:.05em;">Without aliasing</div>
+    <div style="font-size:1.4em;font-weight:800;color:#ef4444;">52 MB</div>
   </div>
-  <div style="border-radius:8px;border:1px solid var(--color-neutral-300,#d4d4d4);padding:.7em .8em;font-size:.88em;line-height:1.6;">
-    <div style="font-weight:700;color:#8b5cf6;margin-bottom:.3em;">2. Refcount</div>
-    Increment at first use, decrement at last use. When refcount hits zero, physical memory is eligible for reuse.
+  <div style="font-size:1.5em;opacity:.3;">→</div>
+  <div style="text-align:center;line-height:1.3;">
+    <div style="font-size:.75em;opacity:.6;text-transform:uppercase;letter-spacing:.05em;">With aliasing</div>
+    <div style="font-size:1.4em;font-weight:800;color:#22c55e;">36 MB</div>
   </div>
-  <div style="border-radius:8px;border:1px solid var(--color-neutral-300,#d4d4d4);padding:.7em .8em;font-size:.88em;line-height:1.6;">
-    <div style="font-weight:700;color:#22c55e;margin-bottom:.3em;">3. Free-list scan</div>
-    Sort by first-use, scan for compatible physical allocation. Fit → reuse. No fit → allocate. <strong>Greedy interval-coloring.</strong>
-  </div>
-</div>
-
-<div class="diagram-compat">
-  <div class="dc-box">
-    <strong>Candidate block</strong><br>
-    <span class="dc-check">✓?</span> device-local<br>
-    <span class="dc-check">✓?</span> 16 MB<br>
-    <span class="dc-check">✓?</span> avail after P4
-  </div>
-  <div class="dc-box">
-    <strong>New resource</strong><br>
-    same memory type?<br>
-    8 MB needed<br>
-    first use at P5
-  </div>
-  <div class="dc-arrow">→</div>
-  <div class="dc-result">all three ✓ → reuse!</div>
-</div>
-
-This is the same approach Frostbite described at GDC 2017.
-
-**How aliasing works at the API level:** Two virtual resources sharing physical memory requires **placed resources** — GPU memory allocated from a heap, with resources bound to offsets within it.
-
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:.8em;margin:1em 0;">
-  <div style="border-radius:8px;border:1.5px solid rgba(59,130,246,.3);padding:.7em .9em;font-size:.88em;line-height:1.6;">
-    <div style="font-weight:700;color:#3b82f6;margin-bottom:.3em;">D3D12</div>
-    Create <code>ID3D12Heap</code> (e.g., 64 MB device-local). Call <code>CreatePlacedResource</code> to bind each virtual resource at an offset. Two resources with non-overlapping lifetimes share the heap.
-  </div>
-  <div style="border-radius:8px;border:1.5px solid rgba(139,92,246,.3);padding:.7em .9em;font-size:.88em;line-height:1.6;">
-    <div style="font-weight:700;color:#8b5cf6;margin-bottom:.3em;">Vulkan</div>
-    Allocate <code>VkDeviceMemory</code>. Create <code>VkImage</code>/<code>VkBuffer</code> normally, then call <code>vkBindImageMemory</code> pointing into the same memory block at different offsets.
+  <div style="margin-left:auto;font-size:.85em;line-height:1.4;opacity:.8;">
+    3 physical blocks shared across 6 virtual resources.<br>
+    <strong style="color:#22c55e;">31% saved</strong> — in complex pipelines: 40–50%.
   </div>
 </div>
 
-<div style="margin:.8em 0;padding:.5em .8em;border-radius:6px;background:rgba(245,158,11,.05);border:1px solid rgba(245,158,11,.15);font-size:.88em;">
-⚙️ Without placed resources, each <code>CreateCommittedResource</code> (D3D12) or dedicated allocation (Vulkan) gets its own memory — aliasing is impossible. This is why the graph's allocator works with heaps.
-</div>
+This requires **placed resources** at the API level — GPU memory allocated from a heap, with resources bound to offsets within it. In D3D12, that means `ID3D12Heap` + `CreatePlacedResource`. In Vulkan, `VkDeviceMemory` + `vkBindImageMemory` at different offsets. Without placed resources (i.e., `CreateCommittedResource` or Vulkan dedicated allocations), each resource gets its own memory and aliasing is impossible — which is why the graph's allocator works with heaps.
 
-**Worked example** (1080p deferred pipeline):
-
-| Virtual Resource | Format | Size | Lifetime (passes) |
-|-----------------|--------|------|--------------------|
-| GBuffer Albedo | RGBA8 | 8 MB | 2–4 |
-| GBuffer Normals | RGB10A2 | 8 MB | 2–4 |
-| SSAO Scratch | R8 | 2 MB | 3–4 |
-| SSAO Result | R8 | 2 MB | 4–5 |
-| HDR Lighting | RGBA16F | 16 MB | 5–6 |
-| Bloom Scratch | RGBA16F | 16 MB | 6–7 |
-
-Without aliasing: 52 MB. With aliasing: GBuffer Albedo and HDR Lighting share one 16 MB block (lifetimes don't overlap). GBuffer Normals and Bloom Scratch share another. SSAO Scratch and SSAO Result share a third.
-
-<div style="margin:.8em 0;padding:.6em 1em;border-radius:8px;background:linear-gradient(135deg,rgba(34,197,94,.06),rgba(59,130,246,.06));border:1px solid rgba(34,197,94,.2);font-size:.92em;font-weight:600;text-align:center;">
-💾 Physical memory: 36 MB — <span style="color:#22c55e;">31% saved</span>. In complex pipelines: <span style="color:#22c55e;">40–50% savings</span>.
-</div>
+Drag the interactive timeline below to see how resources share physical blocks as their lifetimes end:
 
 {{< interactive-aliasing >}}
 
-**Diff from v2 — lifetime tracking and free-list allocator:**
+---
+
+### Putting it together — v2 → v3 diff
 
 Two additions to the `FrameGraph` class: (1) a lifetime scan that records each transient resource's first and last use in the sorted pass order, and (2) a greedy free-list allocator that reuses physical blocks when lifetimes don't overlap.
 
@@ -517,133 +536,16 @@ Two additions to the `FrameGraph` class: (1) a lifetime scan that records each t
 +    }
 {{< /code-diff >}}
 
-The complete v3 file integrates all v2 code plus lifetime analysis and aliasing into a single compilable header ([frame_graph_v3.h](frame_graph_v3.h)):
+Complete v3 source — all v2 code plus lifetime analysis and aliasing:
 
-{{< include-code file="frame_graph_v3.h" lang="cpp" >}}
+{{< include-code file="frame_graph_v3.h" lang="cpp" compact="true" >}}
+{{< include-code file="example_v3.cpp" lang="cpp" compile="true" deps="frame_graph_v3.h" compact="true" >}}
 
-**Usage** — lifetime analysis and aliasing in action ([example_v3.cpp](example_v3.cpp)):
+~70 new lines on top of v2. Aliasing runs once per frame in O(R log R) — sort, then linear scan of the free list. Sub-microsecond for 15 transient resources.
 
-{{< include-code file="example_v3.cpp" lang="cpp" compile="true" deps="frame_graph_v3.h" >}}
+That's the full value prop — automatic memory aliasing *and* automatic barriers from a single `FrameGraph` class. Feature-equivalent to Frostbite's 2017 GDC demo (minus async compute). UE5's transient resource allocator does the same thing: any `FRDGTexture` created through `FRDGBuilder::CreateTexture` (vs `RegisterExternalTexture`) is transient and eligible for aliasing, using the same lifetime analysis and free-list scan we just built. One difference: UE5 only aliases transient resources — imported resources are never aliased, even with fully known lifetimes. Frostbite was more aggressive here.
 
-That's ~70 new lines on top of v2. The aliasing runs once per frame in O(R log R) — sort the resources, then a linear scan of the free list. For 15 transient resources this is sub-microsecond.
-
-<div style="display:flex;gap:1em;flex-wrap:wrap;margin:1.2em 0">
-  <div style="flex:1;min-width:240px;background:linear-gradient(135deg,rgba(34,197,94,.08),rgba(34,197,94,.03));border:1px solid rgba(34,197,94,.25);border-radius:10px;padding:1em 1.2em">
-    <div style="font-weight:700;color:#22c55e;margin-bottom:.4em">✓ What v3 proves</div>
-    <div style="font-size:.92em;line-height:1.5">The full value prop — automatic memory aliasing <em>and</em> automatic barriers. Feature-equivalent to Frostbite's 2017 GDC demo (minus async compute).</div>
-  </div>
-  <div style="flex:1;min-width:240px;background:linear-gradient(135deg,rgba(239,68,68,.08),rgba(239,68,68,.03));border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:1em 1.2em">
-    <div style="font-weight:700;color:#ef4444;margin-bottom:.4em">✗ Still missing</div>
-    <div style="font-size:.92em;line-height:1.5">Async compute, split barriers, pass merging, parallel recording. These are production features — covered in <a href="/posts/frame-graph-production/">Part III</a>.</div>
-  </div>
-</div>
-
-<div style="border-left:4px solid #8b5cf6;background:linear-gradient(135deg,rgba(139,92,246,.06),transparent);border-radius:0 10px 10px 0;padding:1em 1.2em;margin:1em 0">
-  <div style="font-weight:700;color:#8b5cf6;font-size:.9em;margin-bottom:.3em">🔮 UE5 equivalent</div>
-  <div style="font-size:.9em;line-height:1.55">This is handled by the <strong>transient resource allocator</strong>. Any <code>FRDGTexture</code> created through <code>FRDGBuilder::CreateTexture</code> (vs <code>RegisterExternalTexture</code>) is transient and eligible for aliasing. The RDG compiler runs the same lifetime analysis and free-list scan we just built.</div>
-</div>
-
-<div style="border-left:4px solid #f59e0b;background:linear-gradient(135deg,rgba(245,158,11,.06),transparent);border-radius:0 10px 10px 0;padding:1em 1.2em;margin:1em 0">
-  <div style="font-weight:700;color:#f59e0b;font-size:.9em;margin-bottom:.3em">⚠ Limitation</div>
-  <div style="font-size:.9em;line-height:1.55">UE5 only aliases <em>transient</em> resources. Imported resources — even with fully known lifetimes — are never aliased. Frostbite was more aggressive, aliasing across a broader set by tracking GPU-timeline lifetimes. If your renderer has large imported resources with predictable per-frame usage, UE5's approach leaves VRAM on the table.</div>
-</div>
-
----
-
-## A Real Frame
-
-**Deferred Pipeline**
-
-Depth prepass → GBuffer → SSAO → Lighting → Tonemap → Present
-
-<div class="diagram-flow" style="justify-content:center;flex-wrap:wrap">
-  <div class="df-step df-primary">Depth<span class="df-sub">depth (T)</span></div>
-  <div class="df-arrow"></div>
-  <div class="df-step df-primary">GBuf<span class="df-sub">albedo (T) · norm (T)</span></div>
-  <div class="df-arrow"></div>
-  <div class="df-step df-primary">SSAO<span class="df-sub">scratch (T) · result (T)</span></div>
-  <div class="df-arrow"></div>
-  <div class="df-step df-primary">Lighting<span class="df-sub">HDR (T)</span></div>
-  <div class="df-arrow"></div>
-  <div class="df-step">Tonemap</div>
-  <div class="df-arrow"></div>
-  <div class="df-step df-success">Present<span class="df-sub">backbuffer (imported)</span></div>
-</div>
-<div style="text-align:center;font-size:.75em;opacity:.5;margin-top:-.3em">(T) = transient — aliased by graph &nbsp;&nbsp;&nbsp; (imported) = owned externally</div>
-
-<div style="display:flex;gap:1em;flex-wrap:wrap;margin:1em 0">
-  <div style="flex:1;min-width:220px;border:1px solid rgba(59,130,246,.3);border-radius:10px;padding:1em 1.2em;background:linear-gradient(135deg,rgba(59,130,246,.06),transparent)">
-    <div style="font-weight:700;color:#3b82f6;margin-bottom:.4em">⚡ Transient</div>
-    <div style="font-size:.9em;line-height:1.55">GBuffer MRTs, SSAO scratch, HDR lighting buffer, bloom scratch — created and destroyed within this frame. <strong>Aliased by the graph.</strong></div>
-  </div>
-  <div style="flex:1;min-width:220px;border:1px solid rgba(139,92,246,.3);border-radius:10px;padding:1em 1.2em;background:linear-gradient(135deg,rgba(139,92,246,.06),transparent)">
-    <div style="font-weight:700;color:#8b5cf6;margin-bottom:.4em">📌 Imported</div>
-    <div style="font-size:.9em;line-height:1.55">Backbuffer (swapchain), TAA history (read last frame → written this frame), shadow atlas (persistent, updated incrementally). <strong>Graph tracks barriers but doesn't own their memory.</strong></div>
-  </div>
-</div>
-
-**Forward Pipeline**
-
-<div class="diagram-flow" style="justify-content:center;flex-wrap:wrap">
-  <div class="df-step df-primary">Depth<span class="df-sub">depth (T)</span></div>
-  <div class="df-arrow"></div>
-  <div class="df-step df-primary">Forward + MSAA<span class="df-sub">color MSAA (T)</span></div>
-  <div class="df-arrow"></div>
-  <div class="df-step df-primary">Resolve<span class="df-sub">color (T)</span></div>
-  <div class="df-arrow"></div>
-  <div class="df-step df-primary">PostProc<span class="df-sub">HDR (T)</span></div>
-  <div class="df-arrow"></div>
-  <div class="df-step df-success">Present<span class="df-sub">backbuffer (imported)</span></div>
-</div>
-<div style="text-align:center;font-size:.75em;opacity:.5;margin-top:-.3em">Fewer passes, fewer transient resources → less aliasing opportunity. Same API, same automatic barriers.</div>
-
-**Side-by-side**
-
-<div style="overflow-x:auto;margin:1em 0">
-<table style="width:100%;border-collapse:collapse;border-radius:10px;overflow:hidden;font-size:.92em">
-  <thead>
-    <tr style="background:linear-gradient(135deg,rgba(59,130,246,.12),rgba(139,92,246,.1))">
-      <th style="padding:.7em 1em;text-align:left;border-bottom:2px solid rgba(59,130,246,.2)">Aspect</th>
-      <th style="padding:.7em 1em;text-align:center;border-bottom:2px solid rgba(59,130,246,.2);color:#3b82f6">Deferred</th>
-      <th style="padding:.7em 1em;text-align:center;border-bottom:2px solid rgba(139,92,246,.2);color:#8b5cf6">Forward</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr><td style="padding:.5em 1em">Passes</td><td style="padding:.5em 1em;text-align:center">6</td><td style="padding:.5em 1em;text-align:center">5</td></tr>
-    <tr style="background:rgba(127,127,127,.04)"><td style="padding:.5em 1em">Peak VRAM (no aliasing)</td><td style="padding:.5em 1em;text-align:center">X MB</td><td style="padding:.5em 1em;text-align:center">Y MB</td></tr>
-    <tr><td style="padding:.5em 1em">Peak VRAM (with aliasing)</td><td style="padding:.5em 1em;text-align:center">0.6X MB</td><td style="padding:.5em 1em;text-align:center">0.75Y MB</td></tr>
-    <tr style="background:linear-gradient(90deg,rgba(34,197,94,.08),rgba(34,197,94,.04))"><td style="padding:.5em 1em;font-weight:700">VRAM saved by aliasing</td><td style="padding:.5em 1em;text-align:center;font-weight:700;color:#22c55e;font-size:1.1em">40%</td><td style="padding:.5em 1em;text-align:center;font-weight:700;color:#22c55e;font-size:1.1em">25%</td></tr>
-    <tr><td style="padding:.5em 1em">Barriers auto-inserted</td><td style="padding:.5em 1em;text-align:center">8</td><td style="padding:.5em 1em;text-align:center">5</td></tr>
-  </tbody>
-</table>
-</div>
-
-**What about CPU cost?** Every phase is linear-time:
-
-<div style="overflow-x:auto;margin:1em 0">
-<table style="width:100%;border-collapse:collapse;font-size:.9em">
-  <thead>
-    <tr>
-      <th style="padding:.6em 1em;text-align:left;border-bottom:2px solid rgba(34,197,94,.3);color:#22c55e">Phase</th>
-      <th style="padding:.6em 1em;text-align:center;border-bottom:2px solid rgba(34,197,94,.3)">Complexity</th>
-      <th style="padding:.6em 1em;text-align:left;border-bottom:2px solid rgba(34,197,94,.3)">Notes</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr><td style="padding:.45em 1em;font-weight:600">Topological sort</td><td style="padding:.45em 1em;text-align:center;font-family:ui-monospace,monospace;color:#22c55e">O(V + E)</td><td style="padding:.45em 1em;font-size:.9em;opacity:.8">Kahn's algorithm — passes + edges</td></tr>
-    <tr style="background:rgba(127,127,127,.04)"><td style="padding:.45em 1em;font-weight:600">Pass culling</td><td style="padding:.45em 1em;text-align:center;font-family:ui-monospace,monospace;color:#22c55e">O(V + E)</td><td style="padding:.45em 1em;font-size:.9em;opacity:.8">Backward reachability from output</td></tr>
-    <tr><td style="padding:.45em 1em;font-weight:600">Lifetime scan</td><td style="padding:.45em 1em;text-align:center;font-family:ui-monospace,monospace;color:#22c55e">O(V)</td><td style="padding:.45em 1em;font-size:.9em;opacity:.8">Single pass over sorted list</td></tr>
-    <tr style="background:rgba(127,127,127,.04)"><td style="padding:.45em 1em;font-weight:600">Aliasing</td><td style="padding:.45em 1em;text-align:center;font-family:ui-monospace,monospace;color:#22c55e">O(R log R)</td><td style="padding:.45em 1em;font-size:.9em;opacity:.8">Sort by first-use, then O(R) free-list scan</td></tr>
-    <tr><td style="padding:.45em 1em;font-weight:600">Barrier insertion</td><td style="padding:.45em 1em;text-align:center;font-family:ui-monospace,monospace;color:#22c55e">O(V)</td><td style="padding:.45em 1em;font-size:.9em;opacity:.8">Linear scan with state lookup</td></tr>
-  </tbody>
-</table>
-</div>
-
-<div style="font-size:.88em;line-height:1.5;opacity:.75;margin:-.3em 0 1em 0">Where V = passes (~25), E = dependency edges (~50), R = transient resources (~15). Everything is linear or near-linear. All data fits in L1 cache — the entire compile is well under 0.1 ms.</div>
-
-<div style="border-left:4px solid #6366f1;background:linear-gradient(135deg,rgba(99,102,241,.08),transparent);border-radius:0 10px 10px 0;padding:1.1em 1.3em;margin:1.5em 0;font-size:1.05em;font-style:italic;line-height:1.5">
-The graph doesn't care about your rendering <em>strategy</em>. It cares about your <em>dependencies</em>. That's the whole point.
-</div>
+Still missing from our implementation: async compute, split barriers, pass merging, and parallel recording. These are production features — covered in [Part III](/posts/frame-graph-production/).
 
 ---
 

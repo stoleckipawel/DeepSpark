@@ -30,41 +30,42 @@
   <div class="cc-header">
     <span class="cc-icon">⚖</span>
     <span class="cc-title">Compare: {{ $labelA }} vs {{ $labelB }}</span>
-    <p class="cc-hint">Click both buttons to compile and compare the output side by side.</p>
   </div>
   <div class="cc-panels">
     <div class="cc-panel">
       <div class="cc-panel-title cc-panel-a">{{ $labelA }}</div>
-      <details class="code-collapse">
+      <details class="code-collapse code-collapse-compact">
         <summary>
-          <span class="code-collapse-label">{{ $fileA }} <span class="code-collapse-hint">(click to expand)</span></span>
-          <div class="code-preview-body">
-            {{ highlight (delimit (first 6 (split $resA.Content "\n")) "\n") $lang "" }}
-            <div class="code-fade-overlay"></div>
-          </div>
+          <span class="code-compact-bar">
+            <span class="code-compact-icon">📄</span>
+            <span class="code-compact-name">{{ $fileA }}</span>
+            <span class="code-compact-meta">{{ len (split $resA.Content "\n") }} lines</span>
+            <span class="code-compact-actions" data-source="{{ $srcA | base64Encode }}">
+              <button class="compile-btn-sm" onclick="event.stopPropagation();compileAndRun(this)">▶ Run</button>
+            </span>
+            <span class="code-compact-expand">▸ source</span>
+          </span>
         </summary>
         {{ highlight $resA.Content $lang "" }}
       </details>
-      <div class="code-actions" data-source="{{ $srcA | base64Encode }}">
-        <button class="compile-btn" onclick="compileAndRun(this)">▶ Compile &amp; Run</button>
-      </div>
       <pre class="compile-output"></pre>
     </div>
     <div class="cc-panel">
       <div class="cc-panel-title cc-panel-b">{{ $labelB }}</div>
-      <details class="code-collapse">
+      <details class="code-collapse code-collapse-compact">
         <summary>
-          <span class="code-collapse-label">{{ $fileB }} <span class="code-collapse-hint">(click to expand)</span></span>
-          <div class="code-preview-body">
-            {{ highlight (delimit (first 6 (split $resB.Content "\n")) "\n") $lang "" }}
-            <div class="code-fade-overlay"></div>
-          </div>
+          <span class="code-compact-bar">
+            <span class="code-compact-icon">📄</span>
+            <span class="code-compact-name">{{ $fileB }}</span>
+            <span class="code-compact-meta">{{ len (split $resB.Content "\n") }} lines</span>
+            <span class="code-compact-actions" data-source="{{ $srcB | base64Encode }}">
+              <button class="compile-btn-sm" onclick="event.stopPropagation();compileAndRun(this)">▶ Run</button>
+            </span>
+            <span class="code-compact-expand">▸ source</span>
+          </span>
         </summary>
         {{ highlight $resB.Content $lang "" }}
       </details>
-      <div class="code-actions" data-source="{{ $srcB | base64Encode }}">
-        <button class="compile-btn" onclick="compileAndRun(this)">▶ Compile &amp; Run</button>
-      </div>
       <pre class="compile-output"></pre>
     </div>
   </div>

@@ -3,6 +3,7 @@
 {{ $previewLines := .Get "preview" | default "8" | int }}
 {{ $compile := .Get "compile" | default "" }}
 {{ $deps := .Get "deps" | default "" }}
+{{ $compact := .Get "compact" | default "" }}
 {{ $resource := .Page.Resources.GetMatch $file }}
 {{ if $resource }}
 {{ $lines := split $resource.Content "\n" }}
@@ -19,6 +20,45 @@
     {{ $fullSource = replace $fullSource $includeDirective $depResource.Content }}
   {{ end }}
 {{ end }}
+{{ if eq $compact "true" }}
+{{/* ── COMPACT MODE: single-line card, no code preview ── */}}
+<div class="code-block-wrapper code-compact">
+  <details class="code-collapse code-collapse-compact">
+    <summary>
+      <span class="code-compact-bar">
+        <span class="code-compact-icon">{{ if strings.HasSuffix $file ".h" }}📑{{ else }}📄{{ end }}</span>
+        <span class="code-compact-name">{{ $file }}</span>
+        <span class="code-compact-meta">{{ $total }} lines</span>
+        {{ if eq $compile "true" }}
+        <span class="code-compact-actions" data-source="{{ $fullSource | base64Encode }}">
+          <button class="compile-btn-sm" onclick="event.stopPropagation();compileAndRun(this)">▶ Run</button>
+          <button class="godbolt-btn-sm" onclick="event.stopPropagation();openInGodbolt(this)">↗ CE</button>
+        </span>
+        {{ end }}
+        <span class="code-compact-expand">▸ source</span>
+      </span>
+    </summary>
+    {{ highlight $resource.Content $lang "" }}
+  </details>
+  {{ if eq $compile "true" }}
+  <pre class="compile-output"></pre>
+  {{ end }}
+</div>
+<script>
+(function(){
+  var wrapper = document.currentScript.previousElementSibling;
+  var details = wrapper.querySelector('details.code-collapse-compact');
+  if (!details) return;
+  var fullCode = details.querySelector(':scope > .highlight');
+  if (!fullCode) return;
+  fullCode.addEventListener('click', function(e) {
+    if (window.getSelection().toString().length > 0) return;
+    details.open = false;
+  });
+})();
+</script>
+{{ else }}
+{{/* ── STANDARD MODE: preview + expand ── */}}
 <div class="code-block-wrapper">
   <details class="code-collapse">
     <summary>
@@ -38,7 +78,7 @@
   </div>
   <pre class="compile-output"></pre>
   {{ end }}
-</div>{{/* Click-to-collapse: make the expanded code body close the <details> on click */}}
+</div>
 <script>
 (function(){
   var details = document.currentScript.previousElementSibling.querySelector('details.code-collapse');
@@ -46,12 +86,12 @@
   var fullCode = details.querySelector(':scope > .highlight');
   if (!fullCode) return;
   fullCode.addEventListener('click', function(e) {
-    // Don't collapse if user is selecting text
     if (window.getSelection().toString().length > 0) return;
     details.open = false;
   });
 })();
-</script>{{ else }}
+</script>
+{{ end }}{{ else }}
 {{ errorf "include-code shortcode: file %q not found in page bundle at %s" $file .Page.File.Path }}
 {{ end }}
 {{/* Inject compile helper JS once per page */}}
@@ -65,7 +105,8 @@
   const STD_FLAG   = "-std=c++17 -O2";
 
   function getSource(btn) {
-    return atob(btn.closest(".code-actions").dataset.source);
+    var el = btn.closest(".code-actions") || btn.closest(".code-compact-actions");
+    return atob(el.dataset.source);
   }
 
   // Render compilation output with color-coded sections
@@ -135,8 +176,9 @@
   }
 
   window.compileAndRun = async function(btn) {
-    const actions = btn.closest(".code-actions");
-    const output  = actions.nextElementSibling;   // the <pre class="compile-output">
+    const actions = btn.closest(".code-actions") || btn.closest(".code-compact-actions");
+    const wrapper = btn.closest(".code-block-wrapper") || btn.closest(".cc-panel");
+    const output  = wrapper.querySelector(".compile-output");
     const source  = getSource(btn);
 
     btn.disabled = true;

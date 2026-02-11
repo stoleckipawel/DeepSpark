@@ -19,7 +19,7 @@ showTableOfContents: false
 
 ---
 
-## Why You Want One
+## 🎯 Why You Want One
 
 <div style="margin:1.2em 0 1.5em;padding:1.3em 1.5em;border-radius:12px;border:1.5px solid rgba(99,102,241,.18);background:linear-gradient(135deg,rgba(99,102,241,.04),rgba(34,197,94,.03));">
   <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:.3em .8em;align-items:center;font-size:1em;line-height:1.6;">
@@ -64,7 +64,7 @@ If you've watched VRAM spike from non-overlapping textures or chased a black scr
 
 ---
 
-## The Problem
+## 🔥 The Problem
 
 <div style="position:relative;margin:1.4em 0;padding-left:2.2em;border-left:3px solid var(--color-neutral-300,#d4d4d4);">
 
@@ -154,7 +154,7 @@ The pattern is always the same: manual resource management works at small scale 
 
 ---
 
-## The Core Idea
+## 💡 The Core Idea
 
 A frame graph is a **directed acyclic graph (DAG)** — each node is a render pass, each edge is a resource one pass hands to the next. Here's what a typical deferred frame looks like:
 
@@ -202,7 +202,7 @@ Let's look at each step.
 
 ---
 
-## The Declare Step
+## 📋 The Declare Step
 
 Each frame starts on the CPU. You register passes, describe the resources they need, and declare who reads or writes what. No GPU work happens yet — you're building a description of the frame.
 
@@ -267,7 +267,7 @@ When you declare a resource, the graph needs to know one thing: **does it live i
 
 ---
 
-## The Compile Step
+## ⚙️ The Compile Step
 
 The declared DAG goes in, an optimized execution plan comes out. Three things happen — all near-linear, all in microseconds for a typical frame.
 
@@ -312,7 +312,7 @@ The declared DAG goes in, an optimized execution plan comes out. Three things ha
 
 ---
 
-## The Execute Step
+## ▶️ The Execute Step
 
 The plan is ready — now the GPU gets involved. This phase walks the compiled pass order, applies barriers, and calls your execute lambdas.
 
@@ -343,7 +343,7 @@ The plan is ready — now the GPU gets involved. This phase walks the compiled p
 
 ---
 
-## Rebuild Strategies
+## 🔄 Rebuild Strategies
 
 How often should the graph recompile? Three approaches, each a valid tradeoff:
 
@@ -387,7 +387,7 @@ Most engines use **dynamic** or **hybrid**. The compile is so cheap that caching
 
 ---
 
-## The Payoff
+## 💰 The Payoff
 
 <div style="margin:1.2em 0;display:grid;grid-template-columns:1fr 1fr;gap:0;border-radius:10px;overflow:hidden;border:2px solid rgba(99,102,241,.25);box-shadow:0 2px 8px rgba(0,0,0,.08);">
   <div style="padding:.6em 1em;font-weight:800;font-size:.95em;background:rgba(239,68,68,.1);border-bottom:1.5px solid rgba(99,102,241,.15);border-right:1.5px solid rgba(99,102,241,.15);color:#ef4444;">❌ Without Graph</div>
