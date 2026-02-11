@@ -238,7 +238,7 @@ Each frame starts on the CPU. You register passes, describe the resources they n
   Resources stay virtual at this stage — just a description and a handle. Memory comes later.
 </div>
 
-### Transient vs. imported
+### 📦 Transient vs. imported
 
 When you declare a resource, the graph needs to know one thing: **does it live inside this frame, or does it come from outside?**
 
@@ -265,7 +265,7 @@ When you declare a resource, the graph needs to know one thing: **does it live i
   </div>
 </div>
 
-### Aliasing pitfalls
+### ⚠️ Aliasing pitfalls
 
 Aliasing is one of the graph's biggest VRAM wins — but it has sharp edges:
 
@@ -506,11 +506,13 @@ Fewer render pass boundaries means fewer state changes, less barrier overhead, a
 
 Pass merging and barriers optimize work on a single GPU queue. But modern GPUs expose at least two: a **graphics queue** and a **compute queue**. If two passes have **no dependency path between them** in the DAG, the compiler can schedule them on different queues simultaneously.
 
-#### Finding parallelism
+#### 🔍 Finding parallelism
 
-The compiler finds async candidates via **reachability analysis** — build a bitset per pass in reverse topological order; two passes are independent iff their bitsets don't overlap (one AND check).
+The compiler needs to answer one question for every pair of passes: **can these run at the same time?** Two passes can overlap only if neither depends on the other — directly or indirectly. A pass that writes the GBuffer can't overlap with lighting (which reads it), but it *can* overlap with SSAO if they share no resources.
 
-#### Minimizing fences
+The algorithm is called **reachability analysis** — for each pass, the compiler figures out every other pass it can eventually reach by following edges forward through the DAG. If pass A can reach pass B (or B can reach A), they're dependent. If neither can reach the other, they're **independent** — safe to run on separate queues.
+
+#### 🚧 Minimizing fences
 
 Cross-queue work needs **GPU fences** — one queue signals, the other waits. Each fence costs ~5–15 µs of dead GPU time. Move SSAO, volumetrics, and particle sim to compute and you create six fences — up to **90 µs of idle** that can erase the overlap gain. The compiler applies **transitive reduction** to collapse those down:
 
@@ -540,7 +542,7 @@ Cross-queue work needs **GPU fences** — one queue signals, the other waits. Ea
   </div>
 </div>
 
-#### What makes overlap good or bad
+#### ⚖️ What makes overlap good or bad
 
 Solving fences is the easy part — the compiler handles that. The harder question is whether overlapping two specific passes actually helps:
 
@@ -567,7 +569,7 @@ Try it yourself — move compute-eligible passes between queues and see how fenc
 
 {{< interactive-async >}}
 
-#### Should this pass go async?
+#### 🧭 Should this pass go async?
 
 <div style="margin:1.2em 0;max-width:420px;font-size:.88em;">
   <div style="display:flex;align-items:center;gap:.6em;padding:.55em .8em;border-radius:8px 8px 0 0;background:rgba(99,102,241,.06);border:1.5px solid rgba(99,102,241,.15);border-bottom:none;">
@@ -648,7 +650,7 @@ A **split barrier** breaks the transition into two halves and spreads them apart
 
 The passes between begin and end are the **overlap gap** — they execute while the cache flush happens in the background. The compiler places these automatically: begin immediately after the source pass, end immediately before the destination.
 
-#### How much gap is enough?
+#### 📏 How much gap is enough?
 
 <div class="fg-grid-stagger" style="display:grid;grid-template-columns:repeat(4,1fr);gap:.6em;margin:1.2em 0;">
   <div class="fg-hoverable" style="border-radius:8px;border:1.5px solid rgba(239,68,68,.2);background:rgba(239,68,68,.03);padding:.7em .8em;text-align:center;">

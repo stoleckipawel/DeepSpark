@@ -25,7 +25,7 @@ showTableOfContents: false
 
 We start from the API you *want* to write — a minimal `FrameGraph` that declares a depth prepass, GBuffer pass, and lighting pass in ~20 lines of C++.
 
-### Design principles
+### 🎯 Design principles
 
 <div style="margin:1em 0 1.4em;display:grid;grid-template-columns:repeat(3,1fr);gap:.8em;">
   <div style="padding:1em;border-radius:10px;border-top:3px solid #3b82f6;background:rgba(59,130,246,.04);">
@@ -92,7 +92,7 @@ These three ideas produce a natural pipeline — declare your intent, let the co
   </div>
 </div>
 
-### Putting it together
+### 🧩 Putting it together
 
 Here's how the final API reads — three passes, ~20 lines:
 
@@ -296,32 +296,32 @@ The graph already knows the sorted pass order and what each pass reads or writes
     <tr>
       <td style="padding:.5em .8em;font-weight:600;">Render Target → Shader Read</td>
       <td style="padding:.5em .8em;font-size:.9em;opacity:.8;">GBuffer → Lighting samples it</td>
-      <td style="padding:.5em .8em;font-size:.82em;font-family:ui-monospace,monospace;line-height:1.6;"><span style="color:#ef4444;">VK</span> COLOR_ATTACHMENT → FRAGMENT_SHADER<br><span style="color:#3b82f6;">DX</span> RENDER_TARGET → PIXEL_SHADER_RESOURCE</td>
+      <td style="padding:.5em .8em;font-size:.82em;font-family:ui-monospace,monospace;line-height:1.6;">RENDER_TARGET → PIXEL_SHADER_RESOURCE</td>
     </tr>
     <tr style="background:rgba(127,127,127,.03);">
       <td style="padding:.5em .8em;font-weight:600;">Depth Write → Depth Read</td>
       <td style="padding:.5em .8em;font-size:.9em;opacity:.8;">Shadows → Lighting reads as texture</td>
-      <td style="padding:.5em .8em;font-size:.82em;font-family:ui-monospace,monospace;line-height:1.6;"><span style="color:#ef4444;">VK</span> LATE_FRAGMENT_TESTS → FRAGMENT_SHADER<br><span style="color:#3b82f6;">DX</span> DEPTH_WRITE → PIXEL_SHADER_RESOURCE</td>
+      <td style="padding:.5em .8em;font-size:.82em;font-family:ui-monospace,monospace;line-height:1.6;">DEPTH_WRITE → PIXEL_SHADER_RESOURCE</td>
     </tr>
     <tr>
       <td style="padding:.5em .8em;font-weight:600;">UAV Write → UAV Read</td>
       <td style="padding:.5em .8em;font-size:.9em;opacity:.8;">Bloom mip N → mip N+1</td>
-      <td style="padding:.5em .8em;font-size:.82em;font-family:ui-monospace,monospace;line-height:1.6;"><span style="color:#ef4444;">VK</span> COMPUTE_SHADER (W) → COMPUTE_SHADER (R)<br><span style="color:#3b82f6;">DX</span> UAV barrier (flush caches)</td>
+      <td style="padding:.5em .8em;font-size:.82em;font-family:ui-monospace,monospace;line-height:1.6;">UAV barrier (flush caches)</td>
     </tr>
     <tr style="background:rgba(127,127,127,.03);">
       <td style="padding:.5em .8em;font-weight:600;">Shader Read → Render Target</td>
       <td style="padding:.5em .8em;font-size:.9em;opacity:.8;">Lighting read HDR → Tonemap writes</td>
-      <td style="padding:.5em .8em;font-size:.82em;font-family:ui-monospace,monospace;line-height:1.6;"><span style="color:#ef4444;">VK</span> FRAGMENT_SHADER → COLOR_ATTACHMENT<br><span style="color:#3b82f6;">DX</span> PIXEL_SHADER_RESOURCE → RENDER_TARGET</td>
+      <td style="padding:.5em .8em;font-size:.82em;font-family:ui-monospace,monospace;line-height:1.6;">PIXEL_SHADER_RESOURCE → RENDER_TARGET</td>
     </tr>
     <tr>
       <td style="padding:.5em .8em;font-weight:600;">Render Target → Present</td>
       <td style="padding:.5em .8em;font-size:.9em;opacity:.8;">Final composite → swapchain</td>
-      <td style="padding:.5em .8em;font-size:.82em;font-family:ui-monospace,monospace;line-height:1.6;"><span style="color:#ef4444;">VK</span> COLOR_ATTACHMENT → BOTTOM_OF_PIPE<br><span style="color:#3b82f6;">DX</span> RENDER_TARGET → PRESENT</td>
+      <td style="padding:.5em .8em;font-size:.82em;font-family:ui-monospace,monospace;line-height:1.6;">RENDER_TARGET → PRESENT</td>
     </tr>
     <tr style="background:rgba(127,127,127,.03);">
       <td style="padding:.5em .8em;font-weight:600;">Aliasing Barrier</td>
       <td style="padding:.5em .8em;font-size:.9em;opacity:.8;">GBuffer dies → HDR reuses memory</td>
-      <td style="padding:.5em .8em;font-size:.82em;font-family:ui-monospace,monospace;line-height:1.6;"><span style="color:#3b82f6;">DX</span> RESOURCE_BARRIER_TYPE_ALIASING<br><span style="color:#ef4444;">VK</span> layout UNDEFINED (discard)</td>
+      <td style="padding:.5em .8em;font-size:.82em;font-family:ui-monospace,monospace;line-height:1.6;">RESOURCE_BARRIER_TYPE_ALIASING</td>
     </tr>
   </tbody>
 </table>
@@ -335,7 +335,7 @@ A real frame needs <strong>dozens of these</strong>. Miss one → rendering corr
 
 ---
 
-### Putting it together — v1 → v2 diff
+### 🧩 Putting it together — v1 → v2 diff
 
 We need four new pieces: (1) resource versioning with read/write tracking, (2) adjacency list for the DAG, (3) topological sort, (4) pass culling, and (5) barrier insertion. Additions marked with `// NEW v2` in the source:
 
@@ -552,7 +552,7 @@ Drag the interactive timeline below to see how resources share physical blocks a
 
 ---
 
-### Putting it together — v2 → v3 diff
+### 🧩 Putting it together — v2 → v3 diff
 
 Two additions to the `FrameGraph` class: (1) a lifetime scan that records each transient resource's first and last use in the sorted pass order, and (2) a greedy free-list allocator that reuses physical blocks when lifetimes don't overlap.
 
@@ -610,7 +610,7 @@ That's the full value prop — automatic memory aliasing *and* automatic barrier
 
 ---
 
-### What the MVP delivers
+### ✅ What the MVP delivers
 
 Three iterations produced a single `FrameGraph` class. Here's what it does every frame, broken down by phase — the same declare → compile → execute lifecycle from [Part I](/posts/frame-graph-theory/):
 
