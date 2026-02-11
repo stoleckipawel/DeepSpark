@@ -19,7 +19,7 @@ showTableOfContents: false
 How UE5, Frostbite, and Unity implement the same ideas at scale — what they added, what they compromised, and where they still differ.
 </div>
 
-[Part II](/posts/frame-graph-build-it/) left us with a working frame graph — automatic barriers, pass culling, and memory aliasing in ~300 lines of C++. That's a solid MVP, but production engines face problems we didn't: parallel command recording, subpass merging for mobile GPUs, async compute scheduling, and managing thousands of passes across legacy codebases. This article examines how three major engines solved those problems, then maps out the path from MVP to production.
+[Part II](/posts/frame-graph-build-it/) left us with a working frame graph — automatic barriers, pass culling, and memory aliasing in ~300 lines of C++. That's a solid MVP, but production engines face problems we didn't: parallel command recording, subpass merging, async compute scheduling, and managing thousands of passes across legacy codebases. This article examines how three major engines solved those problems, then maps out the path from MVP to production.
 
 ---
 
@@ -151,7 +151,7 @@ This boundary is shrinking every release as Epic migrates more passes to RDG, bu
   <div class="dl-item"><span class="dl-x">✗</span> <strong>Incomplete migration</strong> — Legacy FRHICommandList ←→ RDG boundary = manual barriers at the seam</div>
   <div class="dl-item"><span class="dl-x">✗</span> <strong>Macro-heavy API</strong> — BEGIN_SHADER_PARAMETER_STRUCT → opaque, no debugger stepping, fights dynamic composition</div>
   <div class="dl-item"><span class="dl-x">✗</span> <strong>Transient-only aliasing</strong> — Imported resources never aliased, even when lifetime is fully known within the frame</div>
-  <div class="dl-item"><span class="dl-x">✗</span> <strong>No automatic subpass merging</strong> — Delegated to RHI — graph can't optimize tile-based GPUs directly</div>
+  <div class="dl-item"><span class="dl-x">✗</span> <strong>No automatic subpass merging</strong> — Delegated to RHI — graph can't optimize render pass structure directly</div>
   <div class="dl-item"><span class="dl-x">✗</span> <strong>Async compute is opt-in</strong> — Manual ERDGPassFlags::AsyncCompute tagging. Compiler trusts, doesn't discover.</div>
   <div class="dl-item"><span class="dl-x">✗</span> <strong>No cross-pass resource versioning</strong> — Unlike our MVP's read/write versioning, RDG uses a flat dependency model. Parallel reads are implicit.</div>
 </div>
@@ -168,39 +168,13 @@ Frostbite's frame graph (O'Donnell & Barczak, GDC 2017: *"FrameGraph: Extensible
   <div class="di-row"><div class="di-label">Dynamic rebuild</div><div>Full rebuild every frame. "Compile cost so low, caching adds complexity for nothing."</div></div>
 </div>
 
-**Frostbite vs UE5 — design spectrum:**
-
-<div class="diagram-spectrum">
-  <div class="ds-labels"><span>More aggressive</span><span>More conservative</span></div>
-  <div class="ds-bar"></div>
-  <div class="ds-cards">
-    <div class="ds-card" style="border-color:#22c55e">
-      <div class="ds-name" style="color:#22c55e">Frostbite</div>
-      <span style="color:#22c55e">✓</span> fully dynamic<br>
-      <span style="color:#22c55e">✓</span> alias everything<br>
-      <span style="color:#22c55e">✓</span> subpass merging<br>
-      <span style="color:#22c55e">✓</span> auto async<br>
-      <span style="color:#ef4444">✗</span> no legacy support<br>
-      <span style="color:#ef4444">✗</span> closed engine
-    </div>
-    <div class="ds-card" style="border-color:#3b82f6">
-      <div class="ds-name" style="color:#3b82f6">UE5 RDG</div>
-      <span style="color:#22c55e">✓</span> hybrid/cached<br>
-      <span style="color:#22c55e">✓</span> transient only<br>
-      <span style="color:#ef4444">✗</span> RHI-delegated<br>
-      <span style="color:#ef4444">✗</span> opt-in async<br>
-      <span style="color:#22c55e">✓</span> legacy compat<br>
-      <span style="color:#22c55e">✓</span> 3P game code
-    </div>
-  </div>
-  <div style="font-size:.78em;opacity:.6;margin-top:.5em">Frostbite controls the full engine. UE5 must support 25 years of existing code.</div>
-</div>
+Frostbite controls the full engine, so it pushes harder — full aliasing, automatic async compute, subpass merging. UE5 must support 25 years of existing code, so it trades some optimization for compatibility. The comparison table below has the full breakdown.
 
 ### 🔧 Other implementations
 
 <div style="border:1px solid rgba(34,197,94,.2);border-radius:10px;padding:1em 1.2em;margin:1em 0;background:linear-gradient(135deg,rgba(34,197,94,.05),transparent)">
   <div style="font-weight:700;color:#22c55e;margin-bottom:.3em">Unity — SRP Render Graph</div>
-  <div style="font-size:.9em;line-height:1.55">Shipped as part of the Scriptable Render Pipeline. Handles pass culling and transient resource aliasing in URP/HDRP backends. Async compute support varies by platform. Designed for portability across mobile and desktop, so it avoids the more aggressive GPU-specific optimizations.</div>
+  <div style="font-size:.9em;line-height:1.55">Shipped as part of the Scriptable Render Pipeline. Handles pass culling and transient resource aliasing in URP/HDRP backends. Async compute support varies by platform. Designed for broad portability, so it avoids the more aggressive GPU-specific optimizations that Frostbite and UE5 pursue.</div>
 </div>
 
 ### 📊 Comparison
@@ -251,9 +225,9 @@ All three engines use the same core algorithm from [Part II](/posts/frame-graph-
 
 - **Frostbite** merges automatically in the graph compiler — the original design treated it as first-class.
 - **UE5 RDG** delegates to the RHI layer. Pass authors never see it; the graph itself doesn't know about subpasses.
-- **Unity SRP** handles it per-platform in the backend, optimizing for tile architectures.
+- **Unity SRP** handles it per-platform in the backend.
 
-Biggest wins on tile-based GPUs (mobile, Switch, Apple Silicon), but desktop benefits from fewer render pass boundaries and state changes — especially with D3D12 Render Pass Tier 2.
+On PC and console, the wins come from fewer render pass boundaries and state changes — especially with D3D12 Render Pass Tier 2, where the GPU can keep data on-chip between fused subpasses. Console fixed-function hardware benefits similarly from reduced state thrashing.
 
 ### ⚡ Async compute
 
@@ -269,7 +243,7 @@ Biggest wins on tile-based GPUs (mobile, Switch, Apple Silicon), but desktop ben
 
 Both Frostbite and UE5 support split barriers. UE5 batches them via `FRDGBarrierBatchBegin`/`FRDGBarrierBatchEnd`. Frostbite's compiler places begin/end automatically based on pass gaps.
 
-Diminishing returns on desktop — modern drivers hide barrier latency internally. Biggest wins on mobile GPUs and expensive layout transitions (depth → shader-read). Add last, and only if profiling shows barrier stalls.
+Diminishing returns on desktop — modern drivers hide barrier latency internally. Biggest wins on expensive layout transitions (depth → shader-read) and console GPUs with more exposed pipeline control. Add last, and only if profiling shows barrier stalls.
 
 ---
 
