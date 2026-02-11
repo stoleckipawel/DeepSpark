@@ -251,9 +251,9 @@ All three engines use the same core algorithm from [Part II](/posts/frame-graph-
 
 - **Frostbite** merges automatically in the graph compiler — the original design treated it as first-class.
 - **UE5 RDG** delegates to the RHI layer. Pass authors never see it; the graph itself doesn't know about subpasses.
-- **Unity SRP** handles it per-platform in the backend, optimizing for mobile tile architectures.
+- **Unity SRP** handles it per-platform in the backend, optimizing for tile architectures.
 
-Desktop GPUs gain almost nothing from merging. Only worth the complexity if you ship on mobile or Switch.
+Biggest wins on tile-based GPUs (mobile, Switch, Apple Silicon), but desktop benefits from fewer render pass boundaries and state changes — especially with D3D12 Render Pass Tier 2.
 
 ### ⚡ Async compute
 

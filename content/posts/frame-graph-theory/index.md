@@ -448,55 +448,47 @@ The core graph — scheduling, barriers, aliasing — covers most of what a rend
 
 ### 🔗 Pass Merging
 
-Tile-based GPUs (Mali, Adreno, Apple Silicon) render into small on-chip tile memory. Between separate render passes, the GPU **flushes** tiles to main memory and **reloads** them for the next pass — expensive bandwidth you'd rather avoid.
+<div style="margin:0 0 1.2em;padding:.85em 1.1em;border-radius:10px;border:1px solid rgba(99,102,241,.15);background:linear-gradient(135deg,rgba(99,102,241,.04),transparent);font-size:.92em;line-height:1.65;">
+Every render pass boundary has a cost — the GPU resolves attachments, flushes caches, stores intermediate results to memory, and sets up state for the next pass. When two adjacent passes share the same render targets, that boundary is pure overhead. <strong>Pass merging</strong> fuses compatible passes into a single API render pass, eliminating the round-trip entirely.
+</div>
 
-<div class="diagram-tiles">
-  <div class="dt-col">
-    <div class="dt-col-title">Without merging (tile-based GPU)</div>
-    <div class="dt-col-body">
-      <strong>Pass A (GBuffer)</strong><br>
-      ├ render to tile<br>
-      ├ <span class="dt-cost-bad">flush tile → main memory ✗ slow</span><br>
-      └ done<br><br>
-      <strong>Pass B (Lighting)</strong><br>
-      ├ <span class="dt-cost-bad">load from main memory ✗ slow</span><br>
-      ├ render to tile<br>
-      └ done
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1em;margin:1.2em 0">
+  <div style="border-radius:10px;border:1.5px solid rgba(239,68,68,.2);background:rgba(239,68,68,.03);padding:1em 1.1em;">
+    <div style="font-weight:800;font-size:.85em;text-transform:uppercase;letter-spacing:.04em;color:#ef4444;margin-bottom:.6em;">Without merging</div>
+    <div style="font-size:.88em;line-height:1.7;font-family:ui-monospace,monospace;">
+      <strong>Pass A</strong> GBuffer<br>
+      <span style="opacity:.5">│</span> render<br>
+      <span style="opacity:.5">│</span> <span style="color:#ef4444;font-weight:600">store → VRAM ✗</span><br>
+      <span style="opacity:.5">└</span> done<br>
+      <br>
+      <strong>Pass B</strong> Lighting<br>
+      <span style="opacity:.5">│</span> <span style="color:#ef4444;font-weight:600">load ← VRAM ✗</span><br>
+      <span style="opacity:.5">│</span> render<br>
+      <span style="opacity:.5">└</span> done
     </div>
+    <div style="margin-top:.7em;padding-top:.6em;border-top:1px solid rgba(239,68,68,.12);font-size:.82em;opacity:.7">2 render passes, 1 unnecessary round-trip</div>
   </div>
-  <div class="dt-col" style="border-color:#22c55e">
-    <div class="dt-col-title" style="color:#22c55e">With merging</div>
-    <div class="dt-col-body">
-      <strong>Pass A+B (merged subpass)</strong><br>
-      ├ render A to tile<br>
-      ├ <span class="dt-cost-good">B reads tile directly — free!</span><br>
-      └ flush once → main memory<br><br>
-      <strong>Saves:</strong> 1 flush + 1 load per merged pair<br>
-      = <span class="dt-cost-good">massive bandwidth savings on mobile</span>
+  <div style="border-radius:10px;border:1.5px solid rgba(34,197,94,.25);background:rgba(34,197,94,.03);padding:1em 1.1em;">
+    <div style="font-weight:800;font-size:.85em;text-transform:uppercase;letter-spacing:.04em;color:#22c55e;margin-bottom:.6em;">With merging</div>
+    <div style="font-size:.88em;line-height:1.7;font-family:ui-monospace,monospace;">
+      <strong>Pass A+B</strong> merged<br>
+      <span style="opacity:.5">│</span> render A<br>
+      <span style="opacity:.5">│</span> <span style="color:#22c55e;font-weight:600">B reads in-place ✓</span><br>
+      <span style="opacity:.5">│</span> render B<br>
+      <span style="opacity:.5">└</span> store once → VRAM
     </div>
+    <div style="margin-top:.7em;padding-top:.6em;border-top:1px solid rgba(34,197,94,.15);font-size:.82em;color:#22c55e;font-weight:600">1 render pass — no intermediate memory traffic</div>
   </div>
 </div>
 
-Two adjacent passes can merge when they share the **same render target dimensions**, the second only reads the first's output at the **current pixel** (not arbitrary UVs), and there are **no external dependencies** forcing a render pass break. The graph compiler walks the sorted pass list, checks these three conditions, and groups compatible passes into one API render pass with multiple subpasses.
-
-<div style="overflow-x:auto;margin:1em 0">
-<table style="width:100%;border-collapse:collapse;font-size:.88em;border-radius:10px;overflow:hidden">
-  <thead>
-    <tr style="background:linear-gradient(135deg,rgba(59,130,246,.1),rgba(139,92,246,.08))">
-      <th style="padding:.65em 1em;text-align:left;border-bottom:2px solid rgba(59,130,246,.15)">API</th>
-      <th style="padding:.65em 1em;text-align:left;border-bottom:2px solid rgba(59,130,246,.15)">Merged group becomes</th>
-      <th style="padding:.65em 1em;text-align:left;border-bottom:2px solid rgba(59,130,246,.15)">Intermediate data</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr><td style="padding:.5em 1em;font-weight:600;color:#ef4444">Vulkan</td><td style="padding:.5em 1em">Single <code>VkRenderPass</code> + N <code>VkSubpassDescription</code></td><td style="padding:.5em 1em">Subpass inputs (tile-local)</td></tr>
-    <tr style="background:rgba(127,127,127,.04)"><td style="padding:.5em 1em;font-weight:600;color:#6b7280">Metal</td><td style="padding:.5em 1em">One <code>MTLRenderPassDescriptor</code>, <code>storeAction = .dontCare</code></td><td style="padding:.5em 1em"><code>loadAction = .load</code></td></tr>
-    <tr><td style="padding:.5em 1em;font-weight:600;color:#3b82f6">D3D12</td><td style="padding:.5em 1em"><code>BeginRenderPass</code>/<code>EndRenderPass</code> (Tier 1/2)</td><td style="padding:.5em 1em">No direct subpass — via render pass tiers</td></tr>
-  </tbody>
-</table>
+<div style="margin:1.2em 0;padding:.75em 1em;border-radius:8px;background:rgba(59,130,246,.04);border:1px solid rgba(59,130,246,.1);font-size:.88em;line-height:1.6;">
+<strong>When can two passes merge?</strong> Three conditions, all required:<br>
+<span style="display:inline-block;width:1.4em;text-align:center;font-weight:700;color:#3b82f6;">①</span> Same render target dimensions<br>
+<span style="display:inline-block;width:1.4em;text-align:center;font-weight:700;color:#3b82f6;">②</span> Second pass reads the first's output at the <strong>current pixel only</strong> (no arbitrary UV sampling)<br>
+<span style="display:inline-block;width:1.4em;text-align:center;font-weight:700;color:#3b82f6;">③</span> No external dependencies forcing a render pass break
 </div>
 
-Desktop GPUs (NVIDIA, AMD) don't use tile-based rendering, so merging has minimal benefit there. This optimization matters most on mobile and Switch.
+The biggest wins come on tile-based GPUs (Mali, Adreno, Apple Silicon) where merging avoids flushing tile memory to DRAM entirely. But desktop GPUs benefit too: fewer render pass boundaries means fewer state changes, less barrier overhead, and the driver gets a larger scope to schedule work internally. D3D12 Tier 2 hardware can eliminate intermediate stores for merged passes even on discrete GPUs.
 
 ### 🛡️ Aliasing Pitfalls
 
@@ -618,14 +610,27 @@ Drag the BEGIN marker in the interactive tool below to see how the overlap gap c
 
 Worth it when the gap spans **2+ passes**. If begin and end are adjacent, a split barrier degenerates into a regular barrier with extra API overhead. Vulkan uses `vkCmdSetEvent2` / `vkCmdWaitEvents2`; D3D12 uses `BARRIER_FLAG_BEGIN_ONLY` / `BARRIER_FLAG_END_ONLY`.
 
-<div class="diagram-ftable">
-<table>
-  <tr><th>Gap size</th><th>Action</th><th>Why</th></tr>
-  <tr><td><strong>0 passes</strong></td><td>regular barrier</td><td>begin/end adjacent → no benefit</td></tr>
-  <tr><td><strong>1 pass</strong></td><td>maybe</td><td>marginal overlap</td></tr>
-  <tr><td><strong>2+ passes</strong></td><td>split</td><td>measurable GPU overlap</td></tr>
-  <tr><td><strong>cross-queue</strong></td><td>fence instead</td><td>can't split across queues</td></tr>
-</table>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.6em;margin:1.2em 0;">
+  <div style="border-radius:8px;border:1.5px solid rgba(239,68,68,.2);background:rgba(239,68,68,.03);padding:.7em .8em;text-align:center;">
+    <div style="font-weight:800;font-size:1.1em;color:#ef4444;">0</div>
+    <div style="font-size:.78em;font-weight:600;margin:.2em 0;">passes gap</div>
+    <div style="font-size:.78em;opacity:.7;">Regular barrier — no benefit from splitting</div>
+  </div>
+  <div style="border-radius:8px;border:1.5px solid rgba(234,179,8,.2);background:rgba(234,179,8,.03);padding:.7em .8em;text-align:center;">
+    <div style="font-weight:800;font-size:1.1em;color:#eab308;">1</div>
+    <div style="font-size:.78em;font-weight:600;margin:.2em 0;">pass gap</div>
+    <div style="font-size:.78em;opacity:.7;">Marginal overlap — maybe worth it</div>
+  </div>
+  <div style="border-radius:8px;border:1.5px solid rgba(34,197,94,.25);background:rgba(34,197,94,.03);padding:.7em .8em;text-align:center;">
+    <div style="font-weight:800;font-size:1.1em;color:#22c55e;">2+</div>
+    <div style="font-size:.78em;font-weight:600;margin:.2em 0;">passes gap</div>
+    <div style="font-size:.78em;opacity:.7;">Split — measurable GPU overlap</div>
+  </div>
+  <div style="border-radius:8px;border:1.5px solid rgba(99,102,241,.2);background:rgba(99,102,241,.03);padding:.7em .8em;text-align:center;">
+    <div style="font-weight:800;font-size:1.1em;color:#6366f1;">⚡</div>
+    <div style="font-size:.78em;font-weight:600;margin:.2em 0;">cross-queue</div>
+    <div style="font-size:.78em;opacity:.7;">Use a fence instead — can't split across queues</div>
+  </div>
 </div>
 
 <div style="margin:1.2em 0;padding:.8em 1em;border-radius:8px;background:linear-gradient(135deg,rgba(34,197,94,.06),rgba(59,130,246,.06));border:1px solid rgba(34,197,94,.2);font-size:.92em;line-height:1.6;">
