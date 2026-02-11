@@ -90,7 +90,7 @@ description: "Longer-form rendering articles and write-ups."
 </div>
 </div>
 <div style="display:grid;gap:0;">
-<div class="part-link" onclick="window.location='/posts/frame-graph-theory/'" style="cursor:pointer;padding:.9em 1.3em;border-bottom:1px solid rgba(99,102,241,.07);display:flex;align-items:center;gap:1em;">
+<div class="part-link" onclick="window.location.href='frame-graph-theory/'" style="cursor:pointer;padding:.9em 1.3em;border-bottom:1px solid rgba(99,102,241,.07);display:flex;align-items:center;gap:1em;">
 <div class="part-num" style="width:2em;height:2em;border-radius:50%;background:#3b82f6;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:.85em;flex-shrink:0;">I</div>
 <div style="flex:1;min-width:0;">
 <div class="part-title" style="font-weight:700;font-size:.95em;transition:color .18s ease;">Theory</div>
@@ -98,7 +98,7 @@ description: "Longer-form rendering articles and write-ups."
 </div>
 <div style="font-size:.78em;opacity:.4;flex-shrink:0;">12 min read</div>
 </div>
-<div class="part-link" onclick="window.location='/posts/frame-graph-build-it/'" style="cursor:pointer;padding:.9em 1.3em;border-bottom:1px solid rgba(99,102,241,.07);display:flex;align-items:center;gap:1em;">
+<div class="part-link" onclick="window.location.href='frame-graph-build-it/'" style="cursor:pointer;padding:.9em 1.3em;border-bottom:1px solid rgba(99,102,241,.07);display:flex;align-items:center;gap:1em;">
 <div class="part-num" style="width:2em;height:2em;border-radius:50%;background:#8b5cf6;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:.85em;flex-shrink:0;">II</div>
 <div style="flex:1;min-width:0;">
 <div class="part-title" style="font-weight:700;font-size:.95em;transition:color .18s ease;">Build It</div>
@@ -106,7 +106,7 @@ description: "Longer-form rendering articles and write-ups."
 </div>
 <div style="font-size:.78em;opacity:.4;flex-shrink:0;">30 min read</div>
 </div>
-<div class="part-link" onclick="window.location='/posts/frame-graph-production/'" style="cursor:pointer;padding:.9em 1.3em;display:flex;align-items:center;gap:1em;">
+<div class="part-link" onclick="window.location.href='frame-graph-production/'" style="cursor:pointer;padding:.9em 1.3em;display:flex;align-items:center;gap:1em;">
 <div class="part-num" style="width:2em;height:2em;border-radius:50%;background:#22c55e;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:.85em;flex-shrink:0;">III</div>
 <div style="flex:1;min-width:0;">
 <div class="part-title" style="font-weight:700;font-size:.95em;transition:color .18s ease;">Production Engines</div>

@@ -12,7 +12,7 @@ showTableOfContents: false
 {{< article-nav >}}
 
 <div style="margin:0 0 1.5em;padding:.7em 1em;border-radius:8px;background:rgba(99,102,241,.04);border:1px solid rgba(99,102,241,.12);font-size:.88em;line-height:1.6;opacity:.85;">
-📖 <strong>Part II of III.</strong>&ensp; <a href="/posts/frame-graph-theory/">Theory</a> → <em>Build It</em> → <a href="/posts/frame-graph-production/">Production Engines</a>
+📖 <strong>Part II of III.</strong>&ensp; <a href="../frame-graph-theory/">Theory</a> → <em>Build It</em> → <a href="../frame-graph-production/">Production Engines</a>
 </div>
 
 *Three iterations from blank file to working frame graph with automatic barriers and memory aliasing. Each version builds on the last — by the end you'll have something you can drop into a real renderer.*
@@ -682,10 +682,10 @@ The graph doesn't care about your rendering *strategy*. It cares about your *dep
 ---
 
 <div style="margin:2em 0 0;padding:1em 1.2em;border-radius:10px;border:1px solid rgba(99,102,241,.2);background:rgba(99,102,241,.03);display:flex;justify-content:space-between;align-items:center;">
-  <a href="/posts/frame-graph-theory/" style="text-decoration:none;font-weight:700;font-size:.95em;">
+  <a href="../frame-graph-theory/" style="text-decoration:none;font-weight:700;font-size:.95em;">
     ← Previous: Part I — Theory
   </a>
-  <a href="/posts/frame-graph-production/" style="text-decoration:none;font-weight:700;font-size:.95em;">
+  <a href="../frame-graph-production/" style="text-decoration:none;font-weight:700;font-size:.95em;">
     Next: Part III — Production Engines →
   </a>
 </div>

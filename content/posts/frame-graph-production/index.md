@@ -12,7 +12,7 @@ showTableOfContents: false
 {{< article-nav >}}
 
 <div style="margin:0 0 1.5em;padding:.7em 1em;border-radius:8px;background:rgba(99,102,241,.04);border:1px solid rgba(99,102,241,.12);font-size:.88em;line-height:1.6;opacity:.85;">
-📖 <strong>Part III of III.</strong>&ensp; <a href="/posts/frame-graph-theory/">Theory</a> → <a href="/posts/frame-graph-build-it/">Build It</a> → <em>Production Engines</em>
+📖 <strong>Part III of III.</strong>&ensp; <a href="../frame-graph-theory/">Theory</a> → <a href="../frame-graph-build-it/">Build It</a> → <em>Production Engines</em>
 </div>
 
 <div style="border-left:4px solid #6366f1;background:linear-gradient(135deg,rgba(99,102,241,.06),transparent);border-radius:0 10px 10px 0;padding:1em 1.3em;margin:1em 0;font-size:.95em;font-style:italic;line-height:1.55">
@@ -260,7 +260,7 @@ The point isn't that every project needs a render graph. The point is that if yo
 ---
 
 <div style="margin:2em 0 0;padding:1em 1.2em;border-radius:10px;border:1px solid rgba(99,102,241,.2);background:rgba(99,102,241,.03);display:flex;justify-content:flex-start;">
-  <a href="/posts/frame-graph-build-it/" style="text-decoration:none;font-weight:700;font-size:.95em;">
+  <a href="../frame-graph-build-it/" style="text-decoration:none;font-weight:700;font-size:.95em;">
     ← Previous: Part II — Build It
   </a>
 </div>

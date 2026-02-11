@@ -12,7 +12,7 @@ showTableOfContents: false
 {{< article-nav >}}
 
 <div style="margin:0 0 1.5em;padding:.7em 1em;border-radius:8px;background:rgba(99,102,241,.04);border:1px solid rgba(99,102,241,.12);font-size:.88em;line-height:1.6;opacity:.85;">
-📖 <strong>Part I of III.</strong>&ensp; <em>Theory</em> → <a href="/posts/frame-graph-build-it/">Build It</a> → <a href="/posts/frame-graph-production/">Production Engines</a>
+📖 <strong>Part I of III.</strong>&ensp; <em>Theory</em> → <a href="../frame-graph-build-it/">Build It</a> → <a href="../frame-graph-production/">Production Engines</a>
 </div>
 
 *What a render graph is, what problems it solves, and why every major engine uses one.*
@@ -449,7 +449,7 @@ Most engines use **dynamic** or **hybrid**. The compile is so cheap that caching
 </div>
 
 <div class="fg-reveal" style="margin:1.2em 0;padding:.8em 1em;border-radius:8px;background:linear-gradient(135deg,rgba(34,197,94,.06),rgba(59,130,246,.06));border:1px solid rgba(34,197,94,.2);font-size:.92em;line-height:1.6;">
-🏭 <strong>Not theoretical.</strong> Frostbite reported <strong>50% VRAM reduction</strong> from aliasing at GDC 2017. UE5's RDG ships the same optimization today — every <code>FRDGTexture</code> marked as transient goes through the same aliasing pipeline we build in <a href="/posts/frame-graph-build-it/">Part II</a>.
+🏭 <strong>Not theoretical.</strong> Frostbite reported <strong>50% VRAM reduction</strong> from aliasing at GDC 2017. UE5's RDG ships the same optimization today — every <code>FRDGTexture</code> marked as transient goes through the same aliasing pipeline we build in <a href="../frame-graph-build-it/">Part II</a>.
 </div>
 
 ---
@@ -680,13 +680,13 @@ Try it — drag the BEGIN marker left to widen the overlap gap and watch the sta
 {{< interactive-split-barriers >}}
 
 <div class="fg-reveal" style="margin:1.4em 0;padding:.85em 1.1em;border-radius:10px;background:linear-gradient(135deg,rgba(34,197,94,.06),rgba(59,130,246,.06));border:1px solid rgba(34,197,94,.15);font-size:.92em;line-height:1.65;">
-That's all the theory. <a href="/posts/frame-graph-build-it/" style="font-weight:600;">Part II</a> implements the core — barriers, culling, aliasing — in ~300 lines of C++. <a href="/posts/frame-graph-production/" style="font-weight:600;">Part III</a> shows how production engines deploy all of these at scale.
+That's all the theory. <a href="../frame-graph-build-it/" style="font-weight:600;">Part II</a> implements the core — barriers, culling, aliasing — in ~300 lines of C++. <a href="../frame-graph-production/" style="font-weight:600;">Part III</a> shows how production engines deploy all of these at scale.
 </div>
 
 ---
 
 <div style="margin:2em 0 0;padding:1em 1.2em;border-radius:10px;border:1px solid rgba(59,130,246,.2);background:rgba(59,130,246,.03);display:flex;justify-content:flex-end;">
-  <a href="/posts/frame-graph-build-it/" style="text-decoration:none;font-weight:700;font-size:.95em;">
+  <a href="../frame-graph-build-it/" style="text-decoration:none;font-weight:700;font-size:.95em;">
     Next: Part II — Build It →
   </a>
 </div>
