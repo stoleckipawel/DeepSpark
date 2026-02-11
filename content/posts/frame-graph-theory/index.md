@@ -1,7 +1,7 @@
 ---
 title: "Frame Graph — Theory"
 date: 2026-02-09
-draft: true
+draft: false
 description: "What a render graph is, what problems it solves, and why every major engine uses one."
 tags: ["rendering", "frame-graph", "gpu", "architecture"]
 categories: ["analysis"]

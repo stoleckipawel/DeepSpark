@@ -1,7 +1,7 @@
 ---
 title: "Frame Graph — Production Engines"
 date: 2026-02-11
-draft: true
+draft: false
 description: "How UE5, Frostbite, and Unity implement frame graphs at scale — plus the upgrade roadmap from MVP to production."
 tags: ["rendering", "frame-graph", "gpu", "architecture", "ue5"]
 categories: ["analysis"]

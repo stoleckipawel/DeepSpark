@@ -1,7 +1,7 @@
 ---
 title: "Frame Graph — Build It"
 date: 2026-02-10
-draft: true
+draft: false
 description: "Three iterations from blank file to working frame graph with automatic barriers and memory aliasing."
 tags: ["rendering", "frame-graph", "gpu", "architecture", "cpp"]
 categories: ["analysis"]

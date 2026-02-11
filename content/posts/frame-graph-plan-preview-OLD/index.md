@@ -1,7 +1,7 @@
 ---
 title: "Frame Graph — MVP to Real Engines"
 date: 2026-02-09
-draft: true
+draft: false
 description: "Article plan preview — Frame Graph implementation & usage, from MVP to production engines."
 tags: ["rendering", "frame-graph", "gpu", "architecture"]
 categories: ["analysis"]
