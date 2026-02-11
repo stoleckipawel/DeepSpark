@@ -110,7 +110,7 @@ description: "Longer-form rendering articles and write-ups."
 <div class="part-num" style="width:2em;height:2em;border-radius:50%;background:#22c55e;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:.85em;flex-shrink:0;">III</div>
 <div style="flex:1;min-width:0;">
 <div class="part-title" style="font-weight:700;font-size:.95em;transition:color .18s ease;">Production Engines</div>
-<div style="font-size:.82em;opacity:.6;line-height:1.5;margin-top:.1em;">How UE5, Frostbite, and Unity implement frame graphs at scale.</div>
+<div style="font-size:.82em;opacity:.6;line-height:1.5;margin-top:.1em;">How UE5 and Frostbite implement frame graphs at scale.</div>
 </div>
 <div style="font-size:.78em;opacity:.4;flex-shrink:0;">9 min read</div>
 </div>

@@ -38,7 +38,7 @@ showTableOfContents: false
   </div>
 </div>
 
-Frostbite introduced it at GDC 2017. UE5 ships it as **RDG**. Unity has its own in SRP. Every major renderer uses one — this series shows you why, walks you through building your own in C++, and maps every piece to what ships in production engines.
+Frostbite introduced it at GDC 2017. UE5 ships it as **RDG**. Every major renderer uses one — this series shows you why, walks you through building your own in C++, and maps every piece to what ships in production engines.
 
 <div class="fg-reveal" style="margin:1.5em 0;border-radius:12px;overflow:hidden;border:1.5px solid rgba(99,102,241,.25);background:linear-gradient(135deg,rgba(99,102,241,.04),transparent);">
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0;">
@@ -248,7 +248,7 @@ When you declare a resource, the graph needs to know one thing: **does it live i
     <div style="padding:.7em .9em;font-size:.88em;line-height:1.7;">
       <strong>Lifetime:</strong> single frame<br>
       <strong>Declared as:</strong> description (size, format)<br>
-      <strong>GPU memory:</strong> allocated at compile time — <em>virtual until then</em><br>
+      <strong>GPU memory:</strong> aliasing planned at compile, physically backed at execute<br>
       <strong>Aliasable:</strong> <span style="color:#22c55e;font-weight:700;">Yes</span> — non-overlapping lifetimes share physical memory<br>
       <strong>Examples:</strong> GBuffer MRTs, SSAO scratch, bloom scratch
     </div>
