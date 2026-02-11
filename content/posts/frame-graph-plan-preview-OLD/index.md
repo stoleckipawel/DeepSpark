@@ -21,17 +21,20 @@ showTableOfContents: false
 
 ## Why You Want One
 
-<div style="margin:1.4em 0;padding:1.4em 1.6em;border-radius:12px;background:linear-gradient(135deg,rgba(59,130,246,.08),rgba(139,92,246,.06),rgba(34,197,94,.05));border:1.5px solid rgba(99,102,241,.2);">
-  <div style="font-size:1.15em;font-weight:800;line-height:1.4;margin-bottom:.6em;">
-    Your renderer has 25 passes, 47 barriers, and 900 MB of VRAM.
-    <span style="color:#22c55e;">Half of that memory is wasted.</span>
-    A frame graph fixes it <em>automatically</em>.
+<div style="margin:1.2em 0 1.5em;padding:1.3em 1.5em;border-radius:12px;border:1.5px solid rgba(99,102,241,.18);background:linear-gradient(135deg,rgba(99,102,241,.04),rgba(34,197,94,.03));">
+  <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:.3em .8em;align-items:center;font-size:1em;line-height:1.6;">
+    <span style="text-decoration:line-through;opacity:.4;text-align:right;">Passes run in whatever order you wrote them.</span>
+    <span style="opacity:.35;">→</span>
+    <strong>Sorted by dependencies.</strong>
+    <span style="text-decoration:line-through;opacity:.4;text-align:right;">Every GPU sync point placed by hand.</span>
+    <span style="opacity:.35;">→</span>
+    <strong>Barriers inserted for you.</strong>
+    <span style="text-decoration:line-through;opacity:.4;text-align:right;">Each pass allocates its own memory — 900 MB gone.</span>
+    <span style="opacity:.35;">→</span>
+    <strong style="color:#22c55e;">Resources shared safely — ~450 MB back.</strong>
   </div>
-  <div style="display:flex;gap:.6em;flex-wrap:wrap;margin-top:.7em;">
-    <span style="padding:.3em .7em;border-radius:20px;font-size:.82em;font-weight:700;background:rgba(59,130,246,.12);color:#3b82f6;border:1px solid rgba(59,130,246,.25);">🧩 Plug-and-play passes</span>
-    <span style="padding:.3em .7em;border-radius:20px;font-size:.82em;font-weight:700;background:rgba(34,197,94,.12);color:#22c55e;border:1px solid rgba(34,197,94,.25);">💾 30–50% VRAM saved</span>
-    <span style="padding:.3em .7em;border-radius:20px;font-size:.82em;font-weight:700;background:rgba(139,92,246,.12);color:#8b5cf6;border:1px solid rgba(139,92,246,.25);">🔒 Zero manual barriers</span>
-    <span style="padding:.3em .7em;border-radius:20px;font-size:.82em;font-weight:700;background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.25);">🔍 Frame = inspectable data</span>
+  <div style="margin-top:.8em;padding-top:.7em;border-top:1px solid rgba(99,102,241,.1);font-size:.88em;opacity:.7;line-height:1.5;text-align:center;">
+    You describe <em>what</em> each pass needs — the graph figures out the <em>how</em>.
   </div>
 </div>
 
@@ -153,39 +156,91 @@ The pattern is always the same: manual resource management works at small scale 
 
 ## The Core Idea
 
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2em;margin:1.4em 0;">
-  <div style="border-radius:10px;border:1.5px solid var(--color-neutral-300,#d4d4d4);padding:1em;background:var(--color-neutral-50,#fafafa);">
-    <div style="font-weight:800;font-size:.95em;margin-bottom:.5em;">📦 What it is</div>
-    <ul style="margin:0;padding-left:1.2em;line-height:1.7;font-size:.92em;">
-      <li><strong>Directed Acyclic Graph (DAG)</strong> of render passes</li>
-      <li><strong>Edges</strong> = resource dependencies (read/write)</li>
-      <li>Each frame: declare → compile → execute</li>
-    </ul>
-  </div>
-  <div style="border-radius:10px;border:1.5px solid var(--color-neutral-300,#d4d4d4);padding:1em;background:var(--color-neutral-50,#fafafa);">
-    <div style="font-weight:800;font-size:.95em;margin-bottom:.5em;">💡 Analogy</div>
-    <div style="font-size:.92em;line-height:1.7;">Think of it like a build system for GPU work. Each pass declares its inputs and outputs. The compiler resolves the dependency order, finds where resources can be reused, and inserts synchronization — the same way <code>make</code> figures out which targets to rebuild and in what order.</div>
-  </div>
-</div>
+A frame graph is a **directed acyclic graph (DAG)** — each node is a render pass, each edge is a resource one pass hands to the next. Here's what a typical deferred frame looks like:
 
+<!-- DAG flow diagram -->
+<div style="margin:1.2em 0 .3em;">
 <div class="diagram-flow" style="justify-content:center">
-  <div class="df-step df-primary">Depth<br>Prepass<span class="df-sub">depth tex</span></div>
+  <div class="df-step df-primary">Depth<br>Prepass<span class="df-sub">depth</span></div>
   <div class="df-arrow"></div>
-  <div class="df-step df-primary">GBuf<br>Pass<span class="df-sub">GBuffer</span></div>
+  <div class="df-step df-primary">GBuffer<br>Pass<span class="df-sub">albedo · normals · depth</span></div>
   <div class="df-arrow"></div>
   <div class="df-step" style="display:flex;flex-direction:column;gap:.3em;padding:.5em .8em">
-    <div style="display:flex;gap:.5em;align-items:center">
-      <div class="df-step df-primary" style="border:none;padding:.3em .6em;font-size:.9em">SSAO<span class="df-sub">SSAO tex</span></div>
-    </div>
-    <div style="opacity:.5;font-size:.8em">↕</div>
-    <div class="df-step df-primary" style="border:none;padding:.3em .6em;font-size:.9em">Lighting<span class="df-sub">HDR</span></div>
+    <div class="df-step df-primary" style="border:none;padding:.3em .6em;font-size:.9em">SSAO<span class="df-sub">occlusion</span></div>
+    <div style="opacity:.4;font-size:.75em;">↕</div>
+    <div class="df-step df-primary" style="border:none;padding:.3em .6em;font-size:.9em">Lighting<span class="df-sub">HDR color</span></div>
   </div>
   <div class="df-arrow"></div>
-  <div class="df-step df-success">Tonemap<span class="df-sub">→ Present</span></div>
+  <div class="df-step df-success">Tonemap<span class="df-sub">→ present</span></div>
 </div>
-<div style="text-align:center;font-size:.78em;opacity:.6;margin-top:-.5em">Nodes = passes &nbsp;&nbsp; Edges = resource dependencies &nbsp;&nbsp; Arrow = data flow (write → read)</div>
+<div style="text-align:center;margin-top:.1em;">
+  <span style="display:inline-block;font-size:.76em;opacity:.55;border:1px solid rgba(99,102,241,.15);border-radius:6px;padding:.25em .7em;">nodes = passes &nbsp;·&nbsp; edges = resource flow &nbsp;·&nbsp; arrows = write → read</span>
+</div>
+</div>
 
-Resources in the graph come in two kinds:
+You don't execute this graph directly. Every frame goes through three steps — first you **declare** all the passes and what they read/write, then the system **compiles** an optimized plan (ordering, memory, barriers), and finally it **executes** the result:
+
+<!-- 3-step lifecycle — distinct style from the DAG above -->
+<div style="margin:.8em auto 1.2em;max-width:560px;">
+  <div style="display:flex;align-items:stretch;gap:0;border-radius:10px;overflow:hidden;border:1.5px solid rgba(99,102,241,.2);">
+    <div style="flex:1;padding:.7em .6em;text-align:center;background:rgba(59,130,246,.06);border-right:1px solid rgba(99,102,241,.12);">
+      <div style="font-weight:800;font-size:.88em;letter-spacing:.04em;color:#3b82f6;">①&ensp;DECLARE</div>
+      <div style="font-size:.75em;opacity:.6;margin-top:.2em;">passes &amp; dependencies</div>
+    </div>
+    <div style="flex:1;padding:.7em .6em;text-align:center;background:rgba(139,92,246,.06);border-right:1px solid rgba(99,102,241,.12);">
+      <div style="font-weight:800;font-size:.88em;letter-spacing:.04em;color:#8b5cf6;">②&ensp;COMPILE</div>
+      <div style="font-size:.75em;opacity:.6;margin-top:.2em;">order · aliases · barriers</div>
+    </div>
+    <div style="flex:1;padding:.7em .6em;text-align:center;background:rgba(34,197,94,.06);">
+      <div style="font-weight:800;font-size:.88em;letter-spacing:.04em;color:#22c55e;">③&ensp;EXECUTE</div>
+      <div style="font-size:.75em;opacity:.6;margin-top:.2em;">record GPU commands</div>
+    </div>
+  </div>
+</div>
+
+Let's look at each step.
+
+---
+
+## The Declare Step
+
+Each frame starts on the CPU. You register passes, describe the resources they need, and declare who reads or writes what. No GPU work happens yet — you're building a description of the frame.
+
+<div class="diagram-box">
+  <div class="db-title">📋 DECLARE — building the graph</div>
+  <div class="db-body">
+    <div class="diagram-pipeline">
+      <div class="dp-stage">
+        <div class="dp-title">ADD PASSES</div>
+        <ul><li><code>addPass(setup, execute)</code></li><li>setup runs now, execute runs later</li></ul>
+      </div>
+      <div class="dp-stage">
+        <div class="dp-title">DECLARE RESOURCES</div>
+        <ul><li><code>create({1920,1080, RGBA8})</code></li><li>returns a handle — no allocation yet</li></ul>
+      </div>
+      <div class="dp-stage">
+        <div class="dp-title">WIRE DEPENDENCIES</div>
+        <ul><li><code>read(h)</code> / <code>write(h)</code></li><li>these edges form the DAG</li></ul>
+      </div>
+    </div>
+    <div style="text-align:center;font-size:.82em;opacity:.6;margin-top:.3em">CPU only — the GPU is idle during this phase</div>
+  </div>
+</div>
+
+<div style="margin:1.2em 0;padding:1.1em 1.3em;border-radius:10px;border:1.5px dashed rgba(99,102,241,.3);background:rgba(99,102,241,.04);display:flex;align-items:center;gap:1.2em;flex-wrap:wrap;">
+  <div style="flex:1;min-width:180px;">
+    <div style="font-size:1.15em;font-weight:800;margin:.1em 0;">Handle #3</div>
+    <div style="font-size:.82em;opacity:.6;">1920×1080 · RGBA8 · render target</div>
+  </div>
+  <div style="flex-shrink:0;padding:.4em .8em;border-radius:6px;background:rgba(245,158,11,.1);color:#f59e0b;font-weight:700;font-size:.8em;">description only — no GPU memory yet</div>
+</div>
+<div style="text-align:center;font-size:.82em;opacity:.6;margin-top:-.2em;">
+  Resources stay virtual at this stage — just a description and a handle. Memory comes later.
+</div>
+
+### Transient vs. imported
+
+When you declare a resource, the graph needs to know one thing: **does it live inside this frame, or does it come from outside?**
 
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:1em;margin:1.2em 0;">
   <div style="border-radius:10px;border:1.5px solid rgba(59,130,246,.3);overflow:hidden;">
@@ -210,123 +265,87 @@ Resources in the graph come in two kinds:
   </div>
 </div>
 
-This split is what makes aliasing possible. Transient resources are just descriptions until the compiler maps them to real memory — so two that never overlap can land on the same allocation. Imported resources are already owned by something else; the graph tracks their barriers but leaves their memory alone.
-
-<div class="diagram-flow" style="justify-content:center">
-  <div class="df-step">DECLARE<span class="df-sub">passes & deps</span></div>
-  <div class="df-arrow"></div>
-  <div class="df-step df-primary" style="min-width:180px">COMPILE<span class="df-sub">schedule order · compute aliases · insert barriers</span></div>
-  <div class="df-arrow"></div>
-  <div class="df-step df-success">EXECUTE<span class="df-sub">record cmds</span></div>
-</div>
-
-Let's walk through each stage.
-
----
-
-## The Declare Step
-
-<div class="diagram-box">
-  <div class="db-title">📋 DECLARE — building the graph</div>
-  <div class="db-body">
-    <div class="diagram-pipeline">
-      <div class="dp-stage">
-        <div class="dp-title">ADD PASSES</div>
-        <ul><li>register setup + execute lambdas</li><li>each pass gets a unique ID</li></ul>
-      </div>
-      <div class="dp-stage">
-        <div class="dp-title">DECLARE RESOURCES</div>
-        <ul><li>request by description (size, format)</li><li>virtual handle — no GPU memory yet</li></ul>
-      </div>
-      <div class="dp-stage">
-        <div class="dp-title">WIRE DEPENDENCIES</div>
-        <ul><li><code>read(handle)</code> / <code>write(handle)</code></li><li>edges form the DAG</li></ul>
-      </div>
-    </div>
-    <div style="text-align:center;font-size:.82em;opacity:.6;margin-top:.3em">CPU only — no GPU work happens here</div>
-  </div>
-</div>
-
-- **Add passes** — each `addPass(setup, execute)` call registers a node in the graph. The setup lambda runs *immediately* to declare what resources it touches.
-- **Declare resources** — `createTexture({1920, 1080, RGBA8})` returns a handle, not a GPU allocation. The resource is virtual.
-- **Wire dependencies** — calling `read(handle)` or `write(handle)` inside setup creates edges. This is what the compiler uses to determine order, barriers, and aliasability.
-
-Nothing executes on the GPU during this phase. You're describing *intent* — the compiler turns that intent into a plan.
-
 ---
 
 ## The Compile Step
 
-This is where the heavy lifting happens — the compiler reads the declared DAG and produces an optimized execution plan.
+The declared DAG goes in, an optimized execution plan comes out. Three things happen — all near-linear, all in microseconds for a typical frame.
 
 <div class="diagram-box">
-  <div class="db-title">🔍 COMPILE — inside the black box</div>
+  <div class="db-title">🔍 COMPILE — turning the DAG into a plan</div>
   <div class="db-body">
     <div class="diagram-pipeline">
       <div class="dp-stage">
         <div class="dp-title">SCHEDULE</div>
-        <ul><li>topo-sort DAG (Kahn's alg)</li><li>detect cycles</li><li>→ pass order</li></ul>
+        <ul><li>topological sort (Kahn's)</li><li>cycle detection</li><li>→ final pass order</li></ul>
       </div>
       <div class="dp-stage">
         <div class="dp-title">ALLOCATE</div>
-        <ul><li>map virtual resources to physical memory</li><li>alias overlaps</li><li>→ memory map</li></ul>
+        <ul><li>sort transients by first use</li><li>greedy-fit into physical slots</li><li>→ alias map</li></ul>
       </div>
       <div class="dp-stage">
         <div class="dp-title">SYNCHRONIZE</div>
-        <ul><li>insert barriers between passes that hand off resources</li><li>→ barrier list</li></ul>
+        <ul><li>walk each resource handoff</li><li>emit minimal barriers</li><li>→ barrier list</li></ul>
       </div>
     </div>
-    <div style="text-align:center;font-size:.82em;opacity:.6;margin-top:.3em">Schedule + Sync: O(V + E) &nbsp;&nbsp; Allocate: O(R log R)</div>
+    <div style="text-align:center;font-size:.82em;opacity:.6;margin-top:.3em">Still CPU — producing data structures for the execute phase</div>
   </div>
 </div>
 
-- **Schedule** — topological sort (Kahn's algorithm). If a cycle exists, the compiler catches it here.
-- **Allocate** — two transient resources with non-overlapping lifetimes share the same physical block. Sort by first use, then greedy scan — O(R log R) where R = transient resource count.
-- **Synchronize** — the compiler knows who wrote what and who reads it next — minimal barriers, no over-sync.
-
-<div style="margin:1.2em 0;padding:.7em 1em;border-radius:8px;background:linear-gradient(135deg,rgba(59,130,246,.06),rgba(139,92,246,.06));border:1px solid rgba(59,130,246,.2);font-size:.9em;">
-⚡ All three are <strong>near-linear</strong>. For a typical 25-pass frame the entire compile takes <strong>microseconds</strong>. Exact cost breakdown in <a href="#a-real-frame">A Real Frame</a>.
+<!-- Visual: the virtual handle from Declare is now resolved -->
+<div style="margin:1.2em 0;display:flex;align-items:center;gap:1em;flex-wrap:wrap;">
+  <div style="flex:1;min-width:180px;padding:1em 1.2em;border-radius:10px;border:1.5px dashed rgba(99,102,241,.3);background:rgba(99,102,241,.04);">
+    <div style="font-size:1.1em;font-weight:800;">Handle #3</div>
+    <div style="font-size:.8em;opacity:.5;">1920×1080 · RGBA8</div>
+    <div style="margin-top:.4em;font-size:.75em;padding:.25em .6em;border-radius:6px;background:rgba(245,158,11,.1);color:#f59e0b;font-weight:700;display:inline-block;">virtual</div>
+  </div>
+  <div style="font-size:1.4em;opacity:.3;flex-shrink:0;">→</div>
+  <div style="flex:1;min-width:180px;padding:1em 1.2em;border-radius:10px;border:1.5px solid rgba(34,197,94,.3);background:rgba(34,197,94,.04);">
+    <div style="font-size:1.1em;font-weight:800;">Handle #3 <span style="opacity:.35;">→</span> <span style="color:#22c55e;">Pool slot 0</span></div>
+    <div style="font-size:.8em;opacity:.5;">shares 8 MB with Handle #7</div>
+    <div style="margin-top:.4em;font-size:.75em;padding:.25em .6em;border-radius:6px;background:rgba(34,197,94,.1);color:#22c55e;font-weight:700;display:inline-block;">aliased</div>
+  </div>
 </div>
-
-<div style="margin:1.4em 0;padding:1em 1.2em;border-left:4px solid #8b5cf6;border-radius:0 8px 8px 0;background:rgba(139,92,246,.05);font-size:.95em;line-height:1.6;">
-<strong style="color:#8b5cf6;font-size:1.05em;">🧠 The key insight</strong><br>
-The renderer doesn't <em>run</em> passes — it <em>submits a plan</em>. The graph compiler sees every resource lifetime in the frame at once, so it can pack transient resources into the minimum memory footprint, place every barrier automatically, and cull passes whose outputs nobody reads. This is the <strong>inversion of control</strong> that makes everything else possible.
+<div style="text-align:center;font-size:.82em;opacity:.6;margin-top:-.2em;">
+  The compiler sees every resource lifetime at once — non-overlapping handles land on the same physical memory.
 </div>
 
 ---
 
 ## The Execute Step
 
+The plan is ready — now the GPU gets involved. This phase walks the compiled pass order, applies barriers, and calls your execute lambdas.
+
 <div class="diagram-box">
-  <div class="db-title">▶️ EXECUTE — recording GPU work</div>
+  <div class="db-title">▶️ EXECUTE — recording GPU commands</div>
   <div class="db-body">
     <div class="diagram-pipeline">
       <div class="dp-stage">
-        <div class="dp-title">ALLOCATE MEMORY</div>
-        <ul><li>create/reuse physical resources</li><li>apply alias mappings from compile</li></ul>
+        <div class="dp-title">BACK RESOURCES</div>
+        <ul><li>create or reuse physical memory</li><li>apply the alias map</li></ul>
       </div>
       <div class="dp-stage">
         <div class="dp-title">RUN PASSES</div>
-        <ul><li>iterate compiled order</li><li>insert barriers before each pass</li><li>call execute lambda</li></ul>
+        <ul><li>for each pass in compiled order:</li><li>insert barriers → call <code>execute()</code></li></ul>
       </div>
       <div class="dp-stage">
         <div class="dp-title">CLEANUP</div>
-        <ul><li>free transient resources</li><li>reset frame allocator</li></ul>
+        <ul><li>release transients (or pool them)</li><li>reset the frame allocator</li></ul>
       </div>
     </div>
-    <div style="text-align:center;font-size:.82em;opacity:.6;margin-top:.3em">GPU command recording — the only phase that touches the API</div>
+    <div style="text-align:center;font-size:.82em;opacity:.6;margin-top:.3em">The only phase that touches the GPU API</div>
   </div>
 </div>
 
-- **Allocate memory** — the compiled alias map tells the executor which resources share physical memory. Create only what's needed.
-- **Run passes** — walk the passes in compiled order. Before each pass, insert the barriers the compiler computed. Then call the execute lambda — this is where the user records draw calls, dispatches, copies.
-- **Cleanup** — transient resources are freed (or returned to a pool). The linear allocator resets. The frame is done.
-
-The execute phase is intentionally simple — all the intelligence lives in the compile step. Each execute lambda sees a fully resolved environment: barriers placed, memory allocated, resources ready.
+<div style="margin:1.2em 0;padding:1em 1.2em;border-radius:10px;border:1.5px solid rgba(34,197,94,.2);background:rgba(34,197,94,.04);font-size:.92em;line-height:1.6;">
+  Each execute lambda sees a <strong>fully resolved environment</strong> — barriers already placed, memory already allocated, resources ready to bind. The lambda just records draw calls, dispatches, and copies. All the intelligence lives in the compile step.
+</div>
 
 ---
 
-**How often does it rebuild?** Three strategies, each a valid tradeoff:
+## Rebuild Strategies
+
+How often should the graph recompile? Three approaches, each a valid tradeoff:
 
 <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1em;margin:1.2em 0;">
   <div style="border-radius:10px;border:1.5px solid #22c55e;overflow:hidden;">
@@ -370,49 +389,49 @@ Most engines use **dynamic** or **hybrid**. The compile is so cheap that caching
 
 ## The Payoff
 
-<div style="margin:1.2em 0;display:grid;grid-template-columns:1fr 1fr;gap:0;border-radius:10px;overflow:hidden;border:1.5px solid var(--color-neutral-300,#d4d4d4);">
-  <div style="padding:.6em 1em;font-weight:800;font-size:.95em;background:rgba(239,68,68,.08);border-bottom:1px solid var(--color-neutral-200,#e5e5e5);border-right:1px solid var(--color-neutral-200,#e5e5e5);color:#ef4444;">❌ Without Graph</div>
-  <div style="padding:.6em 1em;font-weight:800;font-size:.95em;background:rgba(34,197,94,.08);border-bottom:1px solid var(--color-neutral-200,#e5e5e5);color:#22c55e;">✅ With Graph</div>
+<div style="margin:1.2em 0;display:grid;grid-template-columns:1fr 1fr;gap:0;border-radius:10px;overflow:hidden;border:2px solid rgba(99,102,241,.25);box-shadow:0 2px 8px rgba(0,0,0,.08);">
+  <div style="padding:.6em 1em;font-weight:800;font-size:.95em;background:rgba(239,68,68,.1);border-bottom:1.5px solid rgba(99,102,241,.15);border-right:1.5px solid rgba(99,102,241,.15);color:#ef4444;">❌ Without Graph</div>
+  <div style="padding:.6em 1em;font-weight:800;font-size:.95em;background:rgba(34,197,94,.1);border-bottom:1.5px solid rgba(99,102,241,.15);color:#22c55e;">✅ With Graph</div>
 
-  <div style="padding:.55em .8em;font-size:.88em;border-bottom:1px solid var(--color-neutral-200,#e5e5e5);border-right:1px solid var(--color-neutral-200,#e5e5e5);">
-    <strong>Memory aliasing</strong><br><span style="opacity:.75">Opt-in, fragile, rarely done</span>
+  <div style="padding:.55em .8em;font-size:.88em;border-bottom:1px solid rgba(99,102,241,.1);border-right:1.5px solid rgba(99,102,241,.15);background:rgba(239,68,68,.02);">
+    <strong>Memory aliasing</strong><br><span style="opacity:.65">Opt-in, fragile, rarely done</span>
   </div>
-  <div style="padding:.55em .8em;font-size:.88em;border-bottom:1px solid var(--color-neutral-200,#e5e5e5);">
+  <div style="padding:.55em .8em;font-size:.88em;border-bottom:1px solid rgba(99,102,241,.1);background:rgba(34,197,94,.02);">
     <strong>Memory aliasing</strong><br>Automatic — compiler sees all lifetimes. <strong style="color:#22c55e;">30–50% VRAM saved.</strong>
   </div>
 
-  <div style="padding:.55em .8em;font-size:.88em;border-bottom:1px solid var(--color-neutral-200,#e5e5e5);border-right:1px solid var(--color-neutral-200,#e5e5e5);">
-    <strong>Lifetimes</strong><br><span style="opacity:.75">Manual create/destroy, leaked or over-retained</span>
+  <div style="padding:.55em .8em;font-size:.88em;border-bottom:1px solid rgba(99,102,241,.1);border-right:1.5px solid rgba(99,102,241,.15);background:rgba(239,68,68,.02);">
+    <strong>Lifetimes</strong><br><span style="opacity:.65">Manual create/destroy, leaked or over-retained</span>
   </div>
-  <div style="padding:.55em .8em;font-size:.88em;border-bottom:1px solid var(--color-neutral-200,#e5e5e5);">
+  <div style="padding:.55em .8em;font-size:.88em;border-bottom:1px solid rgba(99,102,241,.1);background:rgba(34,197,94,.02);">
     <strong>Lifetimes</strong><br>Scoped to first..last use. Zero waste.
   </div>
 
-  <div style="padding:.55em .8em;font-size:.88em;border-bottom:1px solid var(--color-neutral-200,#e5e5e5);border-right:1px solid var(--color-neutral-200,#e5e5e5);">
-    <strong>Barriers</strong><br><span style="opacity:.75">Manual, per-pass</span>
+  <div style="padding:.55em .8em;font-size:.88em;border-bottom:1px solid rgba(99,102,241,.1);border-right:1.5px solid rgba(99,102,241,.15);background:rgba(239,68,68,.02);">
+    <strong>Barriers</strong><br><span style="opacity:.65">Manual, per-pass</span>
   </div>
-  <div style="padding:.55em .8em;font-size:.88em;border-bottom:1px solid var(--color-neutral-200,#e5e5e5);">
+  <div style="padding:.55em .8em;font-size:.88em;border-bottom:1px solid rgba(99,102,241,.1);background:rgba(34,197,94,.02);">
     <strong>Barriers</strong><br>Automatic from declared read/write
   </div>
 
-  <div style="padding:.55em .8em;font-size:.88em;border-bottom:1px solid var(--color-neutral-200,#e5e5e5);border-right:1px solid var(--color-neutral-200,#e5e5e5);">
-    <strong>Pass reordering</strong><br><span style="opacity:.75">Breaks silently</span>
+  <div style="padding:.55em .8em;font-size:.88em;border-bottom:1px solid rgba(99,102,241,.1);border-right:1.5px solid rgba(99,102,241,.15);background:rgba(239,68,68,.02);">
+    <strong>Pass reordering</strong><br><span style="opacity:.65">Breaks silently</span>
   </div>
-  <div style="padding:.55em .8em;font-size:.88em;border-bottom:1px solid var(--color-neutral-200,#e5e5e5);">
+  <div style="padding:.55em .8em;font-size:.88em;border-bottom:1px solid rgba(99,102,241,.1);background:rgba(34,197,94,.02);">
     <strong>Pass reordering</strong><br>Safe — compiler respects dependencies
   </div>
 
-  <div style="padding:.55em .8em;font-size:.88em;border-bottom:1px solid var(--color-neutral-200,#e5e5e5);border-right:1px solid var(--color-neutral-200,#e5e5e5);">
-    <strong>Pass culling</strong><br><span style="opacity:.75">Manual ifdef / flag checks</span>
+  <div style="padding:.55em .8em;font-size:.88em;border-bottom:1px solid rgba(99,102,241,.1);border-right:1.5px solid rgba(99,102,241,.15);background:rgba(239,68,68,.02);">
+    <strong>Pass culling</strong><br><span style="opacity:.65">Manual ifdef / flag checks</span>
   </div>
-  <div style="padding:.55em .8em;font-size:.88em;border-bottom:1px solid var(--color-neutral-200,#e5e5e5);">
+  <div style="padding:.55em .8em;font-size:.88em;border-bottom:1px solid rgba(99,102,241,.1);background:rgba(34,197,94,.02);">
     <strong>Pass culling</strong><br>Automatic — unused outputs = dead pass
   </div>
 
-  <div style="padding:.55em .8em;font-size:.88em;border-right:1px solid var(--color-neutral-200,#e5e5e5);">
-    <strong>Async compute</strong><br><span style="opacity:.75">Manual queue sync</span>
+  <div style="padding:.55em .8em;font-size:.88em;border-right:1.5px solid rgba(99,102,241,.15);background:rgba(239,68,68,.02);">
+    <strong>Async compute</strong><br><span style="opacity:.65">Manual queue sync</span>
   </div>
-  <div style="padding:.55em .8em;font-size:.88em;">
+  <div style="padding:.55em .8em;font-size:.88em;background:rgba(34,197,94,.02);">
     <strong>Async compute</strong><br>Compiler schedules across queues
   </div>
 </div>
@@ -424,37 +443,43 @@ Most engines use **dynamic** or **hybrid**. The compile is so cheap that caching
 
 ---
 
+# Part II — Build It
+
+*Three iterations from blank file to working frame graph with automatic barriers and memory aliasing. Each version builds on the last — by the end you'll have something you can drop into a real renderer.*
+
+---
+
 ## API Design
 
-We start from the API you *want* to write — a minimal `FrameGraph` setup that declares a depth prepass, GBuffer pass, and lighting pass in ~20 lines of C++.
+We start from the API you *want* to write — a minimal `FrameGraph` that declares a depth prepass, GBuffer pass, and lighting pass in ~20 lines of C++.
 
-<div style="margin:1.4em 0;border-radius:10px;border:1.5px solid var(--color-neutral-300,#d4d4d4);overflow:hidden;background:var(--color-neutral-50,#fafafa);">
-  <div style="padding:.65em 1em;font-weight:800;font-size:1em;background:var(--color-primary-100,#e0e7ff);border-bottom:1.5px solid var(--color-neutral-300,#d4d4d4);color:var(--color-neutral-800,#1e1e1e);">
-    🔑 Key design choices
+### Design principles
+
+<div style="margin:1em 0 1.4em;display:grid;grid-template-columns:repeat(3,1fr);gap:.8em;">
+  <div style="padding:1em;border-radius:10px;border-top:3px solid #3b82f6;background:rgba(59,130,246,.04);">
+    <div style="font-weight:800;font-size:.92em;margin-bottom:.4em;color:#3b82f6;">λ² &ensp;Two lambdas</div>
+    <div style="font-size:.86em;line-height:1.6;opacity:.85;">
+      <strong>Setup</strong> — runs at declaration. Declares reads &amp; writes. No GPU work.<br>
+      <strong>Execute</strong> — runs later. Records GPU commands into a fully resolved environment.
+    </div>
   </div>
-  <div style="display:grid;grid-template-columns:auto 1fr;gap:0;">
-    <div style="padding:.7em 1em;font-weight:700;font-size:.92em;border-bottom:1px solid var(--color-neutral-200,#e5e5e5);display:flex;align-items:center;gap:.4em;">
-      <span style="font-size:1.1em;">λ²</span> Two lambdas
+  <div style="padding:1em;border-radius:10px;border-top:3px solid #8b5cf6;background:rgba(139,92,246,.04);">
+    <div style="font-weight:800;font-size:.92em;margin-bottom:.4em;color:#8b5cf6;">📐 &ensp;Virtual resources</div>
+    <div style="font-size:.86em;line-height:1.6;opacity:.85;">
+      Requested by description (<code>{1920, 1080, RGBA8}</code>), not GPU handle. Virtual until the compiler maps them to memory.
     </div>
-    <div style="padding:.7em 1em;font-size:.9em;border-bottom:1px solid var(--color-neutral-200,#e5e5e5);border-left:1px solid var(--color-neutral-200,#e5e5e5);line-height:1.5;">
-      <strong style="color:#3b82f6;">Setup</strong> runs at declaration time — declares "I read A, I write B." No GPU work.<br>
-      <strong style="color:#22c55e;">Execute</strong> runs later — records actual GPU commands. Barriers & memory already resolved.
-    </div>
-    <div style="padding:.7em 1em;font-weight:700;font-size:.92em;border-bottom:1px solid var(--color-neutral-200,#e5e5e5);display:flex;align-items:center;gap:.4em;">
-      <span style="font-size:1.1em;">📐</span> Virtual resources
-    </div>
-    <div style="padding:.7em 1em;font-size:.9em;border-bottom:1px solid var(--color-neutral-200,#e5e5e5);border-left:1px solid var(--color-neutral-200,#e5e5e5);line-height:1.5;">
-      Requested by description (<code>{1920, 1080, RGBA8}</code>), not by GPU handle. Virtual until the compiler maps them.
-    </div>
-    <div style="padding:.7em 1em;font-weight:700;font-size:.92em;display:flex;align-items:center;gap:.4em;">
-      <span style="font-size:1.1em;">♻️</span> Owned lifetimes
-    </div>
-    <div style="padding:.7em 1em;font-size:.9em;border-left:1px solid var(--color-neutral-200,#e5e5e5);line-height:1.5;">
-      The graph owns transient lifetimes — the user never calls create/destroy.
+  </div>
+  <div style="padding:1em;border-radius:10px;border-top:3px solid #22c55e;background:rgba(34,197,94,.04);">
+    <div style="font-weight:800;font-size:.92em;margin-bottom:.4em;color:#22c55e;">♻️ &ensp;Owned lifetimes</div>
+    <div style="font-size:.86em;line-height:1.6;opacity:.85;">
+      The graph owns every transient resource from first use to last. You never call create or destroy.
     </div>
   </div>
 </div>
 
+These three ideas produce a natural pipeline — declare your intent, let the compiler optimize, then execute:
+
+<!-- Timeline: declaration → compile → execution -->
 <div class="diagram-phases">
   <div class="dph-col" style="border-color:#3b82f6">
     <div class="dph-title" style="color:#3b82f6">Declaration time</div>
@@ -486,28 +511,24 @@ We start from the API you *want* to write — a minimal `FrameGraph` setup that 
   </div>
 </div>
 
-If you've seen UE5 code, this should look familiar:
+### UE5 mapping
 
-<div style="margin:1.2em 0;border-radius:10px;overflow:hidden;border:1.5px solid var(--color-neutral-300,#d4d4d4);">
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;">
-    <div style="padding:.55em .8em;font-weight:800;font-size:.92em;background:rgba(59,130,246,.08);border-bottom:1px solid var(--color-neutral-200,#e5e5e5);border-right:1px solid var(--color-neutral-200,#e5e5e5);text-align:center;">🛠️ Our API</div>
-    <div style="padding:.55em .8em;font-weight:800;font-size:.92em;background:rgba(139,92,246,.08);border-bottom:1px solid var(--color-neutral-200,#e5e5e5);text-align:center;">🎮 UE5 Equivalent</div>
-    <div style="padding:.5em .8em;font-size:.88em;border-bottom:1px solid var(--color-neutral-200,#e5e5e5);border-right:1px solid var(--color-neutral-200,#e5e5e5);font-family:ui-monospace,monospace;">addPass(setup, execute)</div>
-    <div style="padding:.5em .8em;font-size:.88em;border-bottom:1px solid var(--color-neutral-200,#e5e5e5);font-family:ui-monospace,monospace;">FRDGBuilder::AddPass</div>
-    <div style="padding:.5em .8em;font-size:.88em;border-bottom:1px solid var(--color-neutral-200,#e5e5e5);border-right:1px solid var(--color-neutral-200,#e5e5e5);font-family:ui-monospace,monospace;">ResourceHandle</div>
-    <div style="padding:.5em .8em;font-size:.88em;border-bottom:1px solid var(--color-neutral-200,#e5e5e5);font-family:ui-monospace,monospace;">FRDGTextureRef / FRDGBufferRef</div>
-    <div style="padding:.5em .8em;font-size:.88em;border-bottom:1px solid var(--color-neutral-200,#e5e5e5);border-right:1px solid var(--color-neutral-200,#e5e5e5);font-family:ui-monospace,monospace;">setup lambda</div>
-    <div style="padding:.5em .8em;font-size:.88em;border-bottom:1px solid var(--color-neutral-200,#e5e5e5);font-family:ui-monospace,monospace;">BEGIN_SHADER_PARAMETER_STRUCT</div>
-    <div style="padding:.5em .8em;font-size:.88em;border-right:1px solid var(--color-neutral-200,#e5e5e5);font-family:ui-monospace,monospace;">execute lambda</div>
-    <div style="padding:.5em .8em;font-size:.88em;font-family:ui-monospace,monospace;">Execute lambda <span style="font-family:inherit;opacity:.6">(same concept)</span></div>
-  </div>
+If you've worked with UE5's RDG, our API maps directly:
+
+<div style="margin:.8em 0;font-size:.9em;line-height:1.8;font-family:ui-monospace,monospace;">
+  <span style="opacity:.5;">ours</span> <code>addPass(setup, execute)</code> &ensp;→&ensp; <span style="opacity:.5;">UE5</span> <code>FRDGBuilder::AddPass</code><br>
+  <span style="opacity:.5;">ours</span> <code>ResourceHandle</code> &ensp;→&ensp; <span style="opacity:.5;">UE5</span> <code>FRDGTextureRef</code> / <code>FRDGBufferRef</code><br>
+  <span style="opacity:.5;">ours</span> <code>setup lambda</code> &ensp;→&ensp; <span style="opacity:.5;">UE5</span> <code>BEGIN_SHADER_PARAMETER_STRUCT</code><br>
+  <span style="opacity:.5;">ours</span> <code>execute lambda</code> &ensp;→&ensp; <span style="opacity:.5;">UE5</span> <code>execute lambda</code> <span style="font-family:inherit;opacity:.5;">(same concept)</span>
 </div>
 
 <div style="margin:1em 0;padding:.7em 1em;border-radius:8px;border-left:4px solid #f59e0b;background:rgba(245,158,11,.05);font-size:.9em;line-height:1.6;">
 ⚠️ <strong>UE5's macro tradeoff:</strong> The <code>BEGIN_SHADER_PARAMETER_STRUCT</code> approach is opaque, hard to debug, and impossible to compose dynamically. Our explicit two-lambda API is simpler and more flexible — UE5 traded that flexibility for compile-time validation and reflection.
 </div>
 
-This is the API we're building toward. The next three sections construct the internals, version by version. Here's a preview of how the final API reads:
+### Putting it together
+
+Here's how the final API reads — three passes, ~20 lines:
 
 ```cpp
 FrameGraph fg;
@@ -532,12 +553,6 @@ fg.execute();  // → topo-sort, cull, alias, barrier, run
 ```
 
 Three passes, declared as lambdas. The graph handles the rest — ordering, barriers, memory. We build this step by step below.
-
----
-
-# Part II — Build It
-
-*Three iterations from blank file to working frame graph with automatic barriers and memory aliasing. Each version builds on the last — by the end you'll have something you can drop into a real renderer.*
 
 ---
 
@@ -691,10 +706,6 @@ Here's what that looks like in practice — every one of these is a barrier your
       <div class="bz-api"><span class="bz-vk">VK</span> image layout UNDEFINED (discard)</div>
     </div>
   </div>
-</div>
-
-<div style="margin:1em 0;padding:.7em 1em;border-radius:8px;border-left:4px solid #f59e0b;background:rgba(245,158,11,.05);font-size:.88em;line-height:1.6;">
-<strong style="color:#f59e0b;">⚡ D3D12 Enhanced Barriers</strong> — If you're on D3D12, the legacy <code>ResourceBarrier</code> API forces per-resource state tracking with unintuitive promotion/decay rules. The newer <strong>Enhanced Barriers</strong> (Agility SDK 1.7+) switch to <em>access-based</em> transitions — closer to how Vulkan works and much friendlier for a frame graph to emit. <strong>TL;DR:</strong> your graph's barrier code gets simpler because you describe <em>what accesses you need</em> instead of tracking what state a resource is "in."
 </div>
 
 {{< interactive-barriers >}}
