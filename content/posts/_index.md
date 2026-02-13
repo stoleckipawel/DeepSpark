@@ -94,7 +94,7 @@ description: "Longer-form rendering articles and write-ups."
 <div class="part-num" style="width:2em;height:2em;border-radius:50%;background:#3b82f6;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:.85em;flex-shrink:0;">I</div>
 <div style="flex:1;min-width:0;">
 <div class="part-title" style="font-weight:700;font-size:.95em;transition:color .18s ease;">Theory</div>
-<div style="font-size:.82em;opacity:.6;line-height:1.5;margin-top:.1em;">What a render graph is, what problems it solves, and why every major engine uses one.</div>
+<div style="font-size:.82em;opacity:.6;line-height:1.5;margin-top:.1em;">The theory behind frame graphs — how a DAG of passes and resources automates scheduling, barriers, and memory aliasing.</div>
 </div>
 <div style="font-size:.78em;opacity:.4;flex-shrink:0;">12 min read</div>
 </div>

@@ -2,7 +2,7 @@
 title: "Frame Graph — Theory"
 date: 2026-02-09
 draft: false
-description: "What a render graph is, what problems it solves, and why every major engine uses one."
+description: "The theory behind frame graphs — how a DAG of passes and resources gives the compiler enough information to automate scheduling, barriers, and memory aliasing."
 tags: ["rendering", "frame-graph", "gpu", "architecture"]
 categories: ["analysis"]
 series: ["Rendering Architecture"]
@@ -14,8 +14,6 @@ showTableOfContents: false
 <div style="margin:0 0 1.5em;padding:.7em 1em;border-radius:8px;background:rgba(99,102,241,.04);border:1px solid rgba(99,102,241,.12);font-size:.88em;line-height:1.6;opacity:.85;">
 📖 <strong>Part I of III.</strong>&ensp; <em>Theory</em> → <a href="../frame-graph-build-it/">Build It</a> → <a href="../frame-graph-production/">Production Engines</a>
 </div>
-
-*What a render graph is, what problems it solves, and why every major engine uses one.*
 
 ---
 
@@ -59,8 +57,6 @@ Frostbite introduced it at GDC 2017. UE5 ships it as **RDG**. Every major render
     </div>
   </div>
 </div>
-
-If you've watched VRAM spike from non-overlapping textures or chased a black screen after reordering a pass — this is for you.
 
 ---
 
@@ -698,10 +694,6 @@ Since the frame graph is a DAG, every dependency is explicitly encoded in the st
 The explorer below is a production-scale graph. Toggle each compiler feature on and off to see exactly what it contributes. Click any pass to inspect its dependencies — every edge was inferred from `read()` and `write()` calls, not hand-written.
 
 {{< interactive-full-pipeline >}}
-
-<div class="fg-reveal" style="margin:1.2em 0;padding:.85em 1.1em;border-radius:10px;border:1px solid rgba(139,92,246,.15);background:rgba(139,92,246,.04);font-size:.9em;line-height:1.65;">
-<strong>Why this matters:</strong> With all features off, you're looking at what a renderer <em>without</em> a frame graph must manage by hand — every dependency, every barrier, every memory decision, across every pass. Turn them on one by one and watch the compiler do the work. That's the pitch: <strong>trade implicit dependencies for compiler-automated scheduling, synchronization, and memory management.</strong> The graph hides where dependencies are — but it also gives you the tooling to see <em>all of them at once</em>, which manual code never could.
-</div>
 
 ---
 
