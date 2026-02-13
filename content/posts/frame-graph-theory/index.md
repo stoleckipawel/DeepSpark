@@ -265,7 +265,7 @@ When you declare a resource, the graph needs to know one thing: **does it live i
 
 ## ⚙️ The Compile Step
 
-The declared DAG goes in, an optimized execution plan comes out — all in microseconds.
+The declared DAG goes in; an optimized execution plan comes out — all on the CPU, in microseconds.
 
 <div style="margin:1.2em 0;border-radius:12px;overflow:hidden;border:1.5px solid rgba(139,92,246,.25);">
   <!-- INPUT -->
@@ -276,11 +276,11 @@ The declared DAG goes in, an optimized execution plan comes out — all in micro
   <!-- PIPELINE -->
   <div style="padding:.8em 1.3em;background:rgba(139,92,246,.03);">
     <div style="display:grid;grid-template-columns:auto 1fr;gap:.35em 1em;align-items:center;font-size:.88em;">
-      <span style="font-weight:700;color:#8b5cf6;">①</span><span>Sort passes into dependency order</span>
-      <span style="font-weight:700;color:#8b5cf6;">②</span><span>Cull passes whose outputs are never read</span>
-      <span style="font-weight:700;color:#8b5cf6;">③</span><span>Alias memory — non-overlapping lifetimes share physical blocks</span>
-      <span style="font-weight:700;color:#8b5cf6;">④</span><span>Insert barriers at every resource state transition</span>
-      <span style="font-weight:700;color:#8b5cf6;">⑤</span><span>Bind physical memory — create or reuse from pool</span>
+      <span style="font-weight:700;color:#8b5cf6;">①</span><span><strong>Sort</strong> passes into dependency order</span>
+      <span style="font-weight:700;color:#8b5cf6;">②</span><span><strong>Cull</strong> passes whose outputs are never read</span>
+      <span style="font-weight:700;color:#8b5cf6;">③</span><span><strong>Allocate</strong> — alias memory so non-overlapping lifetimes share physical blocks</span>
+      <span style="font-weight:700;color:#8b5cf6;">④</span><span><strong>Barrier</strong> — insert transitions at every resource state change</span>
+      <span style="font-weight:700;color:#8b5cf6;">⑤</span><span><strong>Bind</strong> — attach physical memory, creating or reusing from a pool</span>
     </div>
   </div>
   <!-- OUTPUT -->
@@ -289,20 +289,20 @@ The declared DAG goes in, an optimized execution plan comes out — all in micro
     <span style="font-size:.88em;opacity:.8;">ordered passes · aliased memory · barrier list · physical bindings</span>
   </div>
 </div>
-<div style="text-align:center;font-size:.82em;opacity:.5;margin-top:.2em;">Still CPU — all decisions made before the GPU sees a single command</div>
 
-<div style="margin:1.4em 0;border-radius:12px;overflow:hidden;border:1.5px solid rgba(139,92,246,.2);">
-  <div style="padding:.6em 1.1em;background:rgba(139,92,246,.06);font-weight:700;font-size:.82em;text-transform:uppercase;letter-spacing:.04em;color:#8b5cf6;border-bottom:1px solid rgba(139,92,246,.12);">🧱 Allocation — how virtual resources become physical memory</div>
+### Sorting and culling
 
-  <!-- Placed resources concept -->
-  <div style="padding:.8em 1.2em .6em;font-size:.88em;line-height:1.7;border-bottom:1px solid rgba(139,92,246,.08);">
-    The graph allocates a large <code>ID3D12Heap</code> (or <code>VkDeviceMemory</code>) and <strong>places</strong> multiple resources at different offsets within it. Resources whose lifetimes don't overlap share the same physical memory — this is <strong>aliasing</strong>.
-  </div>
+**Sorting** is a topological sort over the dependency edges, producing a linear order that respects every read-before-write constraint.
 
-  <!-- Timeline: why aliasing works -->
+**Culling** walks backward from the final outputs and removes any pass whose results are never read. Dead-code elimination for GPU work — entire passes vanish without a feature flag.
+
+### Allocation and aliasing
+
+The sorted order tells the compiler exactly when each resource is first written and last read — its **lifetime**. Two resources that are never alive at the same time can share the same physical memory.
+
+<div style="margin:1em 0;border-radius:12px;overflow:hidden;border:1.5px solid rgba(139,92,246,.2);">
+  <!-- Timeline -->
   <div style="padding:.8em 1.2em;">
-    <div style="font-size:.78em;font-weight:700;text-transform:uppercase;letter-spacing:.03em;opacity:.45;margin-bottom:.5em;">Why it works — lifetimes don't overlap</div>
-    <!-- Timeline header -->
     <div style="display:grid;grid-template-columns:100px repeat(6,1fr);gap:2px;font-size:.72em;opacity:.45;margin-bottom:.3em;">
       <div></div>
       <div style="text-align:center;">Pass 1</div>
@@ -312,7 +312,6 @@ The declared DAG goes in, an optimized execution plan comes out — all in micro
       <div style="text-align:center;">Pass 5</div>
       <div style="text-align:center;">Pass 6</div>
     </div>
-    <!-- GBuffer row -->
     <div style="display:grid;grid-template-columns:100px repeat(6,1fr);gap:2px;margin-bottom:3px;">
       <div style="font-size:.8em;font-weight:700;display:flex;align-items:center;">GBuffer</div>
       <div style="background:rgba(139,92,246,.2);border-radius:4px 0 0 4px;height:24px;"></div>
@@ -322,7 +321,6 @@ The declared DAG goes in, an optimized execution plan comes out — all in micro
       <div style="height:24px;"></div>
       <div style="height:24px;"></div>
     </div>
-    <!-- Bloom row -->
     <div style="display:grid;grid-template-columns:100px repeat(6,1fr);gap:2px;margin-bottom:.5em;">
       <div style="font-size:.8em;font-weight:700;display:flex;align-items:center;">Bloom</div>
       <div style="height:24px;"></div>
@@ -338,13 +336,18 @@ The declared DAG goes in, an optimized execution plan comes out — all in micro
     </div>
   </div>
 
+  <!-- How it works -->
+  <div style="padding:.7em 1.2em;font-size:.88em;line-height:1.7;border-top:1px solid rgba(139,92,246,.08);">
+    The graph allocates a large <code>ID3D12Heap</code> (or <code>VkDeviceMemory</code>) and <strong>places</strong> multiple resources at different offsets within it. This is the single biggest VRAM win the graph provides.
+  </div>
+
   <!-- Pitfalls -->
   <div style="padding:.7em 1.2em;background:rgba(234,179,8,.04);border-top:1px solid rgba(234,179,8,.12);">
     <div style="font-size:.78em;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:#ca8a04;margin-bottom:.4em;">⚠ Pitfalls</div>
     <div style="display:grid;grid-template-columns:auto 1fr;gap:.2em .8em;font-size:.85em;line-height:1.6;">
-      <span style="font-weight:700;opacity:.7;">Format</span><span>Depth metadata may conflict with color on same memory — skip aliasing for depth formats</span>
-      <span style="font-weight:700;opacity:.7;">Init</span><span>Reused memory = garbage — first use must be a full clear or fullscreen write</span>
-      <span style="font-weight:700;opacity:.7;">Imported</span><span>Survive across frames — never alias. Only transient resources qualify</span>
+      <span style="font-weight:700;opacity:.7;">Garbage</span><span>Aliased memory has stale contents — first use must be a full clear or overwrite</span>
+      <span style="font-weight:700;opacity:.7;">Transient only</span><span>Imported resources live across frames — only single-frame transients qualify</span>
+      <span style="font-weight:700;opacity:.7;">Sync</span><span>The old resource must finish all GPU access before the new one touches the same memory</span>
     </div>
   </div>
 
@@ -362,6 +365,10 @@ The declared DAG goes in, an optimized execution plan comes out — all in micro
     <a href="../frame-graph-production/">Part III</a> covers how UE5 and Frostbite implement these strategies.
   </div>
 </div>
+
+### Barriers
+
+The compiler knows each resource's state at every point — render target, shader read, copy source — and inserts a barrier at every transition. Hand-written barriers are one of the most common sources of GPU bugs; the graph makes them automatic and correct by construction.
 
 ---
 
