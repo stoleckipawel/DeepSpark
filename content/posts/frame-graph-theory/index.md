@@ -261,83 +261,106 @@ When you declare a resource, the graph needs to know one thing: **does it live i
   </div>
 </div>
 
-### ⚠️ Aliasing pitfalls
-
-Aliasing is one of the graph's biggest VRAM wins — but it has sharp edges:
-
-<div class="diagram-warn">
-  <div class="dw-title">⚠ Aliasing pitfalls</div>
-  <div class="dw-row"><div class="dw-label">Format compat</div><div>depth/stencil metadata may conflict with color targets on same VkMemory → skip aliasing for depth formats</div></div>
-  <div class="dw-row"><div class="dw-label">Initialization</div><div>reused memory = garbage contents → first use <strong>MUST</strong> be a full clear or fullscreen write</div></div>
-  <div class="dw-row"><div class="dw-label">Imported res</div><div>survive across frames — <strong>never alias</strong>. Only transient resources qualify.</div></div>
-</div>
-
-Aliasing requires **placed resources** — you allocate a large `ID3D12Heap` (or `VkDeviceMemory`), then bind multiple resources at different offsets within it. Non-overlapping lifetimes land on the same physical memory.
-
-<div class="fg-grid-stagger" style="display:grid;grid-template-columns:1fr 1fr;gap:1em;margin:1.2em 0;">
-  <div class="fg-hoverable" style="border-radius:10px;border:1.5px solid rgba(139,92,246,.25);overflow:hidden;">
-    <div style="padding:.6em .9em;font-weight:800;font-size:.88em;background:rgba(139,92,246,.08);border-bottom:1px solid rgba(139,92,246,.12);color:#8b5cf6;">🪣 Power-of-two bucketing</div>
-    <div style="padding:.7em .9em;font-size:.88em;line-height:1.65;">
-      Instead of allocating exact sizes, round up to the nearest power of two (4 MB, 8 MB, 16 MB…). Fewer distinct sizes → heaps are <strong>reusable across resources</strong> with different dimensions, reducing fragmentation.
-    </div>
-  </div>
-  <div class="fg-hoverable" style="border-radius:10px;border:1.5px solid rgba(34,197,94,.25);overflow:hidden;">
-    <div style="padding:.6em .9em;font-weight:800;font-size:.88em;background:rgba(34,197,94,.08);border-bottom:1px solid rgba(34,197,94,.12);color:#22c55e;">♻️ Cross-frame pooling</div>
-    <div style="padding:.7em .9em;font-size:.88em;line-height:1.65;">
-      Don't destroy heaps at frame end — keep them in a pool. Next frame's <code>compile()</code> pulls from the pool instead of calling the allocator. Allocation cost amortizes to <strong>near zero</strong> after the first few frames.
-    </div>
-  </div>
-</div>
-<div style="text-align:center;font-size:.82em;opacity:.6;margin-top:-.3em;">
-  <a href="../frame-graph-production/" style="opacity:.8;">Part III</a> covers how UE5 and Frostbite implement these.
-</div>
-
 ---
 
 ## ⚙️ The Compile Step
 
-The declared DAG goes in, an optimized execution plan comes out. Four things happen — all near-linear, all in microseconds for a typical frame.
+The declared DAG goes in, an optimized execution plan comes out — all in microseconds.
 
-<div class="diagram-box">
-  <div class="db-title">🔍 COMPILE — turning the DAG into a plan</div>
-  <div class="db-body">
-    <div class="diagram-pipeline">
-      <div class="dp-stage">
-        <div class="dp-title">SCHEDULE</div>
-        <ul><li>topological sort (Kahn's)</li><li>cycle detection</li><li>→ final pass order</li></ul>
-      </div>
-      <div class="dp-stage">
-        <div class="dp-title">ALLOCATE</div>
-        <ul><li>sort transients by first use</li><li>greedy-fit into physical slots</li><li>→ alias map</li></ul>
-      </div>
-      <div class="dp-stage">
-        <div class="dp-title">SYNCHRONIZE</div>
-        <ul><li>walk each resource handoff</li><li>emit minimal barriers</li><li>→ barrier list</li></ul>
-      </div>
-      <div class="dp-stage">
-        <div class="dp-title">BACK RESOURCES</div>
-        <ul><li>create or reuse physical memory</li><li>apply the alias map</li><li>→ physical bindings</li></ul>
-      </div>
+<div style="margin:1.2em 0;border-radius:12px;overflow:hidden;border:1.5px solid rgba(139,92,246,.25);">
+  <!-- INPUT -->
+  <div style="padding:.7em 1.1em;background:rgba(139,92,246,.08);border-bottom:1px solid rgba(139,92,246,.15);display:flex;align-items:center;gap:.8em;">
+    <span style="font-weight:800;font-size:.85em;color:#8b5cf6;text-transform:uppercase;letter-spacing:.04em;">📥 In</span>
+    <span style="font-size:.88em;opacity:.8;">declared passes + virtual resources + read/write edges</span>
+  </div>
+  <!-- PIPELINE -->
+  <div style="padding:.8em 1.3em;background:rgba(139,92,246,.03);">
+    <div style="display:grid;grid-template-columns:auto 1fr;gap:.35em 1em;align-items:center;font-size:.88em;">
+      <span style="font-weight:700;color:#8b5cf6;">①</span><span>Sort passes into dependency order</span>
+      <span style="font-weight:700;color:#8b5cf6;">②</span><span>Cull passes whose outputs are never read</span>
+      <span style="font-weight:700;color:#8b5cf6;">③</span><span>Alias memory — non-overlapping lifetimes share physical blocks</span>
+      <span style="font-weight:700;color:#8b5cf6;">④</span><span>Insert barriers at every resource state transition</span>
+      <span style="font-weight:700;color:#8b5cf6;">⑤</span><span>Bind physical memory — create or reuse from pool</span>
     </div>
-    <div style="text-align:center;font-size:.82em;opacity:.6;margin-top:.3em">Still CPU — all decisions made before the GPU sees a single command</div>
+  </div>
+  <!-- OUTPUT -->
+  <div style="padding:.7em 1.1em;background:rgba(34,197,94,.06);border-top:1px solid rgba(34,197,94,.15);display:flex;align-items:center;gap:.8em;">
+    <span style="font-weight:800;font-size:.85em;color:#22c55e;text-transform:uppercase;letter-spacing:.04em;">📤 Out</span>
+    <span style="font-size:.88em;opacity:.8;">ordered passes · aliased memory · barrier list · physical bindings</span>
   </div>
 </div>
+<div style="text-align:center;font-size:.82em;opacity:.5;margin-top:.2em;">Still CPU — all decisions made before the GPU sees a single command</div>
 
-<div class="fg-reveal" style="margin:1.2em 0;display:flex;align-items:center;gap:1em;flex-wrap:wrap;">
-  <div style="flex:1;min-width:180px;padding:1em 1.2em;border-radius:10px;border:1.5px dashed rgba(99,102,241,.3);background:rgba(99,102,241,.04);">
-    <div style="font-size:1.1em;font-weight:800;">Handle #3</div>
-    <div style="font-size:.8em;opacity:.5;">1920×1080 · RGBA8</div>
-    <div style="margin-top:.4em;font-size:.75em;padding:.25em .6em;border-radius:6px;background:rgba(245,158,11,.1);color:#f59e0b;font-weight:700;display:inline-block;">virtual</div>
+<div style="margin:1.4em 0;border-radius:12px;overflow:hidden;border:1.5px solid rgba(139,92,246,.2);">
+  <div style="padding:.6em 1.1em;background:rgba(139,92,246,.06);font-weight:700;font-size:.82em;text-transform:uppercase;letter-spacing:.04em;color:#8b5cf6;border-bottom:1px solid rgba(139,92,246,.12);">🧱 Allocation — how virtual resources become physical memory</div>
+
+  <!-- Placed resources concept -->
+  <div style="padding:.8em 1.2em .6em;font-size:.88em;line-height:1.7;border-bottom:1px solid rgba(139,92,246,.08);">
+    The graph allocates a large <code>ID3D12Heap</code> (or <code>VkDeviceMemory</code>) and <strong>places</strong> multiple resources at different offsets within it. Resources whose lifetimes don't overlap share the same physical memory — this is <strong>aliasing</strong>.
   </div>
-  <div class="fg-resolve-arrow" style="font-size:1.4em;opacity:.3;flex-shrink:0;">→</div>
-  <div style="flex:1;min-width:180px;padding:1em 1.2em;border-radius:10px;border:1.5px solid rgba(34,197,94,.3);background:rgba(34,197,94,.04);">
-    <div style="font-size:1.1em;font-weight:800;">Handle #3 <span style="opacity:.35;">→</span> <span style="color:#22c55e;">Pool slot 0</span></div>
-    <div style="font-size:.8em;opacity:.5;">shares 8 MB with Handle #7</div>
-    <div style="margin-top:.4em;font-size:.75em;padding:.25em .6em;border-radius:6px;background:rgba(34,197,94,.1);color:#22c55e;font-weight:700;display:inline-block;">aliased</div>
+
+  <!-- Timeline: why aliasing works -->
+  <div style="padding:.8em 1.2em;">
+    <div style="font-size:.78em;font-weight:700;text-transform:uppercase;letter-spacing:.03em;opacity:.45;margin-bottom:.5em;">Why it works — lifetimes don't overlap</div>
+    <!-- Timeline header -->
+    <div style="display:grid;grid-template-columns:100px repeat(6,1fr);gap:2px;font-size:.72em;opacity:.45;margin-bottom:.3em;">
+      <div></div>
+      <div style="text-align:center;">Pass 1</div>
+      <div style="text-align:center;">Pass 2</div>
+      <div style="text-align:center;">Pass 3</div>
+      <div style="text-align:center;">Pass 4</div>
+      <div style="text-align:center;">Pass 5</div>
+      <div style="text-align:center;">Pass 6</div>
+    </div>
+    <!-- GBuffer row -->
+    <div style="display:grid;grid-template-columns:100px repeat(6,1fr);gap:2px;margin-bottom:3px;">
+      <div style="font-size:.8em;font-weight:700;display:flex;align-items:center;">GBuffer</div>
+      <div style="background:rgba(139,92,246,.2);border-radius:4px 0 0 4px;height:24px;"></div>
+      <div style="background:rgba(139,92,246,.2);height:24px;"></div>
+      <div style="background:rgba(139,92,246,.2);border-radius:0 4px 4px 0;height:24px;"></div>
+      <div style="height:24px;"></div>
+      <div style="height:24px;"></div>
+      <div style="height:24px;"></div>
+    </div>
+    <!-- Bloom row -->
+    <div style="display:grid;grid-template-columns:100px repeat(6,1fr);gap:2px;margin-bottom:.5em;">
+      <div style="font-size:.8em;font-weight:700;display:flex;align-items:center;">Bloom</div>
+      <div style="height:24px;"></div>
+      <div style="height:24px;"></div>
+      <div style="height:24px;"></div>
+      <div style="background:rgba(139,92,246,.2);border-radius:4px 0 0 4px;height:24px;"></div>
+      <div style="background:rgba(139,92,246,.2);height:24px;"></div>
+      <div style="background:rgba(139,92,246,.2);border-radius:0 4px 4px 0;height:24px;"></div>
+    </div>
+    <div style="border-top:1px solid rgba(139,92,246,.1);padding-top:.5em;display:flex;align-items:center;gap:.8em;">
+      <span style="font-size:.8em;opacity:.5;">No overlap →</span>
+      <span style="padding:.25em .65em;border-radius:6px;background:rgba(34,197,94,.1);color:#22c55e;font-weight:700;font-size:.82em;">same heap, two resources</span>
+    </div>
   </div>
-</div>
-<div style="text-align:center;font-size:.82em;opacity:.6;margin-top:-.2em;">
-  The compiler sees every resource lifetime at once — non-overlapping handles land on the same physical memory.
+
+  <!-- Pitfalls -->
+  <div style="padding:.7em 1.2em;background:rgba(234,179,8,.04);border-top:1px solid rgba(234,179,8,.12);">
+    <div style="font-size:.78em;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:#ca8a04;margin-bottom:.4em;">⚠ Pitfalls</div>
+    <div style="display:grid;grid-template-columns:auto 1fr;gap:.2em .8em;font-size:.85em;line-height:1.6;">
+      <span style="font-weight:700;opacity:.7;">Format</span><span>Depth metadata may conflict with color on same memory — skip aliasing for depth formats</span>
+      <span style="font-weight:700;opacity:.7;">Init</span><span>Reused memory = garbage — first use must be a full clear or fullscreen write</span>
+      <span style="font-weight:700;opacity:.7;">Imported</span><span>Survive across frames — never alias. Only transient resources qualify</span>
+    </div>
+  </div>
+
+  <!-- Production tricks -->
+  <div style="padding:.7em 1.2em;background:rgba(139,92,246,.03);border-top:1px solid rgba(139,92,246,.08);">
+    <div style="font-size:.78em;font-weight:700;text-transform:uppercase;letter-spacing:.03em;opacity:.45;margin-bottom:.4em;">Production optimizations</div>
+    <div style="display:grid;grid-template-columns:auto 1fr;gap:.2em .8em;font-size:.85em;line-height:1.6;">
+      <span style="font-weight:700;opacity:.7;">🪣 Bucketing</span><span>Round sizes to power-of-two (4, 8, 16 MB…) — fewer distinct sizes means heaps are reusable across resources</span>
+      <span style="font-weight:700;opacity:.7;">♻️ Pooling</span><span>Keep heaps across frames. Next frame's <code>compile()</code> pulls from the pool — allocation cost drops to near zero</span>
+    </div>
+  </div>
+
+  <!-- Part III link -->
+  <div style="padding:.45em 1.2em;background:rgba(139,92,246,.06);border-top:1px solid rgba(139,92,246,.1);font-size:.8em;opacity:.6;text-align:center;">
+    <a href="../frame-graph-production/">Part III</a> covers how UE5 and Frostbite implement these strategies.
+  </div>
 </div>
 
 ---
