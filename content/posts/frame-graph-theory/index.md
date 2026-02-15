@@ -396,6 +396,10 @@ With edges in place, the compiler flattens the DAG into a linear execution order
 🔨 <a href="../frame-graph-build-it/#v2-toposort" style="font-weight:600;">Part II</a> implements both — step through the topological sort interactively and toggle DAG edges to watch culling remove dead passes in real time.
 </div>
 
+Toggle edges in the DAG below — disconnect a pass and the compiler removes it along with its resources in real time:
+
+{{< interactive-dag >}}
+
 ### Allocation and aliasing
 
 The sorted order tells the compiler exactly when each resource is first written and last read — its **lifetime**. Two resources that are never alive at the same time can share the same physical memory.
@@ -479,6 +483,10 @@ Because the graph already knows every resource's state at every point in the sor
 <div style="margin:.6em 0;padding:.5em .9em;border-radius:8px;border-left:3px solid rgba(var(--ds-code-rgb),.4);background:rgba(var(--ds-code-rgb),.04);font-size:.85em;line-height:1.5;">
 🔨 <a href="../frame-graph-build-it/#v2-barriers" style="font-weight:600;">Part II</a> walks through the insertion algorithm step by step — how the compiler tracks state, where it places each barrier, and every transition type a real frame needs.
 </div>
+
+Step through a full pipeline — watch each resource's state update as passes execute, and see exactly where the compiler fires each barrier:
+
+{{< interactive-barriers >}}
 
 ---
 

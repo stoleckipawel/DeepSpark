@@ -341,10 +341,6 @@ The code is a single backward walk — mark the final pass alive, then propagate
 +    }
 {{< /code-diff >}}
 
-Toggle edges in the DAG below — disconnect a pass and the compiler removes it along with its resources in real time:
-
-{{< interactive-dag >}}
-
 ---
 
 <span id="v2-barriers"></span>
@@ -408,10 +404,6 @@ The implementation walks each pass's reads and writes, comparing the resource's 
 {{< /code-diff >}}
 
 All four pieces — versioning, sorting, culling, barriers — compose into that `execute()` body. Each step feeds the next: versioning creates edges, edges feed the sort, the sort enables culling, and the surviving sorted passes get automatic barriers.
-
-Step through a full pipeline below — watch each resource's state update as passes execute, and see exactly where the compiler fires each barrier:
-
-{{< interactive-barriers >}}
 
 ---
 
