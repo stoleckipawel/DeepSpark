@@ -620,7 +620,6 @@ body.toc-sidebar-hidden section.prose { flex-direction: column !important; }
   height: 20px;
   border-radius: 3px;
   background: var(--ds-info);
-  transition: width 0.5s ease;
 }
 .diagram-bars .db-bar.db-warn { background: var(--ds-warn); }
 .diagram-bars .db-bar.db-danger { background: var(--ds-danger); }
@@ -1482,9 +1481,13 @@ body.toc-sidebar-hidden section.prose { flex-direction: column !important; }
 .fg-compare.visible > div:nth-child(n+13) { transition-delay: .48s; }
 
 /* ── Interactive widget markers ── */
-/* Pulsing glow to draw attention */
+/* Pulsing glow — only animates when widget is in viewport (class toggled by IO) */
 .interactive-widget {
   animation: fg-widget-glow 4s ease-in-out infinite;
+  animation-play-state: paused;
+}
+.interactive-widget.in-view {
+  animation-play-state: running;
 }
 @keyframes fg-widget-glow {
   0%, 100% { box-shadow: 0 2px 12px rgba(0,0,0,.06); }
@@ -1492,6 +1495,10 @@ body.toc-sidebar-hidden section.prose { flex-direction: column !important; }
 }
 :is(.dark,.scheme-congo) .interactive-widget {
   animation: fg-widget-glow-dark 4s ease-in-out infinite;
+  animation-play-state: paused;
+}
+:is(.dark,.scheme-congo) .interactive-widget.in-view {
+  animation-play-state: running;
 }
 @keyframes fg-widget-glow-dark {
   0%, 100% { box-shadow: 0 2px 16px rgba(0,0,0,.25); }
@@ -1515,10 +1522,14 @@ body.toc-sidebar-hidden section.prose { flex-direction: column !important; }
   letter-spacing: .06em;
   box-shadow: 0 2px 8px rgba(var(--ds-code-rgb),.25);
   animation: fg-badge-shimmer 3s ease-in-out infinite;
+  animation-play-state: paused;
+}
+.interactive-widget.in-view .widget-header::after {
+  animation-play-state: running;
 }
 @keyframes fg-badge-shimmer {
   0%, 100% { opacity: .85; }
-  50%      { opacity: 1; box-shadow: 0 2px 12px rgba(var(--ds-code-rgb),.4); }
+  50%      { opacity: 1; }
 }
 
 /* Animated border-top gradient on widget header */

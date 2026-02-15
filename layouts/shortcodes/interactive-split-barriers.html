@@ -109,6 +109,7 @@ window.splitSetExample=function(i){loadExample(i);}
 
 var splitPos=1.0; // 1.0 = regular (begin at boundary), 0.0 = max split (begin right after src)
 var dragging=false;
+var srcEnd=0, dstStart=0; // boundaries for drag, updated by render()
 
 function isDark(){
   return document.documentElement.classList.contains("dark")||
@@ -198,8 +199,8 @@ function render(){
   });
 
   // Split barrier: BEGIN can slide from right after srcPass ends to just before dstPass starts
-  var srcEnd=passXs[srcPass]+passes[srcPass].dur*scale;
-  var dstStart=passXs[dstPass];
+  srcEnd=passXs[srcPass]+passes[srcPass].dur*scale;
+  dstStart=passXs[dstPass];
   var gapWidth=dstStart-srcEnd;
   // splitPos: 1.0 = begin at dstStart (=regular), 0.0 = begin at srcEnd (max split)
   var beginX=srcEnd+(dstStart-srcEnd)*splitPos;
@@ -248,32 +249,41 @@ function render(){
   svg.append(txt(left,apiY,"Vulkan: vkCmdSetEvent2 (begin) / vkCmdWaitEvents2 (end)",mutedC,"10px ui-monospace,monospace","start"));
   svg.append(txt(left,apiY+14,"D3D12:  BARRIER_FLAG_BEGIN_ONLY / BARRIER_FLAG_END_ONLY",mutedC,"10px ui-monospace,monospace","start"));
 
-  // Drag logic
-  dragHit.addEventListener("mousedown",function(ev){dragging=true;ev.preventDefault();});
-  svg.addEventListener("mousemove",function(ev){
-    if(!dragging)return;
-    var rect=svg.getBoundingClientRect();
-    var svgX=(ev.clientX-rect.left)/rect.width*680;
-    var ratio=(svgX-srcEnd)/(dstStart-srcEnd);
-    splitPos=Math.max(0,Math.min(1,ratio));
-    render();
-  });
-  svg.addEventListener("mouseup",function(){dragging=false;});
-  svg.addEventListener("mouseleave",function(){dragging=false;});
-  dragHit.addEventListener("touchstart",function(ev){dragging=true;ev.preventDefault();},{passive:false});
-  svg.addEventListener("touchmove",function(ev){
-    if(!dragging)return;
-    var touch=ev.touches[0];
-    var rect=svg.getBoundingClientRect();
-    var svgX=(touch.clientX-rect.left)/rect.width*680;
-    var ratio=(svgX-srcEnd)/(dstStart-srcEnd);
-    splitPos=Math.max(0,Math.min(1,ratio));
-    render();
-  },{passive:false});
-  svg.addEventListener("touchend",function(){dragging=false;});
-
   updateInfo();
 }
+
+// Drag logic — attached once outside render(), gated by rAF
+var dragRafPending = false;
+function onDragMove(clientX) {
+  if (!dragging) return;
+  var rect = svg.getBoundingClientRect();
+  var svgX = (clientX - rect.left) / rect.width * 680;
+  var ratio = (svgX - srcEnd) / (dstStart - srcEnd);
+  splitPos = Math.max(0, Math.min(1, ratio));
+  if (!dragRafPending) {
+    dragRafPending = true;
+    requestAnimationFrame(function() { dragRafPending = false; render(); });
+  }
+}
+svg.addEventListener("mousedown", function(ev) {
+  var rect = svg.getBoundingClientRect();
+  var svgX = (ev.clientX - rect.left) / rect.width * 680;
+  var beginX = srcEnd + (dstStart - srcEnd) * splitPos;
+  if (Math.abs(svgX - beginX) < 24) { dragging = true; ev.preventDefault(); }
+});
+svg.addEventListener("mousemove", function(ev) { onDragMove(ev.clientX); });
+svg.addEventListener("mouseup", function() { dragging = false; });
+svg.addEventListener("mouseleave", function() { dragging = false; });
+svg.addEventListener("touchstart", function(ev) {
+  var rect = svg.getBoundingClientRect();
+  var svgX = (ev.touches[0].clientX - rect.left) / rect.width * 680;
+  var beginX = srcEnd + (dstStart - srcEnd) * splitPos;
+  if (Math.abs(svgX - beginX) < 24) { dragging = true; ev.preventDefault(); }
+}, {passive: false});
+svg.addEventListener("touchmove", function(ev) {
+  onDragMove(ev.touches[0].clientX);
+}, {passive: false});
+svg.addEventListener("touchend", function() { dragging = false; });
 
 function handlePassClick(idx){
   if(idx===srcPass||idx===dstPass)return;

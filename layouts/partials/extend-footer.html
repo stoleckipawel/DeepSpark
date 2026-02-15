@@ -28,6 +28,16 @@
   document.querySelectorAll('.fg-reveal,.fg-compare,.fg-connector,.fg-grid-stagger').forEach(function(el){
     observer.observe(el);
   });
+
+  /* ── Pause/resume infinite animations when widgets leave viewport ── */
+  var widgetIO = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      e.target.classList.toggle('in-view', e.isIntersecting);
+    });
+  }, {rootMargin:'100px'});
+  document.querySelectorAll('.interactive-widget').forEach(function(el){
+    widgetIO.observe(el);
+  });
 })();
 </script>
 
@@ -182,42 +192,55 @@
 
     /* ── Scroll tracking ──────────────────────────────────────────── */
     var ticking = false;
+    var prevActive = null;          /* cache to avoid querySelectorAll */
+    var railInnerRef = hasToc ? document.getElementById('snav-rail-inner') : null;
+
     function onScroll() {
       if (ticking) return;
       ticking = true;
       requestAnimationFrame(function() {
         ticking = false;
+
+        /* ── Reads first (avoid layout thrashing) ──────────────── */
         var scrollY  = window.scrollY || window.pageYOffset;
         var docH     = document.documentElement.scrollHeight - window.innerHeight;
         var pct      = docH > 0 ? Math.min(100, Math.round(scrollY / docH * 100)) : 0;
         var show     = scrollY > 150;
 
+        var cur = null;
+        if (hasToc) {
+          for (var i = tocItems.length - 1; i >= 0; i--) {
+            if (tocItems[i].el.getBoundingClientRect().top <= 80) { cur = tocItems[i]; break; }
+          }
+        }
+
+        /* ── Writes ────────────────────────────────────────────── */
         topEl.classList.toggle('visible', show);
         document.body.classList.toggle('snav-active', show);
         if (railEl) railEl.classList.toggle('visible', show);
 
-        barEl.style.width = pct + '%';
+        barEl.style.transform = 'scaleX(' + (pct / 100) + ')';
         bcPct.textContent = pct + '%';
         if (railPctEl) railPctEl.textContent = pct + '% read';
 
-        /* Scrollspy */
+        /* Scrollspy — swap only changed active link */
         if (hasToc) {
-          var cur = null;
-          for (var i = tocItems.length - 1; i >= 0; i--) {
-            if (tocItems[i].el.getBoundingClientRect().top <= 80) { cur = tocItems[i]; break; }
-          }
           if (cur) {
             bcSection.textContent = cur.name;
-            railItemsE.querySelectorAll('.snav-rail-link').forEach(function(el){ el.classList.remove('active'); });
-            var active = railItemsE.querySelector('[data-target="' + cur.id + '"]');
-            if (active) {
-              active.classList.add('active');
-              var ri = document.getElementById('snav-rail-inner');
-              var lr = active.getBoundingClientRect(), rr = ri.getBoundingClientRect();
-              if (lr.bottom > rr.bottom || lr.top < rr.top) active.scrollIntoView({ block:'nearest' });
+            var next = railItemsE.querySelector('[data-target="' + cur.id + '"]');
+            if (next !== prevActive) {
+              if (prevActive) prevActive.classList.remove('active');
+              if (next) {
+                next.classList.add('active');
+                /* Scroll rail to keep active visible (reads after all class writes) */
+                var lr = next.getBoundingClientRect(), rr = railInnerRef.getBoundingClientRect();
+                if (lr.bottom > rr.bottom || lr.top < rr.top) next.scrollIntoView({ block:'nearest' });
+              }
+              prevActive = next;
             }
           } else {
             bcSection.textContent = '\u2014';
+            if (prevActive) { prevActive.classList.remove('active'); prevActive = null; }
           }
         }
       });
@@ -252,16 +275,12 @@
   function check() {
     raf = null;
 
-    // Temporarily reveal sidebar so we can measure real positions
-    var wasHidden = document.body.classList.contains('toc-sidebar-hidden');
-    if (wasHidden) document.body.classList.remove('toc-sidebar-hidden');
-
+    // Use window width vs content right to decide overlap,
+    // avoiding the toggle-measure-toggle reflow pattern.
     var contentRect = contentWrap.getBoundingClientRect();
-    var sidebarRect = sidebarWrap.getBoundingClientRect();
-
-    // The sidebar overlaps/touches if its left edge <= content's right edge
-    // (with a small 8px gap tolerance)
-    var overlaps = sidebarRect.left < contentRect.right + 8;
+    // Sidebar sits after content; if remaining space is too narrow, hide it.
+    var spaceRight = window.innerWidth - contentRect.right;
+    var overlaps = spaceRight < 280; // sidebar ~256px + 16px gap + tolerance
 
     if (overlaps) {
       document.body.classList.add('toc-sidebar-hidden');

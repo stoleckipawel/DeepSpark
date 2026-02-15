@@ -277,6 +277,7 @@ var PIPELINES=[
 
 /* ─── State ─── */
 var curEx=0,passes,edges,outputId,resources,selectedPass=null;
+var passById={};
 var cachedOrder,cachedAlive,cachedBarriers,cachedAlias;
 
 function loadExample(idx){
@@ -287,6 +288,9 @@ function loadExample(idx){
   outputId=ex.outputId;
   resources=ex.resources.map(function(r){return Object.assign({},r)});
   selectedPass=null;
+  /* Build fast lookup map */
+  passById={};
+  passes.forEach(function(p){passById[p.id]=p});
   document.querySelectorAll('.pipe-ex-btn').forEach(function(b){
     b.classList.toggle('pipe-ex-active',parseInt(b.dataset.ex)===idx);
   });
@@ -399,8 +403,8 @@ function renderMinimap(opts){
 
   /* edges */
   edges.forEach(function(e){
-    var sp=passes.find(function(p){return p.id===e.from});
-    var dp=passes.find(function(p){return p.id===e.to});
+    var sp=passById[e.from];
+    var dp=passById[e.to];
     if(!sp||!dp)return;
     var both=alive.has(e.from)&&alive.has(e.to);
     var sx=sp.mx+MM_NW,sy=sp.my+MM_NH/2,dx=dp.mx,dy=dp.my+MM_NH/2;
@@ -416,7 +420,7 @@ function renderMinimap(opts){
   if(opts.barriers){
     var bc={};barriers.forEach(function(b){bc[b.pass]=(bc[b.pass]||0)+1});
     Object.keys(bc).forEach(function(pid){
-      var p=passes.find(function(pp){return pp.id===+pid});
+      var p=passById[+pid];
       if(!p||!alive.has(p.id))return;
       svg.append(el("line",{x1:p.mx-4,y1:p.my,x2:p.mx-4,y2:p.my+MM_NH,
         stroke:C.barrier,"stroke-width":"2",opacity:"0.6","stroke-linecap":"round"}));
@@ -467,14 +471,23 @@ function renderMinimap(opts){
 
 /* ─── Focus view ─── */
 var F_NW=155,F_NH=42,F_CG=210,F_PAD=25;
+/* Cache focus-view DOM refs (resolved once on first call) */
+var focusRefs=null;
+function getFocusRefs(){
+  if(!focusRefs) focusRefs={
+    wrap:document.getElementById("pipe-focus-wrap"),
+    svg:document.getElementById("pipe-focus-svg"),
+    title:document.getElementById("pipe-focus-title"),
+    badge:document.getElementById("pipe-focus-badge"),
+    info:document.getElementById("pipe-focus-info"),
+    res:document.getElementById("pipe-focus-resources")
+  };
+  return focusRefs;
+}
 
 function renderFocus(opts){
-  var wrap=document.getElementById("pipe-focus-wrap");
-  var svg=document.getElementById("pipe-focus-svg");
-  var titleEl=document.getElementById("pipe-focus-title");
-  var badgeEl=document.getElementById("pipe-focus-badge");
-  var infoEl=document.getElementById("pipe-focus-info");
-  var resEl=document.getElementById("pipe-focus-resources");
+  var fr=getFocusRefs();
+  var wrap=fr.wrap,svg=fr.svg,titleEl=fr.title,badgeEl=fr.badge,infoEl=fr.info,resEl=fr.res;
   var dark=isDark();
 
   if(selectedPass===null){
@@ -493,7 +506,7 @@ function renderFocus(opts){
   }
 
   wrap.classList.add("pipe-focus-active");
-  var p=passes.find(function(pp){return pp.id===selectedPass});
+  var p=passById[selectedPass];
   var isAlive=cachedAlive.has(p.id);
   var isOut=p.id===outputId;
   var isAsync=opts.async&&p.canAsync;
@@ -604,9 +617,9 @@ function renderFocus(opts){
     svg.append(g);
   }
 
-  predPositions.forEach(function(pp){drawNode(pp.x,pp.y,passes.find(function(n){return n.id===pp.id}),false)});
+  predPositions.forEach(function(pp){drawNode(pp.x,pp.y,passById[pp.id],false)});
   drawNode(centerX,centerY,p,true);
-  succPositions.forEach(function(sp){drawNode(sp.x,sp.y,passes.find(function(n){return n.id===sp.id}),false)});
+  succPositions.forEach(function(sp){drawNode(sp.x,sp.y,passById[sp.id],false)});
 
   /* ─── Info text ─── */
   var depCount=inEdges.filter(function(e){return cachedAlive.has(e.from)}).length;

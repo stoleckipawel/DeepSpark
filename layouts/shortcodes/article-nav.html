@@ -58,9 +58,11 @@
 }
 .anav-progress-bar {
   height: 100%;
-  width: 0%;
+  width: 100%;
   background: linear-gradient(90deg, var(--ds-accent), var(--ds-highlight));
-  transition: width .15s linear;
+  transform: scaleX(0);
+  transform-origin: left;
+  will-change: transform;
   border-radius: 0 2px 2px 0;
 }
 .anav-breadcrumb {
@@ -490,6 +492,9 @@
     // Show threshold — show nav after scrolling past first heading
     var showThreshold = 200;
     var ticking = false;
+    var prevActiveLink = null;
+    var contentElCached = document.querySelector('.article-content') || document.querySelector('article');
+    var railInnerCached = document.getElementById('anav-rail-inner');
 
     function onScroll() {
       if (ticking) return;
@@ -508,65 +513,55 @@
       // Show/hide — only show if scrolled past threshold AND rail doesn't overlap content
       var show = scrollY > showThreshold;
 
-      if (show) {
-        var contentEl = document.querySelector('.article-content') || document.querySelector('article');
-        if (contentEl) {
-          var contentRight = contentEl.getBoundingClientRect().right;
-          var railLeft = window.innerWidth - 300 - 16; // rail width(300) + right offset(16)
-          if (railLeft < contentRight + 8) {
-            show = false; // would overlap — hide rail, top bar stays
-          }
+      if (show && contentElCached) {
+        var spaceRight = window.innerWidth - contentElCached.getBoundingClientRect().right;
+        if (spaceRight < 324) { // rail 300 + 16 offset + 8 gap
+          show = false;
         }
       }
 
       topBar.classList.toggle('visible', scrollY > showThreshold);
       rail.classList.toggle('visible', show);
 
-      // Progress bar
-      progressBar.style.width = pct + '%';
+      // Progress bar — use scaleX (compositor-friendly) instead of width
+      progressBar.style.transform = 'scaleX(' + (pct / 100) + ')';
       bcPct.textContent = pct + '%';
       railPct.textContent = pct + '% read';
 
-      // Scroll spy — find current section
+      // Scroll spy — find current section (reads only)
       var currentSection = null;
-      var currentPartIdx = 0;
-      var currentLink = null;
-      var offset = 80; // px from top to count as "in view"
+      var offset = 80;
 
       for (var i = allSections.length - 1; i >= 0; i--) {
-        var rect = allSections[i].el.getBoundingClientRect();
-        if (rect.top <= offset) {
+        if (allSections[i].el.getBoundingClientRect().top <= offset) {
           currentSection = allSections[i];
           break;
         }
       }
 
       if (currentSection) {
-        currentPartIdx = currentSection.partIdx;
-
         // Update breadcrumb
-        if (parts[currentPartIdx]) {
-          var partShort = parts[currentPartIdx].name.split('—')[0].trim();
+        if (parts[currentSection.partIdx]) {
+          var partShort = parts[currentSection.partIdx].name.split('\u2014')[0].trim();
           bcPart.textContent = partShort;
-          bcPart.setAttribute('data-part', currentPartIdx);
-          bcPart.style.color = partColors[currentPartIdx] || 'var(--ds-accent)';
+          bcPart.setAttribute('data-part', currentSection.partIdx);
+          bcPart.style.color = partColors[currentSection.partIdx] || 'var(--ds-accent)';
         }
-        bcSection.textContent = currentSection.isPart ? '—' : currentSection.name;
+        bcSection.textContent = currentSection.isPart ? '\u2014' : currentSection.name;
 
-        // Update rail active state
-        railItems.querySelectorAll('.anav-rail-link,.anav-rail-part').forEach(function(el) {
-          el.classList.remove('active');
-        });
-        var activeLink = railItems.querySelector('[data-target="' + currentSection.id + '"]');
-        if (activeLink) {
-          activeLink.classList.add('active');
-          // Scroll rail to keep active item visible
-          var railInner = document.getElementById('anav-rail-inner');
-          var linkRect = activeLink.getBoundingClientRect();
-          var railRect = railInner.getBoundingClientRect();
-          if (linkRect.bottom > railRect.bottom || linkRect.top < railRect.top) {
-            activeLink.scrollIntoView({ block: 'nearest' });
+        // Update rail active state — swap only changed element
+        var nextLink = railItems.querySelector('[data-target="' + currentSection.id + '"]');
+        if (nextLink !== prevActiveLink) {
+          if (prevActiveLink) prevActiveLink.classList.remove('active');
+          if (nextLink) {
+            nextLink.classList.add('active');
+            var linkRect = nextLink.getBoundingClientRect();
+            var railRect = railInnerCached.getBoundingClientRect();
+            if (linkRect.bottom > railRect.bottom || linkRect.top < railRect.top) {
+              nextLink.scrollIntoView({ block: 'nearest' });
+            }
           }
+          prevActiveLink = nextLink;
         }
       }
     }

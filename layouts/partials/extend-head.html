@@ -34,9 +34,11 @@
 }
 .snav-progress-bar {
   height: 100%;
-  width: 0%;
+  width: 100%;
   background: linear-gradient(90deg, var(--ds-warm), var(--ds-accent), var(--ds-highlight));
-  transition: width .15s linear;
+  transform: scaleX(0);
+  transform-origin: left;
+  will-change: transform;
   border-radius: 0 2px 2px 0;
 }
 .snav-breadcrumb {
