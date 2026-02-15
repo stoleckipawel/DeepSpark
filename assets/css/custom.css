@@ -6,6 +6,13 @@
   max-width: 120px !important;
 }
 
+/* Header icon (next to text logo) */
+.main-menu img.header-icon {
+  max-height: 62px !important;
+  max-width: 62px !important;
+  border-radius: 8px;
+}
+
 /* Widen the outer page container (theme default: max-w-7xl = 1280px).
    Using a large but finite value so margin:auto still centres the page. */
 body {
