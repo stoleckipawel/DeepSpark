@@ -1,4 +1,11 @@
 /* ── Full-width layout overrides ─────────────────────────────── */
+
+/* Make header logo 50% bigger than default (80px → 120px) */
+.main-menu img.logo {
+  max-height: 120px !important;
+  max-width: 120px !important;
+}
+
 /* Widen the outer page container (theme default: max-w-7xl = 1280px).
    Using a large but finite value so margin:auto still centres the page. */
 body {
