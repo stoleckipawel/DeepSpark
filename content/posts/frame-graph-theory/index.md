@@ -152,7 +152,7 @@ The pattern is always the same: manual resource management works at small scale 
 
 ## 💡 The Core Idea
 
-A frame graph is a **directed acyclic graph (DAG)** — each node is a render pass, each edge is a resource one pass hands to the next. Here's what a typical deferred frame looks like:
+A frame graph models an entire frame as a **directed acyclic graph (DAG)**. Each node is a render pass; each edge carries a resource — a texture, a buffer, an attachment — from the pass that writes it to every pass that reads it. Here's what a typical deferred-rendering frame looks like:
 
 <!-- DAG flow diagram — Frostbite-style -->
 <div style="margin:1.6em 0 .5em;text-align:center;">
@@ -216,7 +216,9 @@ A frame graph is a **directed acyclic graph (DAG)** — each node is a render pa
 </div>
 </div>
 
-You don't execute this graph directly. Every frame goes through three steps — first you **declare** all the passes and what they read/write, then the system **compiles** an optimized plan (ordering, memory, barriers), and finally it **executes** the result:
+You never execute this graph directly. Because the system sees **every** pass and **every** resource before a single GPU instruction is recorded, it can reorder work, alias memory, and insert synchronization barriers automatically — exactly the things that break when done by hand at scale.
+
+Every frame follows a three-phase lifecycle:
 
 <!-- 3-step lifecycle — distinct style from the DAG above -->
 <div class="fg-reveal" style="margin:.8em auto 1.2em;max-width:560px;">
@@ -238,7 +240,7 @@ You don't execute this graph directly. Every frame goes through three steps — 
   </div>
 </div>
 
-Let's look at each step.
+The separation is deliberate: declaration is cheap, compilation is where the optimization happens, and execution is a straight walk through an already-optimal plan. Let's look at each phase.
 
 ---
 
