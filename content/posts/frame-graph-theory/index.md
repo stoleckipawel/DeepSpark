@@ -339,11 +339,62 @@ The declared DAG goes in; an optimized execution plan comes out — all on the C
   </div>
 </div>
 
+### How edges form — resource versioning
+
+Before the compiler can sort anything, it needs edges. Edges come from **resource versioning**: every time a pass writes a resource, the version number increments. Readers attach to whatever version existed when they were declared. Multiple passes can read the same version without conflict — only a write creates a new one.
+
+This is how the graph knows *exactly* which pass depends on which, even when the same resource is written more than once per frame:
+
+<div style="margin:1.2em 0;font-size:.85em;">
+  <div style="border-radius:10px;overflow:hidden;border:1.5px solid rgba(var(--ds-indigo-rgb),.15);">
+    <div style="padding:.5em .8em;background:rgba(var(--ds-indigo-rgb),.06);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.1);font-weight:700;font-size:.9em;text-align:center;">Resource versioning — HDR target through the frame</div>
+    <div style="display:grid;grid-template-columns:auto auto 1fr;gap:0;">
+      <div style="padding:.45em .6em;background:rgba(var(--ds-info-rgb),.06);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-weight:700;text-align:center;color:var(--ds-info);font-size:.82em;">v1</div>
+      <div style="padding:.45em .6em;background:rgba(var(--ds-info-rgb),.12);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-weight:700;text-align:center;color:var(--ds-info);font-size:.75em;">WRITE</div>
+      <div style="padding:.45em .8em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);font-size:.86em;">
+        <span style="font-weight:700;">Lighting</span> — renders lit color into HDR target
+      </div>
+      <div style="padding:.35em .6em;background:rgba(var(--ds-info-rgb),.03);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-size:.7em;opacity:.4;text-align:center;">v1</div>
+      <div style="padding:.35em .6em;background:rgba(var(--ds-code-rgb),.08);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-weight:600;text-align:center;color:var(--ds-code);font-size:.75em;">read</div>
+      <div style="padding:.35em .8em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);font-size:.84em;opacity:.85;">
+        <span style="font-weight:600;">Bloom</span> — samples bright pixels <span style="opacity:.4;font-size:.88em;">(still v1)</span>
+      </div>
+      <div style="padding:.35em .6em;background:rgba(var(--ds-info-rgb),.03);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-size:.7em;opacity:.4;text-align:center;">v1</div>
+      <div style="padding:.35em .6em;background:rgba(var(--ds-code-rgb),.08);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-weight:600;text-align:center;color:var(--ds-code);font-size:.75em;">read</div>
+      <div style="padding:.35em .8em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);font-size:.84em;opacity:.85;">
+        <span style="font-weight:600;">Reflections</span> — samples for SSR <span style="opacity:.4;font-size:.88em;">(still v1)</span>
+      </div>
+      <div style="padding:.35em .6em;background:rgba(var(--ds-info-rgb),.03);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-size:.7em;opacity:.4;text-align:center;">v1</div>
+      <div style="padding:.35em .6em;background:rgba(var(--ds-code-rgb),.08);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-weight:600;text-align:center;color:var(--ds-code);font-size:.75em;">read</div>
+      <div style="padding:.35em .8em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);font-size:.84em;opacity:.85;">
+        <span style="font-weight:600;">Fog</span> — reads scene color for aerial blending <span style="opacity:.4;font-size:.88em;">(still v1)</span>
+      </div>
+      <div style="padding:.45em .6em;background:rgba(var(--ds-success-rgb),.06);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-weight:700;text-align:center;color:var(--ds-success);font-size:.82em;">v2</div>
+      <div style="padding:.45em .6em;background:rgba(var(--ds-success-rgb),.12);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-weight:700;text-align:center;color:var(--ds-success);font-size:.75em;">WRITE</div>
+      <div style="padding:.45em .8em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);font-size:.86em;">
+        <span style="font-weight:700;">Composite</span> — overwrites with final blended result <span style="opacity:.4;font-size:.88em;">(bumps to v2)</span>
+      </div>
+      <div style="padding:.35em .6em;background:rgba(var(--ds-success-rgb),.03);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-size:.7em;opacity:.4;text-align:center;">v2</div>
+      <div style="padding:.35em .6em;background:rgba(var(--ds-code-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-weight:600;text-align:center;color:var(--ds-code);font-size:.75em;">read</div>
+      <div style="padding:.35em .8em;font-size:.84em;opacity:.85;">
+        <span style="font-weight:600;">Tonemap</span> — maps HDR → SDR for display <span style="opacity:.4;font-size:.88em;">(reads v2, not v1)</span>
+      </div>
+    </div>
+  </div>
+  <div style="margin-top:.4em;font-size:.82em;opacity:.6;">Reads never bump the version — three passes read v1 without conflict. Only a write creates v2. Tonemap depends on Composite (the v2 writer), with <strong>no edge</strong> to Lighting or any v1 reader.</div>
+</div>
+
+These versioned edges are the raw material the compiler works with. Every step that follows — sorting, culling, barrier insertion — operates on this edge set.
+
 ### Sorting and culling
 
-**Sorting** is a topological sort over the dependency edges, producing a linear order that respects every read-before-write constraint.
+With edges in place, the compiler flattens the DAG into a linear execution order. Every edge says *"pass B depends on something pass A produced,"* so the compiler does a **topological sort** — it walks those edges and lines up every pass so that each one runs only after the passes it depends on have finished.
 
 **Culling** walks backward from the final outputs and removes any pass whose results are never read. Dead-code elimination for GPU work — entire passes vanish without a feature flag.
+
+<div style="margin:.6em 0;padding:.5em .9em;border-radius:8px;border-left:3px solid rgba(var(--ds-code-rgb),.4);background:rgba(var(--ds-code-rgb),.04);font-size:.85em;line-height:1.5;">
+🔨 <a href="../frame-graph-build-it/#v2-toposort" style="font-weight:600;">Part II</a> implements both — step through the topological sort interactively and toggle DAG edges to watch culling remove dead passes in real time.
+</div>
 
 ### Allocation and aliasing
 
@@ -417,7 +468,13 @@ The sorted order tells the compiler exactly when each resource is first written 
 
 ### Barriers
 
-The compiler knows each resource's state at every point — render target, shader read, copy source — and inserts a barrier at every transition. Hand-written barriers are one of the most common sources of GPU bugs; the graph makes them automatic and correct by construction.
+A GPU resource can't be a render target and a shader input at the same time — the hardware needs to flush caches, change memory layout, and switch access modes between those uses. That transition is a **barrier**. Miss one and you get rendering corruption or a GPU crash; add an unnecessary one and the GPU stalls waiting for nothing.
+
+Because the graph already knows every resource's state at every point in the sorted pass order, it can insert the exact set of barriers automatically — no manual tracking required.
+
+<div style="margin:.6em 0;padding:.5em .9em;border-radius:8px;border-left:3px solid rgba(var(--ds-code-rgb),.4);background:rgba(var(--ds-code-rgb),.04);font-size:.85em;line-height:1.5;">
+🔨 <a href="../frame-graph-build-it/#v2-barriers" style="font-weight:600;">Part II</a> walks through the insertion algorithm step by step — how the compiler tracks state, where it places each barrier, and every transition type a real frame needs.
+</div>
 
 ---
 

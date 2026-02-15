@@ -201,48 +201,11 @@ Four pieces, each feeding the next:
 
 <span id="v2-versioning"></span>
 
-### 🔀 Resource versioning & the dependency graph
+### 🔀 Resource versioning — the data structure
 
-Multiple passes can read the same resource without conflict — but when a pass *writes* to it, every later reader needs to know which write they depend on. The solution: each write bumps the resource's **version number**. Readers attach to the version that existed when they were declared, so dependency edges stay precise even when the same resource is written multiple times per frame.
+[Part I](/posts/frame-graph-theory/#how-edges-form--resource-versioning) introduced resource versioning — each write bumps a version number, readers attach to the current version, and that's what creates precise dependency edges. Here we implement it.
 
-<div style="margin:1.2em 0;font-size:.85em;">
-  <div style="border-radius:10px;overflow:hidden;border:1.5px solid rgba(var(--ds-indigo-rgb),.15);">
-    <div style="padding:.5em .8em;background:rgba(var(--ds-indigo-rgb),.06);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.1);font-weight:700;font-size:.9em;text-align:center;">Pixel History — HDR target through the frame</div>
-    <div style="display:grid;grid-template-columns:auto auto 1fr;gap:0;">
-      <div style="padding:.45em .6em;background:rgba(var(--ds-info-rgb),.06);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-weight:700;text-align:center;color:var(--ds-info);font-size:.82em;">v1</div>
-      <div style="padding:.45em .6em;background:rgba(var(--ds-info-rgb),.12);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-weight:700;text-align:center;color:var(--ds-info);font-size:.75em;">WRITE</div>
-      <div style="padding:.45em .8em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);font-size:.86em;">
-        <span style="font-weight:700;">Lighting</span> — renders lit color into HDR target
-      </div>
-      <div style="padding:.35em .6em;background:rgba(var(--ds-info-rgb),.03);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-size:.7em;opacity:.4;text-align:center;">v1</div>
-      <div style="padding:.35em .6em;background:rgba(var(--ds-code-rgb),.08);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-weight:600;text-align:center;color:var(--ds-code);font-size:.75em;">read</div>
-      <div style="padding:.35em .8em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);font-size:.84em;opacity:.85;">
-        <span style="font-weight:600;">Bloom</span> — samples bright pixels <span style="opacity:.4;font-size:.88em;">(still v1)</span>
-      </div>
-      <div style="padding:.35em .6em;background:rgba(var(--ds-info-rgb),.03);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-size:.7em;opacity:.4;text-align:center;">v1</div>
-      <div style="padding:.35em .6em;background:rgba(var(--ds-code-rgb),.08);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-weight:600;text-align:center;color:var(--ds-code);font-size:.75em;">read</div>
-      <div style="padding:.35em .8em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);font-size:.84em;opacity:.85;">
-        <span style="font-weight:600;">Reflections</span> — samples for SSR <span style="opacity:.4;font-size:.88em;">(still v1)</span>
-      </div>
-      <div style="padding:.35em .6em;background:rgba(var(--ds-info-rgb),.03);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-size:.7em;opacity:.4;text-align:center;">v1</div>
-      <div style="padding:.35em .6em;background:rgba(var(--ds-code-rgb),.08);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-weight:600;text-align:center;color:var(--ds-code);font-size:.75em;">read</div>
-      <div style="padding:.35em .8em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);font-size:.84em;opacity:.85;">
-        <span style="font-weight:600;">Fog</span> — reads scene color for aerial blending <span style="opacity:.4;font-size:.88em;">(still v1)</span>
-      </div>
-      <div style="padding:.45em .6em;background:rgba(var(--ds-success-rgb),.06);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-weight:700;text-align:center;color:var(--ds-success);font-size:.82em;">v2</div>
-      <div style="padding:.45em .6em;background:rgba(var(--ds-success-rgb),.12);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-weight:700;text-align:center;color:var(--ds-success);font-size:.75em;">WRITE</div>
-      <div style="padding:.45em .8em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);font-size:.86em;">
-        <span style="font-weight:700;">Composite</span> — overwrites with final blended result <span style="opacity:.4;font-size:.88em;">(bumps to v2)</span>
-      </div>
-      <div style="padding:.35em .6em;background:rgba(var(--ds-success-rgb),.03);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-size:.7em;opacity:.4;text-align:center;">v2</div>
-      <div style="padding:.35em .6em;background:rgba(var(--ds-code-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-weight:600;text-align:center;color:var(--ds-code);font-size:.75em;">read</div>
-      <div style="padding:.35em .8em;font-size:.84em;opacity:.85;">
-        <span style="font-weight:600;">Tonemap</span> — maps HDR → SDR for display <span style="opacity:.4;font-size:.88em;">(reads v2, not v1)</span>
-      </div>
-    </div>
-  </div>
-  <div style="margin-top:.4em;font-size:.82em;opacity:.6;">Reads never bump the version — three passes read v1 without conflict. Only a write creates v2. Tonemap depends on Composite (v2 writer), with <strong>no edge</strong> to Lighting or any v1 reader.</div>
-</div>
+The key data structure: each resource entry tracks its **current version** (incremented on write) and a **writer pass index** per version. When a pass calls `read(h)`, the graph looks up the current version's writer and adds a dependency edge from that writer to the reading pass.
 
 ---
 
@@ -250,7 +213,7 @@ Multiple passes can read the same resource without conflict — but when a pass 
 
 ### 📊 Topological sort (Kahn's algorithm)
 
-Count incoming edges per pass. Any pass with zero incoming edges has all dependencies satisfied — emit it, decrement its neighbors' counts, repeat until the queue is empty. If the output is shorter than the pass count, the graph has a cycle.
+[Part I](/posts/frame-graph-theory/#sorting-and-culling) covered *why* the graph needs sorting — every pass must run after the passes it depends on. Here's *how*: **Kahn's algorithm**. Count incoming edges per pass. Any pass with zero means all its dependencies are satisfied — emit it, decrement its neighbors' counts, repeat until the queue drains. If the output is shorter than the pass count, you have a cycle.
 
 {{< interactive-toposort >}}
 
@@ -260,16 +223,18 @@ Count incoming edges per pass. Any pass with zero incoming edges has all depende
 
 ### ✂️ Pass culling
 
+[Part I](/posts/frame-graph-theory/#sorting-and-culling) described culling as "dead-code elimination for GPU work." The implementation is a single backward walk:
+
 <div style="display:grid;grid-template-columns:auto 1fr;gap:.6em .9em;align-items:start;margin:.8em 0 1.2em;padding:.8em 1em;border-radius:10px;background:linear-gradient(135deg,rgba(var(--ds-warn-rgb),.06),transparent);border:1px solid rgba(var(--ds-warn-rgb),.18);font-size:.9em;line-height:1.6;">
   <span style="font-size:1.3em;line-height:1;">🔙</span>
-  <span><strong>Algorithm:</strong> Walk backwards from the final output (present / backbuffer). Mark every reachable pass as <em>alive</em>.</span>
+  <span><strong>Walk:</strong> Start at the final output (present / backbuffer). Follow edges backward, marking every reachable pass as <em>alive</em>.</span>
   <span style="font-size:1.3em;line-height:1;">💀</span>
-  <span><strong>Result:</strong> Any unmarked pass is dead — removed along with all its resource declarations. No <code>#ifdef</code>, no flag.</span>
+  <span><strong>Result:</strong> Unmarked passes are dead — removed along with their resource declarations.</span>
   <span style="font-size:1.3em;line-height:1;">⏱️</span>
-  <span><strong>Cost:</strong> O(V + E) — one linear walk over the graph.</span>
+  <span><strong>Cost:</strong> O(V + E) — one linear walk.</span>
 </div>
 
-Toggle edges in the DAG to see it live — disconnect a pass and the compiler removes it along with its resources. No `#ifdef`, no feature flag — just a missing edge.
+Toggle edges in the DAG below — disconnect a pass and the compiler removes it along with its resources in real time:
 
 {{< interactive-dag >}}
 
@@ -279,58 +244,23 @@ Toggle edges in the DAG to see it live — disconnect a pass and the compiler re
 
 ### 🚧 Barrier insertion
 
-A GPU resource can't be a render target and a shader input at the same time — the hardware needs to flush caches, change memory layout, and switch access modes between those uses. That transition is a **barrier**.
+[Part I](/posts/frame-graph-theory/#barriers) explained *why* barriers exist — the GPU can't read and write a resource simultaneously, so a state transition must happen between those uses. Here's how the compiler places them automatically.
 
-The graph already knows the sorted pass order and what each pass reads or writes. So for every resource handoff — GBuffer goes from "being written by pass A" to "being read by pass B" — it inserts the correct barrier automatically. Here's every type of barrier a real frame needs:
+The algorithm is a single walk over the sorted execution order. Each resource carries a **current state** (e.g. `RENDER_TARGET`, `SHADER_READ`, `DEPTH_WRITE`). For every pass, the compiler checks each resource the pass touches:
 
-<div style="overflow-x:auto;margin:1em 0;">
-<table style="width:100%;border-collapse:collapse;border-radius:10px;overflow:hidden;font-size:.88em;">
-  <thead>
-    <tr style="background:linear-gradient(135deg,rgba(var(--ds-indigo-rgb),.1),rgba(var(--ds-info-rgb),.08));">
-      <th style="padding:.6em .8em;text-align:left;border-bottom:2px solid rgba(var(--ds-indigo-rgb),.2);width:28%;">Transition</th>
-      <th style="padding:.6em .8em;text-align:left;border-bottom:2px solid rgba(var(--ds-indigo-rgb),.2);width:30%;">Example</th>
-      <th style="padding:.6em .8em;text-align:left;border-bottom:2px solid rgba(var(--ds-indigo-rgb),.2);">API</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td style="padding:.5em .8em;font-weight:600;">Render Target → Shader Read</td>
-      <td style="padding:.5em .8em;font-size:.9em;opacity:.8;">GBuffer → Lighting samples it</td>
-      <td style="padding:.5em .8em;font-size:.82em;font-family:ui-monospace,monospace;line-height:1.6;">RENDER_TARGET → PIXEL_SHADER_RESOURCE</td>
-    </tr>
-    <tr style="background:rgba(127,127,127,.03);">
-      <td style="padding:.5em .8em;font-weight:600;">Depth Write → Depth Read</td>
-      <td style="padding:.5em .8em;font-size:.9em;opacity:.8;">Shadows → Lighting reads as texture</td>
-      <td style="padding:.5em .8em;font-size:.82em;font-family:ui-monospace,monospace;line-height:1.6;">DEPTH_WRITE → PIXEL_SHADER_RESOURCE</td>
-    </tr>
-    <tr>
-      <td style="padding:.5em .8em;font-weight:600;">UAV Write → UAV Read</td>
-      <td style="padding:.5em .8em;font-size:.9em;opacity:.8;">Bloom mip N → mip N+1</td>
-      <td style="padding:.5em .8em;font-size:.82em;font-family:ui-monospace,monospace;line-height:1.6;">UAV barrier (flush caches)</td>
-    </tr>
-    <tr style="background:rgba(127,127,127,.03);">
-      <td style="padding:.5em .8em;font-weight:600;">Shader Read → Render Target</td>
-      <td style="padding:.5em .8em;font-size:.9em;opacity:.8;">Lighting read HDR → Tonemap writes</td>
-      <td style="padding:.5em .8em;font-size:.82em;font-family:ui-monospace,monospace;line-height:1.6;">PIXEL_SHADER_RESOURCE → RENDER_TARGET</td>
-    </tr>
-    <tr>
-      <td style="padding:.5em .8em;font-weight:600;">Render Target → Present</td>
-      <td style="padding:.5em .8em;font-size:.9em;opacity:.8;">Final composite → swapchain</td>
-      <td style="padding:.5em .8em;font-size:.82em;font-family:ui-monospace,monospace;line-height:1.6;">RENDER_TARGET → PRESENT</td>
-    </tr>
-    <tr style="background:rgba(127,127,127,.03);">
-      <td style="padding:.5em .8em;font-weight:600;">Aliasing Barrier</td>
-      <td style="padding:.5em .8em;font-size:.9em;opacity:.8;">GBuffer dies → HDR reuses memory</td>
-      <td style="padding:.5em .8em;font-size:.82em;font-family:ui-monospace,monospace;line-height:1.6;">RESOURCE_BARRIER_TYPE_ALIASING</td>
-    </tr>
-  </tbody>
-</table>
-</div>
+1. **Look up** the resource's current state
+2. **Compare** it to the state this pass needs (render target? shader input? UAV?)
+3. **If they differ** → emit a barrier transitioning from the old state to the new one
+4. **Update** the resource's tracked state to the new value
+
+One linear walk, O(V + E). Every barrier lands exactly where the state actually changes — zero redundant transitions, zero missed ones.
+
+Step through a full pipeline below — watch each resource's state update as passes execute, and see exactly where the compiler fires each barrier:
 
 {{< interactive-barriers >}}
 
 <div style="margin:1em 0;padding:.8em 1em;border-radius:8px;border-left:3px solid rgba(var(--ds-danger-rgb),.5);background:rgba(var(--ds-danger-rgb),.04);font-size:.9em;line-height:1.6;">
-A real frame needs <strong>dozens of these</strong>. Miss one → rendering corruption or a GPU crash. Add an unnecessary one → the GPU stalls waiting for nothing. Managing this by hand is tedious and error-prone — the graph sees every read/write edge and emits the exact set automatically.
+A real frame needs <strong>dozens of these</strong>. Miss one → rendering corruption or a GPU crash. Add an unnecessary one → the GPU stalls waiting for nothing. The four-step walk above eliminates both failure modes — every barrier is derived from the declared read/write edges, nothing more.
 </div>
 
 ---
