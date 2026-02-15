@@ -505,9 +505,21 @@
       var docHeight = document.documentElement.scrollHeight - window.innerHeight;
       var pct = docHeight > 0 ? Math.min(100, Math.round((scrollY / docHeight) * 100)) : 0;
 
-      // Show/hide
+      // Show/hide — only show if scrolled past threshold AND rail doesn't overlap content
       var show = scrollY > showThreshold;
-      topBar.classList.toggle('visible', show);
+
+      if (show) {
+        var contentEl = document.querySelector('.article-content') || document.querySelector('article');
+        if (contentEl) {
+          var contentRight = contentEl.getBoundingClientRect().right;
+          var railLeft = window.innerWidth - 300 - 16; // rail width(300) + right offset(16)
+          if (railLeft < contentRight + 8) {
+            show = false; // would overlap — hide rail, top bar stays
+          }
+        }
+      }
+
+      topBar.classList.toggle('visible', scrollY > showThreshold);
       rail.classList.toggle('visible', show);
 
       // Progress bar
@@ -560,6 +572,7 @@
     }
 
     window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
     // Initial update
     setTimeout(updateNav, 100);
   }

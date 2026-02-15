@@ -234,3 +234,57 @@
   }
 })();
 </script>
+
+<!-- Auto-hide sidebar TOC when it touches/overlaps content -->
+<script>
+(function () {
+  if (typeof ResizeObserver === 'undefined') return;
+
+  // The outer wrapper that holds the sidebar TOC
+  var tocOuter = document.querySelector('.toc-right');
+  if (!tocOuter) tocOuter = document.querySelector('.toc');
+  var sidebarWrap = tocOuter && tocOuter.closest('div.order-first');
+  var contentWrap = document.querySelector('.article-content');
+  if (!sidebarWrap || !contentWrap) return;
+
+  var raf = null;
+
+  function check() {
+    raf = null;
+
+    // Temporarily reveal sidebar so we can measure real positions
+    var wasHidden = document.body.classList.contains('toc-sidebar-hidden');
+    if (wasHidden) document.body.classList.remove('toc-sidebar-hidden');
+
+    var contentRect = contentWrap.getBoundingClientRect();
+    var sidebarRect = sidebarWrap.getBoundingClientRect();
+
+    // The sidebar overlaps/touches if its left edge <= content's right edge
+    // (with a small 8px gap tolerance)
+    var overlaps = sidebarRect.left < contentRect.right + 8;
+
+    if (overlaps) {
+      document.body.classList.add('toc-sidebar-hidden');
+    } else {
+      document.body.classList.remove('toc-sidebar-hidden');
+    }
+  }
+
+  function scheduleCheck() {
+    if (!raf) raf = requestAnimationFrame(check);
+  }
+
+  // Watch for size changes on both the content and viewport
+  var ro = new ResizeObserver(scheduleCheck);
+  ro.observe(contentWrap);
+  ro.observe(sidebarWrap);
+  ro.observe(document.documentElement);
+
+  // Also recheck on window resize (catches zoom, orientation, etc.)
+  window.addEventListener('resize', scheduleCheck, { passive: true });
+
+  check(); // initial run
+})();
+</script>
+
+

@@ -15,6 +15,14 @@ body {
   max-width: none !important;
 }
 
+/* ── Auto-hide sidebar TOC when it would overlap content ──────── */
+/* Toggled dynamically by JS ResizeObserver — no hardcoded breakpoints.
+   When the article content is too narrow the sidebar is hidden and
+   the collapsible top TOC is shown instead.                         */
+body.toc-sidebar-hidden .toc-right  { display: none !important; }
+body.toc-sidebar-hidden .toc-inside { display: block !important; }
+body.toc-sidebar-hidden section.prose { flex-direction: column !important; }
+
 /* ── Collapsible code blocks (include-code shortcode) ────────── */
 
 /* ── Compile-compare shortcode ───────────────────────────────── */
