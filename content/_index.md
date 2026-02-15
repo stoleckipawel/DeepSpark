@@ -1,5 +1,5 @@
 ---
-title: "Deep Spark"
+title: ""
 description: "Graphics software engineering — real-time rendering notes, GPU experiments, and performance analysis."
 ---
 
