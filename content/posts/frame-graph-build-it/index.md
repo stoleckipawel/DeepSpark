@@ -665,10 +665,6 @@ The second half of the algorithm — the greedy free-list allocator. Sort resour
 
 ~70 new lines on top of v2. Aliasing runs once per frame in O(R log R) — sort, then linear scan of the free list. Sub-microsecond for 15 transient resources.
 
-Drag the interactive timeline below to see how resources share physical blocks as their lifetimes end:
-
-{{< interactive-aliasing >}}
-
 That's the full value prop — automatic memory aliasing *and* automatic barriers from a single `FrameGraph` class. UE5's transient resource allocator does the same thing: any `FRDGTexture` created through `FRDGBuilder::CreateTexture` (vs `RegisterExternalTexture`) is transient and eligible for aliasing, using the same lifetime analysis and free-list scan we just built.
 
 ---

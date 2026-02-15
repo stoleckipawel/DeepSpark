@@ -466,6 +466,10 @@ The sorted order tells the compiler exactly when each resource is first written 
   </div>
 </div>
 
+Drag the timeline below to see how resources share physical blocks as their lifetimes end:
+
+{{< interactive-aliasing >}}
+
 ### Barriers
 
 A GPU resource can't be a render target and a shader input at the same time — the hardware needs to flush caches, change memory layout, and switch access modes between those uses. That transition is a **barrier**. Miss one and you get rendering corruption or a GPU crash; add an unnecessary one and the GPU stalls waiting for nothing.
