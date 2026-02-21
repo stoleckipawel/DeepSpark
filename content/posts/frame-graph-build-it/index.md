@@ -12,18 +12,66 @@ showTableOfContents: false
 {{< article-nav >}}
 
 <div style="margin:0 0 1.5em;padding:.7em 1em;border-radius:8px;background:rgba(var(--ds-indigo-rgb),.04);border:1px solid rgba(var(--ds-indigo-rgb),.12);font-size:.88em;line-height:1.6;opacity:.85;">
-📖 <strong>Part II of III.</strong>&ensp; <a href="../frame-graph-theory/">Theory</a> → <em>Build It</em> → <a href="../frame-graph-production/">Production Engines</a>
+📖 <strong>Part II of IV.</strong>&ensp; <a href="../frame-graph-theory/">Theory</a> → <em>Build It</em> → <a href="../frame-graph-advanced/">Advanced Features</a> → <a href="../frame-graph-production/">Production Engines</a>
 </div>
 
-*Three iterations from blank file to working frame graph with automatic barriers and memory aliasing. Each version builds on the last — by the end you'll have something you can drop into a real renderer.*
+*Part I laid out the theory — declare, compile, execute. Now we turn that blueprint into code. Three iterations, each one unlocking a capability that wasn't there before: first a topological sort gives us dependency-driven execution order, then the compiler injects barriers automatically, and finally memory aliasing lets resources share the same heap. Each version builds on the last — time to get our hands dirty.*
 
-[Part I](/posts/frame-graph-theory/) covered what a frame graph is — the three-phase lifecycle (declare → compile → execute), the DAG, and why every major engine uses one. Now we implement it. Three C++ iterations, each adding a layer: v1 is scaffolding, v2 adds the dependency graph with automatic barriers and pass culling, v3 adds lifetime analysis and memory aliasing.
+<!-- MVP progression — stacked power-up bars -->
+<div style="margin:1.6em 0 1.2em;position:relative;padding-left:2.6em;">
+  <!-- header -->
+  <div style="margin-left:-2.6em;margin-bottom:1.2em;font-size:1.1em;font-weight:800;text-align:center;letter-spacing:.02em;">🧬 MVP Progression</div>
+  <!-- vertical connector line -->
+  <div style="position:absolute;left:1.05em;top:.4em;bottom:.4em;width:2px;background:linear-gradient(to bottom, var(--ds-info), var(--ds-code), var(--ds-success));border-radius:1px;opacity:.5;"></div>
+
+  <!-- v1 -->
+  <a href="#-v1--the-scaffold" style="text-decoration:none;color:inherit;display:block;position:relative;margin-bottom:1.2em;cursor:pointer;" onmouseover="this.querySelector('.mvp-card').style.borderColor='rgba(var(--ds-info-rgb),.5)'" onmouseout="this.querySelector('.mvp-card').style.borderColor='rgba(var(--ds-info-rgb),.25)'">
+    <div style="position:absolute;left:-2.6em;top:.15em;width:2.1em;height:2.1em;border-radius:50%;background:var(--ds-info);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.7em;color:#fff;box-shadow:0 0 0 3px rgba(var(--ds-info-rgb),.2);z-index:1;">v1</div>
+    <div class="mvp-card" style="padding:.7em .9em;border-radius:8px;border:1.5px solid rgba(var(--ds-info-rgb),.25);background:linear-gradient(90deg,rgba(var(--ds-info-rgb),.06) 0%,transparent 100%);transition:border-color .15s;">
+      <div style="font-weight:800;font-size:.95em;color:var(--ds-info);margin-bottom:.25em;">The Scaffold</div>
+      <div style="font-size:.84em;line-height:1.5;opacity:.85;">Pass declaration, virtual resources, execute in order. The skeleton everything else plugs into.</div>
+      <!-- power bar -->
+      <div style="margin-top:.5em;height:6px;border-radius:3px;background:rgba(127,127,127,.1);overflow:hidden;">
+        <div style="width:20%;height:100%;border-radius:3px;background:var(--ds-info);"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:.2em;font-size:.65em;opacity:.5;"><span>declare</span><span>compile</span><span>execute</span></div>
+    </div>
+  </a>
+
+  <!-- v2 -->
+  <a href="#-mvp-v2--dependencies--barriers" style="text-decoration:none;color:inherit;display:block;position:relative;margin-bottom:1.2em;cursor:pointer;" onmouseover="this.querySelector('.mvp-card').style.borderColor='rgba(var(--ds-code-rgb),.5)'" onmouseout="this.querySelector('.mvp-card').style.borderColor='rgba(var(--ds-code-rgb),.25)'">
+    <div style="position:absolute;left:-2.6em;top:.15em;width:2.1em;height:2.1em;border-radius:50%;background:var(--ds-code);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.7em;color:#fff;box-shadow:0 0 0 3px rgba(var(--ds-code-rgb),.2);z-index:1;">v2</div>
+    <div class="mvp-card" style="padding:.7em .9em;border-radius:8px;border:1.5px solid rgba(var(--ds-code-rgb),.25);background:linear-gradient(90deg,rgba(var(--ds-code-rgb),.06) 0%,transparent 100%);transition:border-color .15s;">
+      <div style="font-weight:800;font-size:.95em;color:var(--ds-code);margin-bottom:.25em;">Dependencies & Barriers</div>
+      <div style="font-size:.84em;line-height:1.5;opacity:.85;">Resource versioning → edges → topo-sort → dead-pass culling → automatic barrier insertion. The core value of a render graph.</div>
+      <!-- power bar -->
+      <div style="margin-top:.5em;height:6px;border-radius:3px;background:rgba(127,127,127,.1);overflow:hidden;">
+        <div style="width:65%;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--ds-info),var(--ds-code));"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:.2em;font-size:.65em;opacity:.5;"><span>declare</span><span>compile</span><span>execute</span></div>
+    </div>
+  </a>
+
+  <!-- v3 -->
+  <a href="#-mvp-v3--lifetimes--aliasing" style="text-decoration:none;color:inherit;display:block;position:relative;cursor:pointer;" onmouseover="this.querySelector('.mvp-card').style.borderColor='rgba(var(--ds-success-rgb),.5)'" onmouseout="this.querySelector('.mvp-card').style.borderColor='rgba(var(--ds-success-rgb),.25)'">
+    <div style="position:absolute;left:-2.6em;top:.15em;width:2.1em;height:2.1em;border-radius:50%;background:var(--ds-success);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.7em;color:#fff;box-shadow:0 0 0 3px rgba(var(--ds-success-rgb),.2), 0 0 12px rgba(var(--ds-success-rgb),.3);z-index:1;">v3</div>
+    <div class="mvp-card" style="padding:.7em .9em;border-radius:8px;border:1.5px solid rgba(var(--ds-success-rgb),.25);background:linear-gradient(90deg,rgba(var(--ds-success-rgb),.06) 0%,transparent 100%);transition:border-color .15s;">
+      <div style="font-weight:800;font-size:.95em;color:var(--ds-success);margin-bottom:.25em;">Lifetimes & Aliasing <span style="font-size:.75em;font-weight:600;opacity:.7;margin-left:.4em;">★ production-ready</span></div>
+      <div style="font-size:.84em;line-height:1.5;opacity:.85;">Lifetime scan + greedy free-list allocator. Non-overlapping resources share physical memory — <strong>~50% VRAM saved</strong>.</div>
+      <!-- power bar -->
+      <div style="margin-top:.5em;height:6px;border-radius:3px;background:rgba(127,127,127,.1);overflow:hidden;">
+        <div style="width:100%;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--ds-info),var(--ds-code),var(--ds-success));"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:.2em;font-size:.65em;opacity:.5;"><span>declare</span><span>compile</span><span>execute</span></div>
+    </div>
+  </a>
+</div>
 
 ---
 
-## 🏗️ API Design
+## 🏗️ API Design & First Prototype
 
-We start from the API you *want* to write — a minimal `FrameGraph` that declares a depth prepass, GBuffer pass, and lighting pass in ~20 lines of C++.
+We start from the API you *want* to write, then build toward it in three iterations — starting with bare scaffolding and ending with automatic barriers and memory aliasing.
 
 ### 🎯 Design principles
 
@@ -92,63 +140,17 @@ These three ideas produce a natural pipeline — declare your intent, let the co
   </div>
 </div>
 
-### 🧩 Putting it together
+### 🚀 The Target API
 
-Here's how the final API reads — three passes, ~20 lines:
+Here's where three iterations take us — the final API in ~20 lines:
 
-```cpp
-FrameGraph fg;
-auto depth = fg.createResource({1920, 1080, Format::D32F});
-auto gbufA = fg.createResource({1920, 1080, Format::RGBA8});
-auto gbufN = fg.createResource({1920, 1080, Format::RGBA8});
-auto hdr   = fg.createResource({1920, 1080, Format::RGBA16F});
+{{< include-code file="api_demo.cpp" lang="cpp" compile="true" deps="frame_graph_v3.h" open="true" >}}
 
-fg.addPass("DepthPrepass",
-    [&]() { fg.write(0, depth); },
-    [&](/*cmd*/) { /* draw scene depth-only */ });
+Three passes, declared as lambdas. The graph handles the rest — ordering, barriers, memory. Hit **▶ Compile & Run** to see it execute — topo-sort, culling, aliasing, barriers, all automatic. Now let's build it step by step.
 
-fg.addPass("GBuffer",
-    [&]() { fg.read(1, depth); fg.write(1, gbufA); fg.write(1, gbufN); },
-    [&](/*cmd*/) { /* draw scene to GBuffer MRTs */ });
+### 🧱 v1 — The Scaffold
 
-fg.addPass("Lighting",
-    [&]() { fg.read(2, gbufA); fg.read(2, gbufN); fg.write(2, hdr); },
-    [&](/*cmd*/) { /* fullscreen lighting pass */ });
-
-fg.execute();  // → topo-sort, cull, alias, barrier, run
-```
-
-Three passes, declared as lambdas. The graph handles the rest — ordering, barriers, memory. We build this step by step below.
-
----
-
-## 🧱 MVP v1 — Declare & Execute
-
-**Data structures:**
-
-<div class="diagram-struct">
-  <div class="dst-title">FrameGraph <span class="dst-comment">(UE5: FRDGBuilder)</span></div>
-  <div class="dst-section">
-    <strong>passes[]</strong> → <strong>RenderPass</strong> <span class="dst-comment">(UE5: FRDGPass)</span><br>
-    &nbsp;&nbsp;• name<br>
-    &nbsp;&nbsp;• setup() <span class="dst-comment">← build the DAG</span><br>
-    &nbsp;&nbsp;• execute() <span class="dst-comment">← record GPU cmds</span>
-  </div>
-  <div class="dst-section">
-    <strong>resources[]</strong> → <strong>ResourceDesc</strong> <span class="dst-comment">(UE5: FRDGTextureDesc)</span><br>
-    &nbsp;&nbsp;• width, height, format<br>
-    &nbsp;&nbsp;• virtual — no GPU handle yet
-  </div>
-  <div class="dst-section">
-    <strong>ResourceHandle</strong> = index into resources[]<br>
-    <span class="dst-comment">(UE5: FRDGTextureRef / FRDGBufferRef)</span>
-  </div>
-  <div class="dst-section">
-    <span class="dst-comment">← linear allocator: all frame-scoped, free at frame end</span>
-  </div>
-</div>
-
-**Flow:** Declare passes in order → execute in order. No dependency tracking yet. Resources are created eagerly.
+Three types are all we need to start: a `RenderPass` with setup + execute lambdas, a `ResourceDesc` (width, height, format — no GPU handle yet), and a `ResourceHandle` that's just an index. The `FrameGraph` class owns arrays of both and runs passes in declaration order. No dependency tracking, no barriers — just the foundation that v2 and v3 build on.
 
 {{< include-code file="frame_graph_v1.h" lang="cpp" compact="true" >}}
 {{< include-code file="example_v1.cpp" lang="cpp" compile="true" deps="frame_graph_v1.h" compact="true" >}}
@@ -266,9 +268,7 @@ Every `write()` pushes a new version. Every `read()` finds the current version's
 
 ### 📊 Topological sort (Kahn's algorithm)
 
-[Part I](/posts/frame-graph-theory/#sorting-and-culling) covered *why* the graph needs sorting — every pass must run after the passes it depends on. Here's *how*: **Kahn's algorithm**. Count incoming edges per pass. Any pass with zero means all its dependencies are satisfied — emit it, decrement its neighbors' counts, repeat until the queue drains. If the output is shorter than the pass count, you have a cycle.
-
-Before we can sort, we need an adjacency list. `buildEdges()` deduplicates the raw `dependsOn` entries from the versioning step and builds the `successors` list that Kahn's algorithm walks:
+[Part I](/posts/frame-graph-theory/#sorting-and-culling) walked through Kahn's algorithm step by step. Here's the implementation. `buildEdges()` deduplicates the raw `dependsOn` entries and builds the adjacency list; `topoSort()` does the zero-in-degree queue drain:
 
 {{< code-diff title="v2 — Edge building + Kahn's topological sort" >}}
 @@ buildEdges() — deduplicate and build adjacency list @@
@@ -305,28 +305,13 @@ Before we can sort, we need an adjacency list. `buildEdges()` deduplicates the r
 +    }
 {{< /code-diff >}}
 
-Step through the algorithm interactively — watch nodes with zero in-degree get emitted one by one:
-
-{{< interactive-toposort >}}
-
 ---
 
 <span id="v2-culling"></span>
 
 ### ✂️ Pass culling
 
-[Part I](/posts/frame-graph-theory/#sorting-and-culling) described culling as "dead-code elimination for GPU work." The implementation is a single backward walk:
-
-<div style="display:grid;grid-template-columns:auto 1fr;gap:.6em .9em;align-items:start;margin:.8em 0 1.2em;padding:.8em 1em;border-radius:10px;background:linear-gradient(135deg,rgba(var(--ds-warn-rgb),.06),transparent);border:1px solid rgba(var(--ds-warn-rgb),.18);font-size:.9em;line-height:1.6;">
-  <span style="font-size:1.3em;line-height:1;">🔙</span>
-  <span><strong>Walk:</strong> Start at the final output (present / backbuffer). Follow edges backward, marking every reachable pass as <em>alive</em>.</span>
-  <span style="font-size:1.3em;line-height:1;">💀</span>
-  <span><strong>Result:</strong> Unmarked passes are dead — removed along with their resource declarations.</span>
-  <span style="font-size:1.3em;line-height:1;">⏱️</span>
-  <span><strong>Cost:</strong> O(V + E) — one linear walk.</span>
-</div>
-
-The code is a single backward walk — mark the final pass alive, then propagate backward through `dependsOn` edges:
+[Part I](/posts/frame-graph-theory/#sorting-and-culling) described culling as "dead-code elimination for GPU work." The implementation is a single backward walk — mark the final pass alive, then propagate backward through `dependsOn` edges:
 
 {{< code-diff title="v2 — Pass culling" >}}
 @@ cull() — backward reachability from output @@
@@ -347,22 +332,7 @@ The code is a single backward walk — mark the final pass alive, then propagate
 
 ### 🚧 Barrier insertion
 
-[Part I](/posts/frame-graph-theory/#barriers) explained *why* barriers exist — the GPU can't read and write a resource simultaneously, so a state transition must happen between those uses. Here's how the compiler places them automatically.
-
-The algorithm is a single walk over the sorted execution order. Each resource carries a **current state** (e.g. `RENDER_TARGET`, `SHADER_READ`, `DEPTH_WRITE`). For every pass, the compiler checks each resource the pass touches:
-
-1. **Look up** the resource's current state
-2. **Compare** it to the state this pass needs (render target? shader input? UAV?)
-3. **If they differ** → emit a barrier transitioning from the old state to the new one
-4. **Update** the resource's tracked state to the new value
-
-One linear walk, O(V + E). Every barrier lands exactly where the state actually changes — zero redundant transitions, zero missed ones.
-
-<div style="margin:1em 0;padding:.8em 1em;border-radius:8px;border-left:3px solid rgba(var(--ds-danger-rgb),.5);background:rgba(var(--ds-danger-rgb),.04);font-size:.9em;line-height:1.6;">
-A real frame needs <strong>dozens of these</strong>. Miss one → rendering corruption or a GPU crash. Add an unnecessary one → the GPU stalls waiting for nothing. The four-step walk above eliminates both failure modes — every barrier is derived from the declared read/write edges, nothing more.
-</div>
-
-The implementation walks each pass's reads and writes, comparing the resource's tracked state to what the pass needs. If they differ — emit a barrier and update:
+[Part I](/posts/frame-graph-theory/#barriers) explained *why* barriers exist and how the compiler infers them from read/write edges. The implementation walks each pass's resources, comparing the tracked state to what the pass needs. If they differ — emit a barrier and update:
 
 {{< code-diff title="v2 — Barrier insertion + execute() rewrite" >}}
 @@ insertBarriers() — emit transitions where state changes @@
@@ -420,11 +390,9 @@ UE5's RDG does the same thing. When you call `FRDGBuilder::AddPass`, RDG builds 
 
 ## 💾 MVP v3 — Lifetimes & Aliasing
 
-V2 gives us ordering, culling, and barriers — but every transient resource lives for the entire frame. A 1080p deferred pipeline allocates ~52 MB of transient textures that are each used for only 2–3 passes. If their lifetimes don't overlap, they can share physical memory. That's aliasing, and it typically saves 30–50% VRAM.
+V2 gives us ordering, culling, and barriers — but every transient resource still gets its own VRAM for the entire frame. [Part I](/posts/frame-graph-theory/#allocation-and-aliasing) showed how non-overlapping lifetimes let the allocator share physical memory (aliasing). Now we implement it.
 
-The algorithm has two steps. First, **scan lifetimes**: walk the sorted pass list and record each transient resource's `firstUse` and `lastUse` pass indices (imported resources are excluded — they're externally owned). Second, **free-list scan**: sort resources by first-use, then greedily try to fit each one into an existing physical block that's compatible (same memory type, large enough, and whose last user finished before this resource's first use). Fit → reuse. No fit → allocate a new block. This is greedy interval-coloring.
-
-Two new structs capture this — a `Lifetime` per resource and a `PhysicalBlock` per heap slot. The lifetime scan is a single walk over the sorted pass list:
+Two new structs — a `Lifetime` per resource and a `PhysicalBlock` per heap slot. The lifetime scan walks the sorted pass list, recording each transient resource's `firstUse` / `lastUse` indices:
 
 {{< code-diff title="v2 → v3 — Lifetime structs & scan" >}}
 @@ New structs @@
@@ -457,157 +425,6 @@ Two new structs capture this — a `Lifetime` per resource and a `PhysicalBlock`
 +        return life;
 +    }
 {{< /code-diff >}}
-
-Now that we know every resource's lifetime, we can see the waste. Without aliasing, every transient resource is a **committed allocation** — its own chunk of VRAM from creation to end of frame, even if it's only used for 2–3 passes. Here's what that looks like for six transient resources at 1080p:
-
-<div style="margin:1.2em 0;font-size:.85em;">
-  <div style="border-radius:10px;overflow:hidden;border:1.5px solid rgba(var(--ds-danger-rgb),.15);">
-    <div style="padding:.5em .8em;background:rgba(var(--ds-danger-rgb),.06);border-bottom:1px solid rgba(var(--ds-danger-rgb),.1);font-weight:700;font-size:.9em;text-align:center;">❌ No aliasing — every resource owns its memory for the full frame</div>
-    <div style="display:grid;grid-template-columns:140px repeat(7,1fr);gap:0;">
-      <div style="padding:.35em .6em;background:rgba(127,127,127,.04);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-size:.75em;font-weight:600;opacity:.5;"></div>
-      <div style="padding:.35em .3em;background:rgba(127,127,127,.04);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);text-align:center;font-size:.72em;font-weight:600;opacity:.4;">P1</div>
-      <div style="padding:.35em .3em;background:rgba(127,127,127,.04);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);text-align:center;font-size:.72em;font-weight:600;opacity:.4;">P2</div>
-      <div style="padding:.35em .3em;background:rgba(127,127,127,.04);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);text-align:center;font-size:.72em;font-weight:600;opacity:.4;">P3</div>
-      <div style="padding:.35em .3em;background:rgba(127,127,127,.04);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);text-align:center;font-size:.72em;font-weight:600;opacity:.4;">P4</div>
-      <div style="padding:.35em .3em;background:rgba(127,127,127,.04);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);text-align:center;font-size:.72em;font-weight:600;opacity:.4;">P5</div>
-      <div style="padding:.35em .3em;background:rgba(127,127,127,.04);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);text-align:center;font-size:.72em;font-weight:600;opacity:.4;">P6</div>
-      <div style="padding:.35em .3em;background:rgba(127,127,127,.04);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);text-align:center;font-size:.72em;font-weight:600;opacity:.4;">P7</div>
-      <div style="padding:.3em .6em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-size:.78em;font-weight:600;">GBuffer Albedo<div style="font-size:.8em;opacity:.4;">8 MB</div></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-danger-rgb),.06);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-info-rgb),.15);border-top:3px solid var(--ds-info);border-bottom:3px solid var(--ds-info);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-info-rgb),.15);border-top:3px solid var(--ds-info);border-bottom:3px solid var(--ds-info);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-info-rgb),.15);border-top:3px solid var(--ds-info);border-bottom:3px solid var(--ds-info);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-danger-rgb),.06);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-danger-rgb),.06);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);background:rgba(var(--ds-danger-rgb),.06);"></div>
-      <div style="padding:.3em .6em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-size:.78em;font-weight:600;">GBuffer Normals<div style="font-size:.8em;opacity:.4;">8 MB</div></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-danger-rgb),.06);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-code-rgb),.15);border-top:3px solid var(--ds-code);border-bottom:3px solid var(--ds-code);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-code-rgb),.15);border-top:3px solid var(--ds-code);border-bottom:3px solid var(--ds-code);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-code-rgb),.15);border-top:3px solid var(--ds-code);border-bottom:3px solid var(--ds-code);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-danger-rgb),.06);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-danger-rgb),.06);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);background:rgba(var(--ds-danger-rgb),.06);"></div>
-      <div style="padding:.3em .6em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-size:.78em;font-weight:600;">SSAO Scratch<div style="font-size:.8em;opacity:.4;">2 MB</div></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-danger-rgb),.06);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-danger-rgb),.06);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-success-rgb),.15);border-top:3px solid var(--ds-success);border-bottom:3px solid var(--ds-success);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-success-rgb),.15);border-top:3px solid var(--ds-success);border-bottom:3px solid var(--ds-success);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-danger-rgb),.06);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-danger-rgb),.06);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);background:rgba(var(--ds-danger-rgb),.06);"></div>
-      <div style="padding:.3em .6em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-size:.78em;font-weight:600;">SSAO Result<div style="font-size:.8em;opacity:.4;">2 MB</div></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-danger-rgb),.06);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-danger-rgb),.06);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-danger-rgb),.06);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-warn-rgb),.15);border-top:3px solid var(--ds-warn);border-bottom:3px solid var(--ds-warn);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-warn-rgb),.15);border-top:3px solid var(--ds-warn);border-bottom:3px solid var(--ds-warn);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-danger-rgb),.06);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);background:rgba(var(--ds-danger-rgb),.06);"></div>
-      <div style="padding:.3em .6em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-size:.78em;font-weight:600;">HDR Lighting<div style="font-size:.8em;opacity:.4;">16 MB</div></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-danger-rgb),.06);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-danger-rgb),.06);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-danger-rgb),.06);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-danger-rgb),.06);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-pink-rgb),.15);border-top:3px solid var(--ds-pink);border-bottom:3px solid var(--ds-pink);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-pink-rgb),.15);border-top:3px solid var(--ds-pink);border-bottom:3px solid var(--ds-pink);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);background:rgba(var(--ds-danger-rgb),.06);"></div>
-      <div style="padding:.3em .6em;border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-size:.78em;font-weight:600;">Bloom Scratch<div style="font-size:.8em;opacity:.4;">16 MB</div></div>
-      <div style="border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-danger-rgb),.06);"></div>
-      <div style="border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-danger-rgb),.06);"></div>
-      <div style="border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-danger-rgb),.06);"></div>
-      <div style="border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-danger-rgb),.06);"></div>
-      <div style="border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-danger-rgb),.06);"></div>
-      <div style="border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(14,165,233,.15);border-top:3px solid #0ea5e9;border-bottom:3px solid #0ea5e9;"></div>
-      <div style="background:rgba(14,165,233,.15);border-top:3px solid #0ea5e9;border-bottom:3px solid #0ea5e9;"></div>
-    </div>
-  </div>
-  <div style="margin-top:.4em;font-size:.82em;opacity:.6;">
-    <span style="color:var(--ds-danger);">Red cells</span> = memory allocated but unused — wasted VRAM. Each resource holds its full allocation across the entire frame even though it's only active for 2–3 passes. Total: <strong style="color:var(--ds-danger);">52 MB</strong> committed.
-  </div>
-</div>
-
-Most of that memory sits idle. The colored bars show when each resource is actually used — everything else is waste. The graph knows every lifetime, so it can do better. Resources whose lifetimes don't overlap can share the same physical memory:
-
-<div style="margin:1.2em 0;font-size:.85em;">
-  <div style="border-radius:10px;overflow:hidden;border:1.5px solid rgba(var(--ds-indigo-rgb),.15);">
-    <div style="display:grid;grid-template-columns:140px repeat(7,1fr);gap:0;">
-      <div style="padding:.4em .6em;background:rgba(var(--ds-indigo-rgb),.06);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.1);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-weight:700;font-size:.82em;">Resource</div>
-      <div style="padding:.4em .3em;background:rgba(var(--ds-indigo-rgb),.06);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.1);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);text-align:center;font-size:.75em;font-weight:600;opacity:.5;">P1</div>
-      <div style="padding:.4em .3em;background:rgba(var(--ds-indigo-rgb),.06);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.1);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);text-align:center;font-size:.75em;font-weight:600;opacity:.5;">P2</div>
-      <div style="padding:.4em .3em;background:rgba(var(--ds-indigo-rgb),.06);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.1);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);text-align:center;font-size:.75em;font-weight:600;opacity:.5;">P3</div>
-      <div style="padding:.4em .3em;background:rgba(var(--ds-indigo-rgb),.06);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.1);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);text-align:center;font-size:.75em;font-weight:600;opacity:.5;">P4</div>
-      <div style="padding:.4em .3em;background:rgba(var(--ds-indigo-rgb),.06);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.1);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);text-align:center;font-size:.75em;font-weight:600;opacity:.5;">P5</div>
-      <div style="padding:.4em .3em;background:rgba(var(--ds-indigo-rgb),.06);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.1);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);text-align:center;font-size:.75em;font-weight:600;opacity:.5;">P6</div>
-      <div style="padding:.4em .3em;background:rgba(var(--ds-indigo-rgb),.06);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.1);text-align:center;font-size:.75em;font-weight:600;opacity:.5;">P7</div>
-      <div style="padding:.35em .6em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-size:.82em;font-weight:600;">GBuffer Albedo<div style="font-size:.8em;opacity:.4;">8 MB</div></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-info-rgb),.2);border-top:3px solid var(--ds-info);border-bottom:3px solid var(--ds-info);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-info-rgb),.2);border-top:3px solid var(--ds-info);border-bottom:3px solid var(--ds-info);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-info-rgb),.2);border-top:3px solid var(--ds-info);border-bottom:3px solid var(--ds-info);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);"></div>
-      <div style="padding:.35em .6em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-size:.82em;font-weight:600;">HDR Lighting<div style="font-size:.8em;opacity:.4;">16 MB → <span style="color:var(--ds-info);">slot A</span></div></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-info-rgb),.2);border-top:3px solid var(--ds-info);border-bottom:3px solid var(--ds-info);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-info-rgb),.2);border-top:3px solid var(--ds-info);border-bottom:3px solid var(--ds-info);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);"></div>
-      <div style="padding:.35em .6em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-size:.82em;font-weight:600;">GBuffer Normals<div style="font-size:.8em;opacity:.4;">8 MB</div></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-code-rgb),.2);border-top:3px solid var(--ds-code);border-bottom:3px solid var(--ds-code);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-code-rgb),.2);border-top:3px solid var(--ds-code);border-bottom:3px solid var(--ds-code);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-code-rgb),.2);border-top:3px solid var(--ds-code);border-bottom:3px solid var(--ds-code);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);"></div>
-      <div style="padding:.35em .6em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-size:.82em;font-weight:600;">Bloom Scratch<div style="font-size:.8em;opacity:.4;">16 MB → <span style="color:var(--ds-code);">slot B</span></div></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-code-rgb),.2);border-top:3px solid var(--ds-code);border-bottom:3px solid var(--ds-code);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);background:rgba(var(--ds-code-rgb),.2);border-top:3px solid var(--ds-code);border-bottom:3px solid var(--ds-code);"></div>
-      <div style="padding:.35em .6em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-size:.82em;font-weight:600;">SSAO Scratch<div style="font-size:.8em;opacity:.4;">2 MB</div></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-success-rgb),.2);border-top:3px solid var(--ds-success);border-bottom:3px solid var(--ds-success);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-success-rgb),.2);border-top:3px solid var(--ds-success);border-bottom:3px solid var(--ds-success);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.05);"></div>
-      <div style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);"></div>
-      <div style="padding:.35em .6em;border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-size:.82em;font-weight:600;">SSAO Result<div style="font-size:.8em;opacity:.4;">2 MB → <span style="color:var(--ds-success);">slot C</span></div></div>
-      <div style="border-right:1px solid rgba(var(--ds-indigo-rgb),.05);"></div>
-      <div style="border-right:1px solid rgba(var(--ds-indigo-rgb),.05);"></div>
-      <div style="border-right:1px solid rgba(var(--ds-indigo-rgb),.05);"></div>
-      <div style="border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-success-rgb),.2);border-top:3px solid var(--ds-success);border-bottom:3px solid var(--ds-success);"></div>
-      <div style="border-right:1px solid rgba(var(--ds-indigo-rgb),.05);background:rgba(var(--ds-success-rgb),.2);border-top:3px solid var(--ds-success);border-bottom:3px solid var(--ds-success);"></div>
-      <div style="border-right:1px solid rgba(var(--ds-indigo-rgb),.05);"></div>
-      <div></div>
-    </div>
-  </div>
-  <div style="margin-top:.5em;font-size:.82em;opacity:.6;">Same color = same physical memory. GBuffer Albedo dies at P4, HDR Lighting starts at P5 → both fit in <span style="color:var(--ds-info);font-weight:600;">slot A</span>. Three physical blocks serve six virtual resources.</div>
-</div>
-
-<div style="display:flex;align-items:center;gap:1em;margin:1em 0;padding:.6em 1em;border-radius:8px;background:linear-gradient(90deg,rgba(var(--ds-danger-rgb),.06),rgba(var(--ds-success-rgb),.06));">
-  <div style="text-align:center;line-height:1.3;">
-    <div style="font-size:.75em;opacity:.6;text-transform:uppercase;letter-spacing:.05em;">Without aliasing</div>
-    <div style="font-size:1.4em;font-weight:800;color:var(--ds-danger);">52 MB</div>
-  </div>
-  <div style="font-size:1.5em;opacity:.3;">→</div>
-  <div style="text-align:center;line-height:1.3;">
-    <div style="font-size:.75em;opacity:.6;text-transform:uppercase;letter-spacing:.05em;">With aliasing</div>
-    <div style="font-size:1.4em;font-weight:800;color:var(--ds-success);">36 MB</div>
-  </div>
-  <div style="margin-left:auto;font-size:.85em;line-height:1.4;opacity:.8;">
-    3 physical blocks shared across 6 virtual resources.<br>
-    <strong style="color:var(--ds-success);">31% saved</strong> — in complex pipelines: 40–50%.
-  </div>
-</div>
 
 This requires **placed resources** at the API level — GPU memory allocated from a heap, with resources bound to offsets within it. In D3D12, that means `ID3D12Heap` + `CreatePlacedResource`. In Vulkan, `VkDeviceMemory` + `vkBindImageMemory` at different offsets. Without placed resources (i.e., `CreateCommittedResource` or Vulkan dedicated allocations), each resource gets its own memory and aliasing is impossible — which is why the graph's allocator works with heaps.
 
@@ -735,7 +552,7 @@ Three iterations produced a single `FrameGraph` class. Here's what it does every
 </div>
 <div style="font-size:.84em;line-height:1.5;opacity:.7;margin:-.3em 0 1em 0">V = passes (~25), E = dependency edges (~50), R = transient resources (~15). Everything linear or near-linear.</div>
 
-The graph doesn't care about your rendering *strategy*. It cares about your *dependencies*. Deferred or forward, the same `FrameGraph` class handles both — different topology, same automatic barriers and aliasing. That's the whole point.
+That's the full MVP — a single `FrameGraph` class that handles dependency-driven ordering, culling, aliasing, and barriers. Every concept from [Part I](/posts/frame-graph-theory/) now exists as running code.
 
 ---
 
@@ -743,7 +560,7 @@ The graph doesn't care about your rendering *strategy*. It cares about your *dep
   <a href="../frame-graph-theory/" style="text-decoration:none;font-weight:700;font-size:.95em;">
     ← Previous: Part I — Theory
   </a>
-  <a href="../frame-graph-production/" style="text-decoration:none;font-weight:700;font-size:.95em;">
-    Next: Part III — Production Engines →
+  <a href="../frame-graph-advanced/" style="text-decoration:none;font-weight:700;font-size:.95em;">
+    Next: Part III — Advanced Features →
   </a>
 </div>

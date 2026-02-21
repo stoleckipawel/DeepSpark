@@ -4,6 +4,7 @@
 {{ $compile := .Get "compile" | default "" }}
 {{ $deps := .Get "deps" | default "" }}
 {{ $compact := .Get "compact" | default "" }}
+{{ $open := .Get "open" | default "" }}
 {{ $resource := .Page.Resources.GetMatch $file }}
 {{ if $resource }}
 {{ $lines := split $resource.Content "\n" }}
@@ -60,7 +61,7 @@
 {{ else }}
 {{/* ── STANDARD MODE: preview + expand ── */}}
 <div class="code-block-wrapper">
-  <details class="code-collapse">
+  <details class="code-collapse"{{ if eq $open "true" }} open{{ end }}>
     <summary>
       <span class="code-collapse-label">{{ $file }} <span class="code-collapse-hint">({{ $total }} lines — click anywhere to expand)</span></span>
       <div class="code-preview-body">

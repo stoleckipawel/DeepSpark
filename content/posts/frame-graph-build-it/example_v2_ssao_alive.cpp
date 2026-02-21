@@ -5,7 +5,6 @@
 
 int main() {
     printf("=== v2 Variant A: SSAO Connected ===\n");
-    printf("SSAO output IS read by Lighting → all passes alive.\n\n");
 
     FrameGraph fg;
     auto depth = fg.createResource({1920, 1080, Format::D32F});
@@ -29,10 +28,7 @@ int main() {
         [&]() { fg.read(3, gbufA); fg.read(3, ssao); fg.write(3, hdr); },
         [&](/*cmd*/) { printf("  >> exec: Lighting\n"); });
 
-    printf("Lighting reads SSAO output → SSAO is ALIVE.\n\n");
+    printf("Lighting reads SSAO → SSAO stays alive.\n");
     fg.execute();
-
-    printf("\nAll 4 passes executed. SSAO survives culling because\n");
-    printf("Lighting depends on its output.\n");
     return 0;
 }

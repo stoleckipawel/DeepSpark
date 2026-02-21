@@ -12,10 +12,10 @@ showTableOfContents: false
 {{< article-nav >}}
 
 <div style="margin:0 0 1.5em;padding:.7em 1em;border-radius:8px;background:rgba(var(--ds-indigo-rgb),.04);border:1px solid rgba(var(--ds-indigo-rgb),.12);font-size:.88em;line-height:1.6;opacity:.85;">
-📖 <strong>Part III of III.</strong>&ensp; <a href="../frame-graph-theory/">Theory</a> → <a href="../frame-graph-build-it/">Build It</a> → <em>Production Engines</em>
+📖 <strong>Part IV of IV.</strong>&ensp; <a href="../frame-graph-theory/">Theory</a> → <a href="../frame-graph-build-it/">Build It</a> → <a href="../frame-graph-advanced/">Advanced Features</a> → <em>Production Engines</em>
 </div>
 
-[Part II](/posts/frame-graph-build-it/) left us with a working frame graph — automatic barriers, pass culling, and memory aliasing in ~300 lines of C++. That's a solid MVP, but production engines face problems we didn't: parallel command recording, subpass merging, async compute scheduling, and managing thousands of passes across legacy codebases. This article examines how UE5 and Frostbite solved those problems, then maps out the path from MVP to production.
+[Part III](/posts/frame-graph-advanced/) showed how the compiler can go further — pass merging, async compute, and split barriers. Production engines face additional challenges we didn't cover: parallel command recording, managing thousands of passes across legacy codebases, and scaling all of these techniques simultaneously. This article examines how UE5 and Frostbite solved those problems, then maps out the path from MVP to production.
 
 ---
 
@@ -233,7 +233,7 @@ This boundary is shrinking every release as Epic migrates more passes to RDG, bu
 
 A render graph is not always the right answer. If your project has a fixed pipeline with 3–4 passes that will never change, the overhead of a graph compiler is wasted complexity. But the moment your renderer needs to *grow* — new passes, new platforms, new debug tools — the graph pays for itself in the first week.
 
-Across these three articles, we covered the full arc: [Part I](/posts/frame-graph-theory/) laid out all the theory — the declare/compile/execute lifecycle, pass merging, async compute, and split barriers. [Part II](/posts/frame-graph-build-it/) turned the core into working C++ — automatic barriers, pass culling, and memory aliasing. And this article mapped those ideas onto what ships in UE5 and Frostbite, showing how production engines implement the same concepts at scale.
+Across these four articles, we covered the full arc: [Part I](/posts/frame-graph-theory/) laid out the core theory — the declare/compile/execute lifecycle, sorting, barriers, and aliasing. [Part II](/posts/frame-graph-build-it/) turned that into working C++. [Part III](/posts/frame-graph-advanced/) pushed further with pass merging, async compute, and split barriers. And this article mapped those ideas onto what ships in UE5 and Frostbite, showing how production engines implement the same concepts at scale.
 
 You can now open `RenderGraphBuilder.h` in UE5 and *read* it, not reverse-engineer it. You know what `FRDGBuilder::AddPass` builds, how the transient allocator aliases memory, why `ERDGPassFlags::AsyncCompute` exists, and how the RDG boundary with legacy code works in practice.
 
@@ -256,7 +256,7 @@ The point isn't that every project needs a render graph. The point is that if yo
 ---
 
 <div style="margin:2em 0 0;padding:1em 1.2em;border-radius:10px;border:1px solid rgba(var(--ds-indigo-rgb),.2);background:rgba(var(--ds-indigo-rgb),.03);display:flex;justify-content:flex-start;">
-  <a href="../frame-graph-build-it/" style="text-decoration:none;font-weight:700;font-size:.95em;">
-    ← Previous: Part II — Build It
+  <a href="../frame-graph-advanced/" style="text-decoration:none;font-weight:700;font-size:.95em;">
+    ← Previous: Part III — Advanced Features
   </a>
 </div>

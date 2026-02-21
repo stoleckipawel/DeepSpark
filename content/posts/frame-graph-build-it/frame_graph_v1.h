@@ -8,6 +8,7 @@
 //   or just #include it from your example/test file.
 
 #include <cstdint>
+#include <cstdio>
 #include <functional>
 #include <string>
 #include <vector>
@@ -54,10 +55,11 @@ public:
 
     // Compile + execute. v1 is trivial — just run in declaration order.
     void execute() {
-        // In v1 we skip compile entirely — no sorting, no culling,
-        // no barriers. Just run every pass in the order it was added.
+        // v1: no compile step — no sorting, no culling, no barriers.
+        // Just run every pass in the order it was added.
+        printf("\n[1] Executing (declaration order — no compile step):\n");
         for (auto& pass : passes_) {
-            // Here you'd bind resources, begin render pass, etc.
+            printf("  >> exec: %s\n", pass.name.c_str());
             pass.execute(/* &cmdList */);
         }
 

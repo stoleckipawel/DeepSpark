@@ -5,7 +5,6 @@
 
 int main() {
     printf("=== v2 Variant B: SSAO Disconnected ===\n");
-    printf("SSAO output NOT read by anything → pass culled.\n\n");
 
     FrameGraph fg;
     auto depth = fg.createResource({1920, 1080, Format::D32F});
@@ -30,10 +29,7 @@ int main() {
         [&]() { fg.read(3, gbufA); fg.write(3, hdr); },
         [&](/*cmd*/) { printf("  >> exec: Lighting\n"); });
 
-    printf("Lighting does NOT read SSAO output → SSAO is DEAD.\n\n");
+    printf("Lighting does NOT read SSAO → SSAO gets culled.\n");
     fg.execute();
-
-    printf("\nOnly 3 passes executed. SSAO was automatically culled\n");
-    printf("because nothing reads its output — no #ifdef needed.\n");
     return 0;
 }

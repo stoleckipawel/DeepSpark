@@ -1,11 +1,8 @@
-// Frame Graph MVP v1 -- Usage Example
-// Compile: g++ -std=c++17 -o example_v1 example_v1.cpp
-#include "frame_graph_v1.h"
-#include <cstdio>
+// Frame Graph — API demo (3 passes)
+// Target API — this is where three iterations take us.
+#include "frame_graph_v3.h"
 
 int main() {
-    printf("=== Frame Graph v1: Declare & Execute ===\n");
-
     FrameGraph fg;
     auto depth = fg.createResource({1920, 1080, Format::D32F});
     auto gbufA = fg.createResource({1920, 1080, Format::RGBA8});
@@ -13,17 +10,16 @@ int main() {
     auto hdr   = fg.createResource({1920, 1080, Format::RGBA16F});
 
     fg.addPass("DepthPrepass",
-        [&]() { /* setup — v1 doesn't use this */ },
+        [&]() { fg.write(0, depth); },
         [&](/*cmd*/) { /* draw scene depth-only */ });
 
     fg.addPass("GBuffer",
-        [&]() { /* setup */ },
+        [&]() { fg.read(1, depth); fg.write(1, gbufA); fg.write(1, gbufN); },
         [&](/*cmd*/) { /* draw scene to GBuffer MRTs */ });
 
     fg.addPass("Lighting",
-        [&]() { /* setup */ },
+        [&]() { fg.read(2, gbufA); fg.read(2, gbufN); fg.write(2, hdr); },
         [&](/*cmd*/) { /* fullscreen lighting pass */ });
 
-    fg.execute();
-    return 0;
+    fg.execute();  // → topo-sort, cull, alias, barrier, run
 }
