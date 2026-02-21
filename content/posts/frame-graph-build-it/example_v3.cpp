@@ -39,6 +39,7 @@ int main() {
         [&]() { fg.write(5, debug); },
         [&](/*cmd*/) { printf("  >> exec: DebugOverlay\n"); });
 
-    fg.execute();
+    auto plan = fg.compile();   // topo-sort, cull, alias
+    fg.execute(plan);             // barriers + run
     return 0;
 }

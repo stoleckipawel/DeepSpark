@@ -71,7 +71,7 @@ showTableOfContents: false
 
 ## 🏗️ API Design & First Prototype
 
-We start from the API you *want* to write, then build toward it in three iterations — starting with bare scaffolding and ending with automatic barriers and memory aliasing.
+We start from the API you *want* to write, then build toward it — starting with bare scaffolding and ending with automatic barriers and memory aliasing.
 
 ### 🎯 Design principles
 
@@ -142,11 +142,9 @@ These three ideas produce a natural pipeline — declare your intent, let the co
 
 ### 🚀 The Target API
 
-Here's where three iterations take us — the final API in ~20 lines:
+Here's where we're headed — the final API in under 30 lines:
 
-{{< include-code file="api_demo.cpp" lang="cpp" compile="true" deps="frame_graph_v3.h" open="true" >}}
-
-Three passes, declared as lambdas. The graph handles the rest — ordering, barriers, memory. Hit **▶ Compile & Run** to see it execute — topo-sort, culling, aliasing, barriers, all automatic. Now let's build it step by step.
+{{< include-code file="api_demo.cpp" lang="cpp" open="true" >}}
 
 ### 🧱 v1 — The Scaffold
 
@@ -487,7 +485,7 @@ That's the full value prop — automatic memory aliasing *and* automatic barrier
 
 ### ✅ What the MVP delivers
 
-Three iterations produced a single `FrameGraph` class. Here's what it does every frame, broken down by phase — the same declare → compile → execute lifecycle from [Part I](/posts/frame-graph-theory/):
+The finished `FrameGraph` class. Here's what it does every frame, broken down by phase — the same declare → compile → execute lifecycle from [Part I](/posts/frame-graph-theory/):
 
 <div style="margin:1.2em 0;display:grid;grid-template-columns:repeat(3,1fr);gap:.8em;">
   <div style="padding:.8em 1em;border-radius:10px;border-top:3px solid var(--ds-info);background:rgba(var(--ds-info-rgb),.04);">

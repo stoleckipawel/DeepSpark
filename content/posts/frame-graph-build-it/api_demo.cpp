@@ -1,9 +1,10 @@
 // Frame Graph — API demo (3 passes)
-// Target API — this is where three iterations take us.
 #include "frame_graph_v3.h"
 
 int main() {
     FrameGraph fg;
+
+    // [1] Declare — describe resources and register passes
     auto depth = fg.createResource({1920, 1080, Format::D32F});
     auto gbufA = fg.createResource({1920, 1080, Format::RGBA8});
     auto gbufN = fg.createResource({1920, 1080, Format::RGBA8});
@@ -21,5 +22,9 @@ int main() {
         [&]() { fg.read(2, gbufA); fg.read(2, gbufN); fg.write(2, hdr); },
         [&](/*cmd*/) { /* fullscreen lighting pass */ });
 
-    fg.execute();  // → topo-sort, cull, alias, barrier, run
+    // [2] Compile — topo-sort, cull, emit barriers, alias memory
+    auto plan = fg.compile();
+
+    // [3] Execute — run each pass in compiled order
+    fg.execute(plan);
 }

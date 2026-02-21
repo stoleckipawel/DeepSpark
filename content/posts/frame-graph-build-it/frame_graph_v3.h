@@ -152,14 +152,8 @@ public:
         return { std::move(sorted), std::move(mapping) };
     }
 
-    // ── v3: execute — just records GPU commands ───────────────
-    void execute() {
-        auto plan = compile();
-
-        // In a real renderer: bind physical memory blocks using plan.mapping here.
-        // Each virtual handle maps to an aliased physical slot decided at compile time.
-        // Our MVP prints the mapping but skips actual GPU binding.
-
+    // ── v3: execute — runs the compiled plan ─────────────────
+    void execute(const CompiledPlan& plan) {
         printf("[6] Executing (with automatic barriers):\n");
         for (uint32_t idx : plan.sorted) {
             if (!passes_[idx].alive) {
@@ -172,6 +166,9 @@ public:
         passes_.clear();
         entries_.clear();
     }
+
+    // convenience: compile + execute in one call
+    void execute() { execute(compile()); }
 
 private:
     uint32_t currentPass_ = 0;
