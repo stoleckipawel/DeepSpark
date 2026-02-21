@@ -19,19 +19,48 @@ showTableOfContents: false
 
 ## 🎯 Why You Want One
 
-<div class="fg-reveal" style="margin:1.2em 0 1.5em;padding:1.3em 1.5em;border-radius:12px;border:1.5px solid rgba(var(--ds-indigo-rgb),.18);background:linear-gradient(135deg,rgba(var(--ds-indigo-rgb),.04),rgba(var(--ds-success-rgb),.03));">
-  <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:.3em .8em;align-items:center;font-size:1em;line-height:1.6;">
-    <span style="text-decoration:line-through;opacity:.4;text-align:right;">Passes run in whatever order you wrote them.</span>
-    <span style="opacity:.45;display:flex;align-items:center;justify-content:center;"><svg viewBox="0 0 32 20" width="24" height="15" fill="none"><line x1="3" y1="10" x2="20" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity=".15"/><line x1="3" y1="10" x2="20" y2="10" class="flow flow-sm flow-current" style="animation-duration:1.4s"/><polyline points="17,4 28,10 17,16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity=".35"/></svg></span>
-    <strong>Sorted by dependencies.</strong>
-    <span style="text-decoration:line-through;opacity:.4;text-align:right;">Every GPU sync point placed by hand.</span>
-    <span style="opacity:.45;display:flex;align-items:center;justify-content:center;"><svg viewBox="0 0 32 20" width="24" height="15" fill="none"><line x1="3" y1="10" x2="20" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity=".15"/><line x1="3" y1="10" x2="20" y2="10" class="flow flow-sm flow-current"/><polyline points="17,4 28,10 17,16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity=".35"/></svg></span>
-    <strong>Barriers inserted for you.</strong>
-    <span style="text-decoration:line-through;opacity:.4;text-align:right;">Each pass allocates its own memory — 900 MB gone.</span>
-    <span style="opacity:.45;display:flex;align-items:center;justify-content:center;"><svg viewBox="0 0 32 20" width="24" height="15" fill="none"><line x1="3" y1="10" x2="20" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity=".15"/><line x1="3" y1="10" x2="20" y2="10" class="flow flow-sm flow-current" style="animation-duration:1.6s"/><polyline points="17,4 28,10 17,16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity=".35"/></svg></span>
-    <strong style="color:var(--ds-success);">Resources shared safely — ~450 MB back.</strong>
+<div style="margin:1.5em 0;border-radius:14px;overflow:hidden;border:1.5px solid rgba(var(--ds-indigo-rgb),.18);box-shadow:0 2px 16px rgba(0,0,0,.06);">
+  <!-- Header gradient bar -->
+  <div style="height:4px;background:linear-gradient(90deg,var(--ds-danger),var(--ds-warn),var(--ds-success));"></div>
+  <!-- Rows -->
+  <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:0;">
+    <!-- Headers -->
+    <div style="padding:.6em 1em;font-size:.72em;text-transform:uppercase;letter-spacing:.06em;font-weight:700;color:var(--ds-danger);background:rgba(var(--ds-danger-rgb),.04);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.06);">❌ Manual</div>
+    <div style="padding:.6em .5em;background:rgba(var(--ds-indigo-rgb),.02);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.06);"></div>
+    <div style="padding:.6em 1em;font-size:.72em;text-transform:uppercase;letter-spacing:.06em;font-weight:700;color:var(--ds-success);background:rgba(var(--ds-success-rgb),.04);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);">✅ Frame Graph</div>
+    <!-- Row 1 -->
+    <div style="padding:.65em 1em;font-size:.88em;opacity:.5;text-decoration:line-through;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.06);text-align:right;">
+      Passes run in whatever order you wrote them.
+    </div>
+    <div style="padding:.65em .3em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.06);display:flex;align-items:center;justify-content:center;">
+      <svg viewBox="0 0 24 16" width="20" height="13" fill="none"><path d="M4 8h12m-4-4l5 4-5 4" stroke="var(--ds-success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity=".5"/></svg>
+    </div>
+    <div style="padding:.65em 1em;font-size:.88em;font-weight:700;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);">
+      Sorted by dependencies.
+    </div>
+    <!-- Row 2 -->
+    <div style="padding:.65em 1em;font-size:.88em;opacity:.5;text-decoration:line-through;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.06);text-align:right;">
+      Every GPU sync point placed by hand.
+    </div>
+    <div style="padding:.65em .3em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.06);display:flex;align-items:center;justify-content:center;">
+      <svg viewBox="0 0 24 16" width="20" height="13" fill="none"><path d="M4 8h12m-4-4l5 4-5 4" stroke="var(--ds-success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity=".5"/></svg>
+    </div>
+    <div style="padding:.65em 1em;font-size:.88em;font-weight:700;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);">
+      Barriers inserted for you.
+    </div>
+    <!-- Row 3 -->
+    <div style="padding:.65em 1em;font-size:.88em;opacity:.5;text-decoration:line-through;border-right:1px solid rgba(var(--ds-indigo-rgb),.06);text-align:right;">
+      Each pass allocates its own memory — 900 MB gone.
+    </div>
+    <div style="padding:.65em .3em;border-right:1px solid rgba(var(--ds-indigo-rgb),.06);display:flex;align-items:center;justify-content:center;">
+      <svg viewBox="0 0 24 16" width="20" height="13" fill="none"><path d="M4 8h12m-4-4l5 4-5 4" stroke="var(--ds-success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity=".5"/></svg>
+    </div>
+    <div style="padding:.65em 1em;font-size:.88em;font-weight:700;color:var(--ds-success);">
+      Resources shared safely — ~450 MB back.
+    </div>
   </div>
-  <div style="margin-top:.8em;padding-top:.7em;border-top:1px solid rgba(var(--ds-indigo-rgb),.1);font-size:.88em;opacity:.7;line-height:1.5;text-align:center;">
+  <!-- Footer -->
+  <div style="padding:.55em 1em;background:rgba(var(--ds-indigo-rgb),.04);border-top:1px solid rgba(var(--ds-indigo-rgb),.08);text-align:center;font-size:.88em;opacity:.65;">
     You describe <em>what</em> each pass needs — the graph figures out the <em>how</em>.
   </div>
 </div>
@@ -391,10 +420,6 @@ These versioned edges are the raw material the compiler works with. Every step t
 With edges in place, the compiler flattens the DAG into a linear execution order. Every edge says *"pass B depends on something pass A produced,"* so the compiler does a **topological sort** — it walks those edges and lines up every pass so that each one runs only after the passes it depends on have finished.
 
 **Culling** walks backward from the final outputs and removes any pass whose results are never read. Dead-code elimination for GPU work — entire passes vanish without a feature flag.
-
-<div style="margin:.6em 0;padding:.5em .9em;border-radius:8px;border-left:3px solid rgba(var(--ds-code-rgb),.4);background:rgba(var(--ds-code-rgb),.04);font-size:.85em;line-height:1.5;">
-🔨 <a href="../frame-graph-build-it/#v2-toposort" style="font-weight:600;">Part II</a> implements both — step through the topological sort interactively and toggle DAG edges to watch culling remove dead passes in real time.
-</div>
 
 Toggle edges in the DAG below — disconnect a pass and the compiler removes it along with its resources in real time:
 
