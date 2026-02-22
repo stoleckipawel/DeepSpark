@@ -1,6 +1,6 @@
 {{/* Interactive Full Pipeline Explorer — minimap + focus view */}}
 <div class="interactive-widget" id="pipeline-widget">
-  <div class="widget-header" style="border-top-color:var(--ds-code)">
+  <div class="widget-header">
     <span class="widget-icon">🎛️</span>
     <span class="widget-title">Interactive: Full Pipeline Explorer</span>
     <p class="widget-hint">The minimap shows the full render graph. Click any pass to focus — the detail view shows its neighbors, resources, and how the compiler transforms it.</p>
@@ -53,7 +53,7 @@
 .pipe-example-bar{display:flex;align-items:center;gap:.5em;margin-bottom:.6em;flex-wrap:wrap}
 .pipe-example-label{font-size:.82em;font-weight:700;opacity:.6}
 .pipe-ex-btn{font-size:.78em!important;padding:.35em .9em!important;border-radius:999px!important;font-weight:600!important}
-.pipe-ex-active{background:var(--ds-code)!important;color:#fff!important;border-color:var(--ds-code)!important;box-shadow:0 0 0 2px rgba(var(--ds-code-rgb),.25)!important}
+.pipe-ex-active{background:var(--ds-code)!important;color:#fff!important;border-color:var(--ds-code)!important}
 
 .pipe-controls{margin:.5em 0 .8em;padding:.6em .8em;border-radius:8px;background:var(--color-neutral-100,#f5f5f5);border:1px solid var(--color-neutral-200,#e5e5e5)}
 :is(.dark,.scheme-congo) .pipe-controls{background:var(--color-neutral-900);border-color:var(--color-neutral-700)}
@@ -69,7 +69,7 @@
 :is(.dark,.scheme-congo) .pipe-toggle-label{color:var(--color-neutral-300)}
 
 /* Minimap */
-.pipe-minimap-wrap{margin:.5em 0;border:1.5px solid var(--color-neutral-200,#e5e5e5);border-radius:10px;overflow:hidden}
+.pipe-minimap-wrap{margin:.5em 0;border:1px solid var(--color-neutral-200,#e5e5e5);border-radius:10px;overflow:hidden}
 :is(.dark,.scheme-congo) .pipe-minimap-wrap{border-color:var(--color-neutral-700)}
 .pipe-minimap-label{padding:.45em .8em;font-size:.78em;font-weight:700;text-transform:uppercase;letter-spacing:.04em;opacity:.6;border-bottom:1px solid var(--color-neutral-200,#e5e5e5)}
 :is(.dark,.scheme-congo) .pipe-minimap-label{border-color:var(--color-neutral-700)}
@@ -78,9 +78,9 @@
 #pipe-minimap{display:block;min-height:120px}
 
 /* Focus view */
-.pipe-focus-wrap{margin:.7em 0;border:2px solid rgba(var(--ds-code-rgb),.25);border-radius:10px;overflow:hidden;background:rgba(var(--ds-code-rgb),.02);transition:border-color .3s}
-.pipe-focus-wrap.pipe-focus-active{border-color:rgba(var(--ds-code-rgb),.5)}
-:is(.dark,.scheme-congo) .pipe-focus-wrap{background:rgba(var(--ds-code-rgb),.05)}
+.pipe-focus-wrap{margin:.7em 0;border:1px solid var(--color-neutral-200,#e5e5e5);border-radius:10px;overflow:hidden;background:var(--color-neutral-50,#fafafa);transition:border-color .3s}
+.pipe-focus-wrap.pipe-focus-active{border-color:rgba(var(--ds-code-rgb),.35)}
+:is(.dark,.scheme-congo) .pipe-focus-wrap{background:var(--color-neutral-800);border-color:var(--color-neutral-700)}
 .pipe-focus-header{padding:.5em .9em;border-bottom:1px solid rgba(var(--ds-code-rgb),.15);display:flex;align-items:center;gap:.6em;flex-wrap:wrap}
 .pipe-focus-title{font-weight:800;font-size:1.05em}
 .pipe-focus-badge{font-size:.75em;font-weight:600;padding:.2em .6em;border-radius:999px;display:inline-block}
@@ -101,8 +101,8 @@
 
 /* Stats */
 .pipe-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(95px,1fr));gap:.4em;margin:.6em 0;font-size:.8em}
-.pipe-stat{padding:.45em .6em;border-radius:6px;text-align:center;font-weight:600;border:1.5px solid}
-.pipe-stat-val{font-size:1.35em;font-weight:800;display:block;margin-bottom:.05em}
+.pipe-stat{padding:.45em .6em;border-radius:6px;text-align:center;font-weight:600;border:1px solid}
+.pipe-stat-val{font-size:1.2em;font-weight:700;display:block;margin-bottom:.05em}
 .pipe-stat-lbl{font-size:.82em;opacity:.7;font-weight:500}
 
 .pipe-detail{font-size:.84em;line-height:1.65;margin:.5em 0;padding:.55em .8em;border-radius:.375rem;border-left:3px solid var(--ds-code);background:var(--color-neutral-100,#f5f5f5);min-height:1.4em}
@@ -441,7 +441,7 @@ function renderMinimap(opts){
     /* selection ring */
     if(isSel){
       svg.append(el("rect",{x:p.mx-3,y:p.my-3,width:MM_NW+6,height:MM_NH+6,rx:7,
-        fill:"none",stroke:"#fff","stroke-width":"2.5",opacity:"0.85"}));
+        fill:"none",stroke:"#fff","stroke-width":"2",opacity:"0.7"}));
     }
 
     var strokeCol=isOut?"#d97706":isAsync?"#7c3aed":isAlive?"#16a34a":"#4b5563";
@@ -564,8 +564,8 @@ function renderFocus(opts){
   function drawEdge(sx,sy,dx,dy,label,edgeAlive){
     var cx1=sx+(dx-sx)*.35,cx2=sx+(dx-sx)*.65;
     var attrs={d:"M"+sx+","+sy+" C"+cx1+","+sy+" "+cx2+","+dy+" "+dx+","+dy,
-      fill:"none",stroke:edgeAlive?C.edge:C.edgeOff,"stroke-width":edgeAlive?"2.5":"1.5",
-      opacity:edgeAlive?"0.65":"0.2"};
+      fill:"none",stroke:edgeAlive?C.edge:C.edgeOff,"stroke-width":edgeAlive?"2":"1.5",
+      opacity:edgeAlive?"0.55":"0.2"};
     if(!edgeAlive)attrs["stroke-dasharray"]="4 3";
     svg.append(el("path",attrs));
     /* flowing charge overlay */
@@ -606,11 +606,11 @@ function renderFocus(opts){
     /* selection ring for center */
     if(isCenter){
       svg.append(el("rect",{x:x-4,y:y-4,width:F_NW+8,height:F_NH+8,rx:11,
-        fill:"none",stroke:"var(--ds-code)","stroke-width":"2.5","stroke-dasharray":"5 3",opacity:"0.6"}));
+        fill:"none",stroke:"var(--ds-code)","stroke-width":"1.5","stroke-dasharray":"5 3",opacity:"0.45"}));
     }
     var strokeCol=no?"#d97706":nas?"#7c3aed":na?"#16a34a":"#4b5563";
     g.append(el("rect",{x:x,y:y,width:F_NW,height:F_NH,rx:8,
-      fill:fill,opacity:na?"1":"0.35",stroke:isCenter?"#fff":strokeCol,"stroke-width":isCenter?"2.5":"1.5"}));
+      fill:fill,opacity:na?"1":"0.35",stroke:isCenter?"#fff":strokeCol,"stroke-width":isCenter?"2":"1.5"}));
     var nameStr=na?nodePass.name:nodePass.name+" \u2717";
     var sz=nameStr.length>16?"10":nameStr.length>12?"11.5":"13";
     g.append(svgText(x+F_NW/2,y+F_NH/2,nameStr,"#fff",sz,"700"));

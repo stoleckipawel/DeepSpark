@@ -23,11 +23,11 @@
 </div>
 
 <style>
-.interactive-widget{margin:1.5em 0;border:2px solid var(--color-neutral-300,#d4d4d4);border-radius:.75rem;overflow:hidden;background:var(--color-neutral-50,#fafafa);box-shadow:0 2px 12px rgba(0,0,0,.06)}
-:is(.dark,.scheme-congo) .interactive-widget{background:var(--color-neutral-800,#262626);border-color:var(--color-neutral-600,#525252);box-shadow:0 2px 16px rgba(0,0,0,.25)}
-.widget-header{padding:.75em 1em .4em;border-bottom:1px solid var(--color-neutral-200,#e5e5e5);border-top:3px solid var(--ds-info);background:linear-gradient(180deg,rgba(var(--ds-info-rgb),.04),transparent)}
-:is(.dark,.scheme-congo) .widget-header{border-color:var(--color-neutral-700);border-top-color:var(--ds-info);background:linear-gradient(180deg,rgba(var(--ds-info-rgb),.08),transparent)}
-.widget-icon{font-size:1.2em;margin-right:.3em}
+.interactive-widget{margin:1.5em 0;border:1px solid var(--color-neutral-300,#d4d4d4);border-radius:.75rem;overflow:hidden;background:var(--color-neutral-50,#fafafa)}
+:is(.dark,.scheme-congo) .interactive-widget{background:var(--color-neutral-800,#262626);border-color:var(--color-neutral-600,#525252)}
+.widget-header{padding:.75em 1em .4em;border-bottom:1px solid var(--color-neutral-200,#e5e5e5);border-top:2px solid rgba(var(--ds-info-rgb),.5)}
+:is(.dark,.scheme-congo) .widget-header{border-color:var(--color-neutral-700);border-top-color:rgba(var(--ds-info-rgb),.6)}
+.widget-icon{font-size:1em;margin-right:.3em}
 .widget-title{font-weight:700;font-size:.95em}
 .widget-hint{margin:.4em 0 .15em;font-size:.82em;line-height:1.55;color:var(--color-neutral-600,#4b5563)}
 :is(.dark,.scheme-congo) .widget-hint{color:var(--color-neutral-400)}
@@ -42,12 +42,12 @@
 .dag-example-bar{display:flex;align-items:center;gap:.5em;margin-bottom:.75em;flex-wrap:wrap}
 .dag-example-label{font-size:.82em;font-weight:700;opacity:.6}
 .dag-ex-btn{font-size:.78em!important;padding:.35em .9em!important;border-radius:999px!important;font-weight:600!important}
-.dag-ex-active{background:var(--ds-info)!important;color:#fff!important;border-color:var(--ds-info)!important;box-shadow:0 0 0 2px rgba(var(--ds-info-rgb),.25)!important}
-#dag-svg{width:100%;max-height:320px;display:block;margin:0 auto}
-#dag-svg .node rect{rx:8;ry:8;stroke-width:2;cursor:default;transition:fill .2s,stroke .2s,opacity .2s}
+.dag-ex-active{background:var(--ds-info)!important;color:#fff!important;border-color:var(--ds-info)!important}
+#dag-svg{width:100%;max-height:280px;display:block;margin:0 auto}
+#dag-svg .node rect{rx:8;ry:8;stroke-width:1.5;cursor:default;transition:fill .2s,stroke .2s,opacity .2s}
 #dag-svg .node text{font:600 12px ui-monospace,SFMono-Regular,monospace;fill:#fff;pointer-events:none;text-anchor:middle;dominant-baseline:central}
 #dag-svg .edge{cursor:pointer}
-#dag-svg .edge path:not(.flow){fill:none;stroke-width:3;transition:stroke .2s,opacity .2s}
+#dag-svg .edge path:not(.flow){fill:none;stroke-width:2;transition:stroke .2s,opacity .2s}
 #dag-svg .edge polygon{transition:fill .2s,opacity .2s}
 #dag-svg .edge-label{font:500 10px system-ui,sans-serif;pointer-events:none;text-anchor:middle;dominant-baseline:central;transition:fill .2s,opacity .2s}
 #dag-svg .edge-hit{fill:transparent;stroke:transparent;stroke-width:22;cursor:pointer}

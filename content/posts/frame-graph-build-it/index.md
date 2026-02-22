@@ -1,4 +1,4 @@
----
+﻿---
 title: "Frame Graph — Build It"
 date: 2026-02-10
 draft: false
@@ -790,11 +790,11 @@ UE5's RDG follows the same pattern. When you call `FRDGBuilder::AddPass`, RDG bu
 🎯 <strong>Goal:</strong> Non-overlapping transient resources share physical memory — automatic VRAM aliasing with savings that depend on pass topology and resolution (Frostbite reported ~50% on BF1's deferred pipeline).
 </div>
 
-V2 gives us ordering, culling, and barriers — but every transient resource still gets its own VRAM for the entire frame. Resources whose lifetimes don’t overlap can share the same physical memory ([theory refresher](/posts/frame-graph-theory/#allocation-and-aliasing)). Time to implement that.
+V2 gives us ordering, culling, and barriers — but every transient resource still owns its own VRAM for the entire frame, even when it's only alive for two passes out of twelve. A 1080p G-Buffer alone eats ~32 MB; the depth target another ~8 MB — and both are dead after lighting. Meanwhile the post-process chain needs similarly-sized targets that could reuse that exact same memory, because the lifetimes never overlap ([theory refresher](/posts/frame-graph-theory/#allocation-and-aliasing)). That's what v3 automates.
 
-Two new structs — a `Lifetime` per resource and a `PhysicalBlock` per heap slot — plus the existing `Barrier` gets extended with aliasing context. The lifetime scan walks the sorted pass list, recording each transient resource's `firstUse` / `lastUse` indices:
+The implementation adds two data structures — `Lifetime` (first/last sorted-pass index per resource) and `PhysicalBlock` (a reusable heap slot) — and extends `Barrier` with aliasing context. First, the lifetime scan. It walks the sorted pass list and records when each transient resource is first touched and last touched:
 
-{{< code-diff title="v2 → v3 — Lifetime structs, aliasing barrier extension & scan" >}}
+{{< code-diff title="v3 — New data structures: lifetime tracking & aliasing barriers" >}}
 @@ frame_graph_v3.h — PhysicalBlock, Lifetime structs @@
 +// A physical memory slot — multiple virtual resources can reuse it if their lifetimes don't overlap.
 +struct PhysicalBlock {
@@ -818,7 +818,11 @@ Two new structs — a `Lifetime` per resource and a `PhysicalBlock` per heap slo
 +    bool          isAliasing   = false;     // aliasing barrier (block changes occupant)
 +    ResourceIndex aliasBefore  = UINT32_MAX; // resource being evicted
  };
+{{< /code-diff >}}
 
+To alias at the heap level, we also need to know sizes. `AllocSize()` computes an aligned allocation size per resource — the 64 KB alignment mirrors what real GPUs enforce for placed resources. With sizes and the structs above, `ScanLifetimes()` walks the sorted pass list and fills in each resource's `firstUse` / `lastUse`:
+
+{{< code-diff title="v3 — Allocation helpers & lifetime scan" >}}
 @@ frame_graph_v3.h — Allocation helpers @@
 +// Minimum placement alignment for aliased heap resources (real APIs enforce similar, e.g. 64 KB).
 +static constexpr uint32_t kPlacementAlignment = 65536;  // 64 KB
@@ -871,11 +875,11 @@ Two new structs — a `Lifetime` per resource and a `PhysicalBlock` per heap slo
 +}
 {{< /code-diff >}}
 
-This requires **placed resources** at the API level — GPU memory allocated from a heap, with resources bound to offsets within it. In D3D12, that means `ID3D12Heap` + `CreatePlacedResource`. In Vulkan, `VkDeviceMemory` + `vkBindImageMemory` at different offsets. Without placed resources (i.e., `CreateCommittedResource` or Vulkan dedicated allocations), each resource gets its own memory and aliasing is impossible — which is why the graph's allocator works with heaps.
+This requires **placed resources** at the API level — GPU memory allocated from a heap, with resources bound to offsets within it. In D3D12, that means `ID3D12Heap` + `CreatePlacedResource`. In Vulkan, `VkDeviceMemory` + `vkBindImageMemory` at different offsets. Without placed resources (i.e. `CreateCommittedResource` or Vulkan dedicated allocations), each resource gets its own memory and aliasing is impossible — which is exactly why the graph's allocator needs to work with heaps.
 
-The second half of the algorithm — the greedy free-list allocator. Sort resources by `firstUse`, then try to fit each one into an existing block whose previous user has finished:
+With lifetimes in hand, the greedy free-list allocator is straightforward. Sort resources by `firstUse`, walk them in order, and for each one either reuse an existing physical block whose previous occupant has finished — or allocate a new one. `CompiledPlan` gains a `mapping` vector (virtual resource → physical block), and `ComputeBarriers()` gains a Phase 1 that emits aliasing barriers whenever a block changes occupant:
 
-{{< code-diff title="v3 — Greedy free-list aliasing + aliasing barriers" >}}
+{{< code-diff title="v3 — Free-list allocator & header changes" >}}
 @@ frame_graph_v3.h — BlockIndex typedef @@
 +using BlockIndex = uint32_t;   // index into the physical-block free list
 
@@ -932,7 +936,11 @@ The second half of the algorithm — the greedy free-list allocator. Sort resour
 +    }
 +    return mapping;
 +}
+{{< /code-diff >}}
 
+`Compile()` chains the new stages together. After topo-sort and culling (unchanged from v2), it calls `ScanLifetimes()` → `AliasResources()` → `ComputeBarriers()`, passing the mapping through. `StateForUsage()` is also new — it extracts the state-inference logic that v2 had inlined inside the barrier loop into its own method, since both reads and writes need the same lookup:
+
+{{< code-diff title="v3 — Updated Compile() & state inference" >}}
 @@ frame_graph_v3.cpp — Compile() extended with lifetime analysis + aliasing @@
  FrameGraph::CompiledPlan FrameGraph::Compile() {
      BuildEdges();
@@ -956,7 +964,11 @@ The second half of the algorithm — the greedy free-list allocator. Sort resour
 +            ? ResourceState::DepthAttachment : ResourceState::ColorAttachment;
 +    return ResourceState::ShaderRead;
 +}
+{{< /code-diff >}}
 
+Finally, `ComputeBarriers()` is where it all comes together. Before emitting state transitions (Phase 2, same as v2), the new Phase 1 checks whether each resource's physical block has changed occupant since the last pass that used it. If so — aliasing barrier. `EmitBarriers()` also grows a branch to dispatch the two barrier types to the correct API call:
+
+{{< code-diff title="v3 — ComputeBarriers() with aliasing + EmitBarriers()" >}}
 @@ frame_graph_v3.cpp — ComputeBarriers() rewritten with aliasing @@
 +// v3 ComputeBarriers: two phases per pass instead of v2's one.
 +//   Phase 1 — aliasing:  did this physical block change occupant? If so, emit an aliasing barrier.
@@ -1021,18 +1033,16 @@ The second half of the algorithm — the greedy free-list allocator. Sort resour
  }
 {{< /code-diff >}}
 
-~170 new lines on top of v2. **The key v3 addition**: lifetime analysis and memory aliasing. `ScanLifetimes()` records each transient resource's first/last use in the sorted pass order, then `AliasResources()` packs non-overlapping lifetimes into shared physical blocks. `ComputeBarriers()` gains a Phase 1 that detects when a physical block changes occupant and emits aliasing barriers before the state transitions. Execute stays unchanged — still pure playback.
+`Execute()` stays unchanged — still pure playback of the compiled plan. All the new logic lives in `Compile()`, which now runs five stages instead of three: build edges → topo-sort → cull → **scan lifetimes → alias → compute barriers**. The last three stages add ~170 lines on top of v2.
 
-Aliasing runs once per frame in O(R log R + R·B) — sort by first-use, then for each resource scan the free list for a fit. B is the number of physical blocks (bounded by R), so worst-case is O(R²) — but in practice B stays small (~3–5 blocks for ~15 resources), making the scan effectively linear. Sub-microsecond for 15 transient resources.
-
-`ComputeBarriers()` now also detects aliasing transitions: it tracks which virtual resource occupies each physical block, and when a block's occupant changes, it emits an aliasing barrier before the state-transition barriers. D3D12 calls this `D3D12_RESOURCE_BARRIER_TYPE_ALIASING`; Vulkan uses a memory barrier on the shared heap region. Without it, caches may serve stale data from the previous occupant.
+The aliasing barriers matter for correctness, not just bookkeeping. When a physical block changes occupant, the GPU's L2 cache may still hold stale data from the previous resource. D3D12 exposes this as `D3D12_RESOURCE_BARRIER_TYPE_ALIASING`; Vulkan uses a `VkMemoryBarrier` on the heap region covering both the outgoing and incoming resource. Omitting these leads to corruption that's timing-dependent and GPU-vendor-specific — exactly the kind of bug that only shows up in the field.
 
 <div style="margin:1.2em 0;padding:.7em 1em;border-radius:8px;border-left:4px solid var(--ds-info);background:rgba(var(--ds-info-rgb),.04);font-size:.88em;line-height:1.6;">
 📝 <strong>Alignment and real GPU sizing.</strong>&ensp;
-Our <code>AllocSize()</code> rounds up to a 64 KB placement alignment — the same constraint real GPUs enforce when placing resources into shared heaps. This matters because without alignment, two resources that appear to fit in the same block could overlap at the hardware level. The raw <code>BytesPerPixel()</code> calculation is still a simplification though: production allocators query the driver for actual sizes (which include row padding, tiling overhead, and per-resource alignment). The aliasing algorithm itself is unchanged — you just swap the size input.
+Our <code>AllocSize()</code> rounds up to a 64 KB placement alignment — the same constraint real GPUs enforce when placing resources into shared heaps. Without alignment, two resources that appear to fit in the same block would overlap at the hardware level. The raw <code>BytesPerPixel()</code> calculation is still a simplification: production allocators query the driver for actual row padding, tiling overhead, and per-format alignment. The aliasing algorithm itself is unchanged — you just swap the size input.
 </div>
 
-That's the full value prop — automatic memory aliasing and precomputed aliasing barriers on top of v2's compile/execute split. UE5's transient resource allocator does the same thing: any `FRDGTexture` created through `FRDGBuilder::CreateTexture` (vs `RegisterExternalTexture`) is transient and eligible for aliasing, using the same lifetime analysis and free-list scan we just built.
+That wraps v3. Starting from v2's compile/execute split, we added lifetime analysis, a greedy free-list allocator, and aliasing-aware barrier insertion — the same architecture Frostbite described at GDC 2017, and the same approach UE5 uses today for every transient `FRDGTexture` created through `FRDGBuilder::CreateTexture`. The graph now owns the full lifecycle: declare virtual resources → analyze dependencies → pack physical memory → precompute every barrier → execute as pure playback.
 
 ---
 
@@ -1046,7 +1056,7 @@ That's the full value prop — automatic memory aliasing and precomputed aliasin
 
 ### ✅ What the MVP delivers
 
-The finished `FrameGraph` class. Here's what it does every frame, broken down by phase — the same declare → compile → execute lifecycle from [Part I](/posts/frame-graph-theory/):
+Here's the full per-frame lifecycle — the same three-phase architecture from [Part I](/posts/frame-graph-theory/), now backed by real code:
 
 <div style="margin:1.2em 0;display:grid;grid-template-columns:repeat(3,1fr);gap:.8em;">
   <div style="padding:.8em 1em;border-radius:10px;border-top:3px solid var(--ds-info);background:rgba(var(--ds-info-rgb),.04);">
@@ -1089,11 +1099,18 @@ The finished `FrameGraph` class. Here's what it does every frame, broken down by
   </div>
 </div>
 
-That's the full MVP — a single `FrameGraph` class that handles dependency-driven ordering, culling, aliasing, and precomputed barriers. Compile analyzes and decides; execute submits and runs. Every concept from [Part I](/posts/frame-graph-theory/) now exists as running code.
+~350 lines of C++17. No external dependencies, no allocator library, no render backend — just the algorithmic core that production engines build on. Every concept from [Part I](/posts/frame-graph-theory/) — virtual resources, dependency edges, topological ordering, dead-pass culling, barrier inference, lifetime analysis, and VRAM aliasing — now exists as running, compilable code.
 
 ### 🔮 What's next
 
-The MVP handles one queue, one barrier type, and one allocation strategy. Production engines go further: **async compute** overlaps GPU work across queues and **split barriers** let the driver pipeline state transitions instead of stalling. [Part III — Beyond MVP](../frame-graph-advanced/) breaks down each of these upgrades and shows where they plug into the architecture we just built.
+The MVP runs everything on a single queue, issues barriers as immediate full-pipeline stalls, and uses the simplest possible allocation strategy. Production engines push past all three constraints:
+
+- **Async compute** — the graph already encodes which passes are independent. Mapping those onto a second hardware queue lets the GPU overlap compute work (SSAO, light culling, particle simulation) with graphics work on the same frame, recovering otherwise-idle ALU cycles.
+- **Split barriers** — instead of stalling the full pipeline at the point of use, split barriers separate the "start transitioning" signal from the "must be done" signal. The driver gets a window to schedule the transition in parallel with unrelated work — often eliminating the stall entirely.
+
+Both features plug directly into the `CompiledPlan` architecture: async compute adds a queue assignment per pass, and split barriers replace single `Barrier` entries with begin/end pairs. The graph's structure doesn't change — only the execution strategy does.
+
+[Part III — Beyond MVP](../frame-graph-advanced/) walks through both upgrades with code diffs against the v3 base we just built.
 
 ---
 

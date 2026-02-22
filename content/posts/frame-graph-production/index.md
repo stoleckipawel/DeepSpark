@@ -76,8 +76,8 @@ Frostbite's GDC 2017 talk described a similar lambda-based declaration — setup
 <div class="diagram-ftable">
 <table>
   <tr><th>Declaration aspect</th><th>Our MVP</th><th>Production engines</th></tr>
-  <tr><td><strong>Edge declaration</strong></td><td>Explicit <code>read()</code> / <code>write()</code> calls in setup lambda</td><td>UE5: macro-generated metadata. Frostbite: lambda-based, similar to MVP.</td></tr>
-  <tr><td><strong>Resource creation</strong></td><td>All transient, created by description</td><td>Transient + imported distinction. Imported resources track barriers but aren't aliased in UE5.</td></tr>
+  <tr><td><strong>Edge declaration</strong></td><td>Explicit <code>read()</code> / <code>write()</code> / <code>readWrite()</code> calls in setup lambda</td><td>UE5: macro-generated metadata. Frostbite: lambda-based, similar to MVP.</td></tr>
+  <tr><td><strong>Resource creation</strong></td><td>Transient (<code>CreateResource</code>) + imported (<code>ImportResource</code>); imported tracked for barriers but not aliased</td><td>Same distinction, plus cross-frame heap pooling, placed sub-allocation, and size bucketing.</td></tr>
   <tr><td><strong>Queue assignment</strong></td><td>Single queue</td><td>Per-pass flags: graphics, compute, async compute, copy</td></tr>
   <tr><td><strong>Rebuild</strong></td><td>Full rebuild every frame</td><td>UE5: hybrid (cached topology, invalidated on change). Others: dynamic rebuild.</td></tr>
 </table>
@@ -238,7 +238,7 @@ This boundary is shrinking every release as Epic migrates more passes to RDG, bu
 
 A render graph is not always the right answer. If your project has a fixed pipeline with 3–4 passes that will never change, the overhead of a graph compiler is wasted complexity. But the moment your renderer needs to *grow* — new passes, new platforms, new debug tools — the graph pays for itself in the first week.
 
-Across these four articles, we covered the full arc: [Part I](/posts/frame-graph-theory/) laid out the core theory — the declare/compile/execute lifecycle, sorting, barriers, and aliasing. [Part II](/posts/frame-graph-build-it/) turned that into working C++. [Part III](/posts/frame-graph-advanced/) pushed further with async compute and split barriers. And this article mapped those ideas onto what ships in UE5 and Frostbite, showing how production engines implement the same concepts at scale.
+Across these four articles, we covered the full arc: [Part I](/posts/frame-graph-theory/) laid out the core theory — the declare/compile/execute lifecycle, sorting, culling, barriers, and aliasing. [Part II](/posts/frame-graph-build-it/) turned that into working C++. [Part III](/posts/frame-graph-advanced/) pushed further with async compute and split barriers. And this article mapped those ideas onto what ships in UE5 and Frostbite, showing how production engines implement the same concepts at scale.
 
 You can now open `RenderGraphBuilder.h` in UE5 and *read* it, not reverse-engineer it. You know what `FRDGBuilder::AddPass` builds, how the transient allocator aliases memory, why `ERDGPassFlags::AsyncCompute` exists, and how the RDG boundary with legacy code works in practice.
 

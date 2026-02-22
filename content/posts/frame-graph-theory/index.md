@@ -420,7 +420,7 @@ This is how the graph knows *exactly* which pass depends on which, even when the
 
 These versioned edges are the raw material the compiler works with. Every step that follows — sorting, culling, barrier insertion — operates on this edge set.
 
-### Sorting and culling
+### Sorting
 
 With edges in place, the compiler flattens the DAG into a linear execution order. Every edge says *"pass B depends on something pass A produced,"* so the compiler needs a **topological sort** — an ordering where every pass comes after the passes it depends on.
 
@@ -445,7 +445,9 @@ Step through the algorithm interactively — watch nodes with zero in-degree get
 
 {{< interactive-toposort >}}
 
-**Culling** walks backward from the final outputs and removes any pass whose results are never read. Dead-code elimination for GPU work — entire passes vanish without a feature flag.
+### Culling
+
+With the sorted order established, the compiler walks backward from the final outputs and removes any pass whose results are never read. Dead-code elimination for GPU work — entire passes vanish without a feature flag.
 
 Toggle edges in the DAG below — disconnect a pass and the compiler removes it along with its resources in real time:
 
@@ -818,20 +820,6 @@ Most engines use **dynamic** or **hybrid**. The compile is so cheap that caching
 </div>
 
 ---
-
-## 🎛 Your First Full Pipeline
-
-You've now seen every piece the compiler works with — sorting, culling, barriers, aliasing. In a 5-pass toy example they feel manageable. In a real renderer? You're looking at **15–25 passes, 30+ resource edges, and dozens of implicit dependencies** — all inferred from `read()` and `write()` calls that no human can hold in their head at once.
-
-<div class="fg-reveal" style="margin:1.2em 0;padding:.85em 1.1em;border-radius:10px;border:1.5px solid rgba(var(--ds-code-rgb),.2);background:linear-gradient(135deg,rgba(var(--ds-code-rgb),.05),transparent);font-size:.92em;line-height:1.65;">
-<strong>This is the trade-off at the heart of every render graph.</strong> Dependencies become <em>implicit</em> — the graph infers ordering from data flow, which means you never declare "pass A must run before pass B." That's powerful: the compiler can reorder, cull, and parallelize freely. But it also means <strong>dependencies are hidden</strong>. Miss a <code>read()</code> call and the graph silently reorders two passes that shouldn't overlap. Add an assert and you'll catch the <em>symptom</em> — but not the missing edge that caused it.
-</div>
-
-Since the frame graph is a DAG, every dependency is explicitly encoded in the structure. That means you can build tools to **visualize** the entire pipeline — every pass, every resource edge, every implicit ordering decision — something that's impossible when barriers and ordering are scattered across hand-written render code.
-
-The explorer below is a production-scale graph. Toggle each compiler feature on and off to see exactly what it contributes. Click any pass to inspect its dependencies — every edge was inferred from `read()` and `write()` calls, not hand-written.
-
-{{< interactive-full-pipeline >}}
 
 ### 🔮 What's next
 
