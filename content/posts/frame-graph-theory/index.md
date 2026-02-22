@@ -183,7 +183,7 @@ The pattern is always the same: manual resource management works at small scale 
 
 A frame graph models an entire frame as a **directed acyclic graph (DAG)**. Each node is a render pass; each edge carries a resource — a texture, a buffer, an attachment — from the pass that writes it to every pass that reads it. Here's what a typical deferred-rendering frame looks like:
 
-<!-- DAG flow diagram — Frostbite-style -->
+<!-- DAG flow diagram -->
 <div style="margin:1.6em 0 .5em;text-align:center;">
 <svg viewBox="0 0 1050 210" width="100%" style="max-width:1050px;display:block;margin:0 auto;font-family:inherit;" xmlns="http://www.w3.org/2000/svg">
   <defs>
@@ -526,7 +526,7 @@ The allocator is a two-step process:
 
   <!-- Part IV link -->
   <div style="padding:.45em 1.2em;background:rgba(var(--ds-code-rgb),.06);border-top:1px solid rgba(var(--ds-code-rgb),.1);font-size:.8em;opacity:.6;text-align:center;">
-    <a href="../frame-graph-production/">Part IV</a> covers how UE5 and Frostbite implement these strategies.
+    <a href="../frame-graph-production/">Part IV</a> covers how production engines implement these strategies.
   </div>
 </div>
 
@@ -590,7 +590,7 @@ How often should the graph recompile? Three approaches, each a valid tradeoff:
       Rebuild every frame.<br>
       <strong>Cost:</strong> microseconds<br>
       <strong>Flex:</strong> full — passes appear/disappear freely<br>
-      <span style="opacity:.6;font-size:.9em;">Used by: Frostbite</span>
+      <span style="opacity:.6;font-size:.9em;">Used by: production engines</span>
     </div>
   </div>
   <div class="fg-hoverable" style="border-radius:10px;border:1.5px solid var(--ds-info);overflow:hidden;">
@@ -678,7 +678,7 @@ Most engines use **dynamic** or **hybrid**. The compile is so cheap that caching
 </div>
 
 <div class="fg-reveal" style="margin:1.2em 0;padding:.8em 1em;border-radius:8px;background:linear-gradient(135deg,rgba(var(--ds-success-rgb),.06),rgba(var(--ds-info-rgb),.06));border:1px solid rgba(var(--ds-success-rgb),.2);font-size:.92em;line-height:1.6;">
-🏭 <strong>Not theoretical.</strong> Frostbite reported <strong>50% VRAM reduction</strong> from aliasing at GDC 2017. UE5's RDG ships the same optimization today — every <code>FRDGTexture</code> marked as transient goes through the same aliasing pipeline we build in <a href="../frame-graph-build-it/">Part II</a>.
+🏭 <strong>Not theoretical.</strong> Production engines report up to <strong>50% VRAM reduction</strong> from aliasing. UE5's RDG ships this optimization today — every <code>FRDGTexture</code> marked as transient goes through the same aliasing pipeline we build in <a href="../frame-graph-build-it/">Part II</a>.
 </div>
 
 ---

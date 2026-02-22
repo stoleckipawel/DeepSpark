@@ -808,7 +808,7 @@ body.toc-sidebar-hidden section.prose { flex-direction: column !important; }
   margin-bottom: 0.3em;
 }
 
-/* Innovations table (for Frostbite) */
+/* Innovations table */
 .diagram-innovations {
   margin: 1em 0;
   border: 2px solid var(--ds-success);

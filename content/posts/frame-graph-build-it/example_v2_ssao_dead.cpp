@@ -30,7 +30,7 @@ int main() {
         [&]() { fg.read(3, gbufA); fg.write(3, hdr); },
         [&](/*cmd*/) { printf("  >> exec: Lighting\n"); });
 
-    printf("Lighting does NOT read SSAO → SSAO gets culled.\n");
+    printf("Lighting does NOT read SSAO -> SSAO gets culled.\n");
     fg.execute();
     return 0;
 }

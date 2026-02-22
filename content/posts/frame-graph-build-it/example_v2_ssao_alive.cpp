@@ -29,7 +29,7 @@ int main() {
         [&]() { fg.read(3, gbufA); fg.read(3, ssao); fg.write(3, hdr); },
         [&](/*cmd*/) { printf("  >> exec: Lighting\n"); });
 
-    printf("Lighting reads SSAO → SSAO stays alive.\n");
+    printf("Lighting reads SSAO -> SSAO stays alive.\n");
     fg.execute();
     return 0;
 }

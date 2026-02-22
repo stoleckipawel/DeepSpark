@@ -220,12 +220,12 @@ The three-phase model from [Part I](../frame-graph-theory/) forces nine API deci
   <td style="padding:.5em .6em;">How does setup talk to execute?</td>
   <td style="padding:.5em .6em;white-space:nowrap;"><strong>Lambda captures</strong></td>
   <td style="padding:.5em .6em;opacity:.8;">Zero boilerplate — handles live in scope, both lambdas capture them directly. Won't scale past one TU per pass; migrate to typed pass data when that matters.</td>
-  <td style="padding:.5em .6em;opacity:.55;font-size:.92em;">Type-erased pass data — <code>addPass&lt;GBufferData&gt;(setup, exec)</code>. Decouples setup/execute across TUs (Frostbite, UE5).</td>
+  <td style="padding:.5em .6em;opacity:.55;font-size:.92em;">Type-erased pass data — <code>addPass&lt;PassData&gt;(setup, exec)</code>. Decouples setup/execute across TUs.</td>
 </tr>
 <tr style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);background:rgba(var(--ds-indigo-rgb),.02);">
   <td style="padding:.5em .6em;font-weight:700;">②</td>
   <td style="padding:.5em .6em;">Where do DAG edges come from?</td>
-  <td style="padding:.5em .6em;white-space:nowrap;"><strong>Direct <code>read/write</code></strong></td>
+  <td style="padding:.5em .6em;white-space:nowrap;"><strong>Explicit <code>fg.read(pass, h)</code></strong></td>
   <td style="padding:.5em .6em;opacity:.8;">Every edge is an explicit call — easy to grep and debug. Scales fine; a scoped builder is syntactic sugar, not a structural change.</td>
   <td style="padding:.5em .6em;opacity:.55;font-size:.92em;">Scoped builder — <code>builder.read(h)</code> auto-binds to the current pass. Prevents mis-wiring at scale.</td>
 </tr>
@@ -233,7 +233,7 @@ The three-phase model from [Part I](../frame-graph-theory/) forces nine API deci
   <td style="padding:.5em .6em;font-weight:700;">③</td>
   <td style="padding:.5em .6em;">What is a resource handle?</td>
   <td style="padding:.5em .6em;white-space:nowrap;"><strong>Plain <code>uint32_t</code> index</strong></td>
-  <td style="padding:.5em .6em;opacity:.8;">One integer, trivially copyable — keeps the MVP header-only with no templates. A <code>using</code> alias away from typed wrappers when pass count grows.</td>
+  <td style="padding:.5em .6em;opacity:.8;">One integer, trivially copyable — no templates, no overhead. A <code>using</code> alias away from typed wrappers when pass count grows.</td>
   <td style="padding:.5em .6em;opacity:.55;font-size:.92em;">Typed wrappers — <code>FRDGTextureRef</code> / <code>FRDGBufferRef</code>. Compile-time safety for 700+ passes (UE5).</td>
 </tr>
 <tr><td colspan="5" style="padding:.6em .6em .3em;font-weight:800;font-size:.85em;letter-spacing:.04em;color:var(--ds-code);border-bottom:1px solid rgba(var(--ds-code-rgb),.12);">COMPILE — what the graph analyser decides</td></tr>
@@ -249,13 +249,13 @@ The three-phase model from [Part I](../frame-graph-theory/) forces nine API deci
   <td style="padding:.5em .6em;">How does culling find the root?</td>
   <td style="padding:.5em .6em;white-space:nowrap;"><strong>Last sorted pass</strong></td>
   <td style="padding:.5em .6em;opacity:.8;">Zero config — Present is naturally last in topo order. Breaks with multiple output roots; add a <code>NeverCull</code> flag when you need them.</td>
-  <td style="padding:.5em .6em;opacity:.55;font-size:.92em;">Write-to-imported heuristic + <code>NeverCull</code> flags. Supports multiple roots (UE5/Frostbite).</td>
+  <td style="padding:.5em .6em;opacity:.55;font-size:.92em;">Write-to-imported heuristic + <code>NeverCull</code> flags. Supports multiple output roots.</td>
 </tr>
 <tr style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);">
   <td style="padding:.5em .6em;font-weight:700;">⑥</td>
   <td style="padding:.5em .6em;">Queue model?</td>
   <td style="padding:.5em .6em;white-space:nowrap;"><strong>Single graphics queue</strong></td>
-  <td style="padding:.5em .6em;opacity:.8;">Keeps barrier logic to plain resource state transitions — no fences, no cross-queue barriers. Multi-queue is a compiler feature layered on top; clean upgrade path.</td>
+  <td style="padding:.5em .6em;opacity:.8;">Keeps barrier logic to plain resource state transitions — no cross-queue barriers. Multi-queue is a compiler feature layered on top; clean upgrade path.</td>
   <td style="padding:.5em .6em;opacity:.55;font-size:.92em;">Multi-queue + async compute. 10–30% GPU uplift but needs fences & cross-queue barriers. <a href="../frame-graph-advanced/" style="opacity:.7;">Part III</a>.</td>
 </tr>
 <tr style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);background:rgba(var(--ds-indigo-rgb),.02);">
@@ -363,7 +363,7 @@ A pass is two lambdas — setup (runs now, wires the DAG) and execute (stored fo
 
 @@ execute — declaration order, no compile step @@
 +void FrameGraph::execute() {
-+    printf("\n[1] Executing (declaration order — no compile step):\n");
++    printf("\n[1] Executing (declaration order -- no compile step):\n");
 +    for (auto& pass : passes_) {
 +        printf("  >> exec: %s\n", pass.name.c_str());
 +        pass.execute(/* &cmdList */);
@@ -400,28 +400,35 @@ Compiles and runs — the execute lambdas are stubs, but the scaffolding is real
 🎯 <strong>Goal:</strong> Automatic pass ordering, dead-pass culling, and barrier insertion — the graph now drives the GPU instead of you.
 </div>
 
-Four pieces, each feeding the next:
+Four steps in strict order — each one's output is the next one's input:
 
-<div style="margin:.8em 0 1.2em;display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-radius:10px;overflow:hidden;border:1.5px solid rgba(var(--ds-indigo-rgb),.2);">
-  <a href="#v2-versioning" style="padding:.7em .6em .5em;background:rgba(var(--ds-info-rgb),.05);border-right:1px solid rgba(var(--ds-indigo-rgb),.12);text-decoration:none;text-align:center;transition:background .15s;" onmouseover="this.style.background='rgba(var(--ds-info-rgb),.12)'" onmouseout="this.style.background='rgba(var(--ds-info-rgb),.05)'">
+<div style="margin:.8em 0 1.2em;display:grid;grid-template-columns:1fr auto 1fr auto 1fr auto 1fr;gap:0;align-items:stretch;border-radius:10px;overflow:hidden;border:1.5px solid rgba(var(--ds-indigo-rgb),.2);">
+  <a href="#v2-versioning" style="padding:.7em .5em .5em;background:rgba(var(--ds-info-rgb),.05);text-decoration:none;text-align:center;transition:background .15s;" onmouseover="this.style.background='rgba(var(--ds-info-rgb),.12)'" onmouseout="this.style.background='rgba(var(--ds-info-rgb),.05)'">
+    <div style="font-size:.65em;font-weight:800;opacity:.45;margin-bottom:.15em;">STEP 1</div>
     <div style="font-size:1.2em;margin-bottom:.15em;">🔀</div>
     <div style="font-weight:800;font-size:.85em;color:var(--ds-info);">Versioning</div>
-    <div style="font-size:.72em;opacity:.6;margin-top:.15em;line-height:1.3;">reads/writes → edges</div>
+    <div style="font-size:.72em;opacity:.6;margin-top:.15em;line-height:1.3;">reads/writes produce edges</div>
   </a>
-  <a href="#v2-toposort" style="padding:.7em .6em .5em;background:rgba(var(--ds-code-rgb),.05);border-right:1px solid rgba(var(--ds-indigo-rgb),.12);text-decoration:none;text-align:center;transition:background .15s;" onmouseover="this.style.background='rgba(var(--ds-code-rgb),.12)'" onmouseout="this.style.background='rgba(var(--ds-code-rgb),.05)'">
+  <div style="display:flex;align-items:center;font-size:1.1em;opacity:.35;padding:0 .1em;">→</div>
+  <a href="#v2-toposort" style="padding:.7em .5em .5em;background:rgba(var(--ds-code-rgb),.05);text-decoration:none;text-align:center;transition:background .15s;" onmouseover="this.style.background='rgba(var(--ds-code-rgb),.12)'" onmouseout="this.style.background='rgba(var(--ds-code-rgb),.05)'">
+    <div style="font-size:.65em;font-weight:800;opacity:.45;margin-bottom:.15em;">STEP 2</div>
     <div style="font-size:1.2em;margin-bottom:.15em;">📦</div>
     <div style="font-weight:800;font-size:.85em;color:var(--ds-code);">Topo Sort</div>
-    <div style="font-size:.72em;opacity:.6;margin-top:.15em;line-height:1.3;">edges → execution order</div>
+    <div style="font-size:.72em;opacity:.6;margin-top:.15em;line-height:1.3;">edges become execution order</div>
   </a>
-  <a href="#v2-culling" style="padding:.7em .6em .5em;background:rgba(var(--ds-warn-rgb),.05);border-right:1px solid rgba(var(--ds-indigo-rgb),.12);text-decoration:none;text-align:center;transition:background .15s;" onmouseover="this.style.background='rgba(var(--ds-warn-rgb),.12)'" onmouseout="this.style.background='rgba(var(--ds-warn-rgb),.05)'">
+  <div style="display:flex;align-items:center;font-size:1.1em;opacity:.35;padding:0 .1em;">→</div>
+  <a href="#v2-culling" style="padding:.7em .5em .5em;background:rgba(var(--ds-warn-rgb),.05);text-decoration:none;text-align:center;transition:background .15s;" onmouseover="this.style.background='rgba(var(--ds-warn-rgb),.12)'" onmouseout="this.style.background='rgba(var(--ds-warn-rgb),.05)'">
+    <div style="font-size:.65em;font-weight:800;opacity:.45;margin-bottom:.15em;">STEP 3</div>
     <div style="font-size:1.2em;margin-bottom:.15em;">✂️</div>
     <div style="font-weight:800;font-size:.85em;color:var(--ds-warn);">Pass Culling</div>
-    <div style="font-size:.72em;opacity:.6;margin-top:.15em;line-height:1.3;">kill unreachable passes</div>
+    <div style="font-size:.72em;opacity:.6;margin-top:.15em;line-height:1.3;">walk backward, kill dead passes</div>
   </a>
-  <a href="#v2-barriers" style="padding:.7em .6em .5em;background:rgba(var(--ds-danger-rgb),.05);text-decoration:none;text-align:center;transition:background .15s;" onmouseover="this.style.background='rgba(var(--ds-danger-rgb),.12)'" onmouseout="this.style.background='rgba(var(--ds-danger-rgb),.05)'">
+  <div style="display:flex;align-items:center;font-size:1.1em;opacity:.35;padding:0 .1em;">→</div>
+  <a href="#v2-barriers" style="padding:.7em .5em .5em;background:rgba(var(--ds-danger-rgb),.05);text-decoration:none;text-align:center;transition:background .15s;" onmouseover="this.style.background='rgba(var(--ds-danger-rgb),.12)'" onmouseout="this.style.background='rgba(var(--ds-danger-rgb),.05)'">
+    <div style="font-size:.65em;font-weight:800;opacity:.45;margin-bottom:.15em;">STEP 4</div>
     <div style="font-size:1.2em;margin-bottom:.15em;">🚧</div>
     <div style="font-weight:800;font-size:.85em;color:var(--ds-danger);">Barriers</div>
-    <div style="font-size:.72em;opacity:.6;margin-top:.15em;line-height:1.3;">emit GPU transitions</div>
+    <div style="font-size:.72em;opacity:.6;margin-top:.15em;line-height:1.3;">emit GPU state transitions</div>
   </a>
 </div>
 
@@ -429,17 +436,14 @@ Four pieces, each feeding the next:
 
 ### 🔀 Resource versioning — the data structure
 
-[Part I](/posts/frame-graph-theory/#how-edges-form--resource-versioning) introduced resource versioning — each write bumps a version number, readers attach to the current version, and that's what creates precise dependency edges. Here we implement it.
+Every write bumps a version number; every read attaches to the current version. That’s enough to produce precise dependency edges ([theory refresher](/posts/frame-graph-theory/#how-edges-form--resource-versioning)).
 
 The key data structure: each resource entry tracks its **current version** (incremented on write) and a **writer pass index** per version. When a pass calls `read(h)`, the graph looks up the current version's writer and adds a dependency edge from that writer to the reading pass.
 
 Here's what changes from v1. The `ResourceDesc` array becomes `ResourceEntry` — each entry carries a version list. `RenderPass` gains dependency tracking fields. And two new methods, `read()` and `write()`, wire everything together:
 
 {{< code-diff title="v1 → v2 — Resource versioning & dependency tracking" >}}
-@@ New types (resource state + version tracking) @@
-+enum class ResourceState { Undefined, ColorAttachment, DepthAttachment,
-+                           ShaderRead, Present };
-+
+@@ New type — version tracking @@
 +struct ResourceVersion {                 // NEW v2
 +    uint32_t writerPass = UINT32_MAX;    // which pass wrote this version
 +    std::vector<uint32_t> readerPasses;  // which passes read it
@@ -448,11 +452,10 @@ Here's what changes from v1. The `ResourceDesc` array becomes `ResourceEntry` �
 +struct ResourceEntry {
 +    ResourceDesc desc;
 +    std::vector<ResourceVersion> versions;  // version 0, 1, 2...
-+    ResourceState currentState = ResourceState::Undefined;
 +    bool imported = false;   // imported resources: barriers tracked, not aliased
 +};
 
-@@ RenderPass — new fields @@
+@@ RenderPass — dependency edges @@
  struct RenderPass {
      std::string name;
      std::function<void()>             setup;
@@ -460,9 +463,6 @@ Here's what changes from v1. The `ResourceDesc` array becomes `ResourceEntry` �
 +    std::vector<ResourceHandle> reads;     // NEW v2
 +    std::vector<ResourceHandle> writes;    // NEW v2
 +    std::vector<uint32_t> dependsOn;       // NEW v2
-+    std::vector<uint32_t> successors;      // NEW v2
-+    uint32_t inDegree = 0;                 // NEW v2 (Kahn's)
-+    bool     alive    = false;             // NEW v2 (culling)
  };
 
 @@ FrameGraph — read/write methods @@
@@ -479,12 +479,6 @@ Here's what changes from v1. The `ResourceDesc` array becomes `ResourceEntry` �
 +        entries_[h.index].versions.back().writerPass = passIdx;
 +        passes_[passIdx].writes.push_back(h);
 +    }
-+
-+    ResourceHandle importResource(const ResourceDesc& desc, ResourceState initial) {
-+        ResourceHandle h{(uint32_t)entries_.size()};
-+        entries_.push_back({desc, {{}}, initial, /*imported=*/true});
-+        return h;
-+    }
 
 @@ Storage @@
 -    std::vector<ResourceDesc>  resources_;
@@ -499,9 +493,16 @@ Every `write()` pushes a new version. Every `read()` finds the current version's
 
 ### 📊 Topological sort (Kahn's algorithm)
 
-[Part I](/posts/frame-graph-theory/#sorting-and-culling) walked through Kahn's algorithm step by step. Here's the implementation. `buildEdges()` deduplicates the raw `dependsOn` entries and builds the adjacency list; `topoSort()` does the zero-in-degree queue drain:
+With edges in place, we need an execution order that respects every dependency. Kahn’s algorithm ([theory refresher](/posts/frame-graph-theory/#sorting-and-culling)) gives us one in O(V+E). `buildEdges()` deduplicates the raw `dependsOn` entries and builds the adjacency list; `topoSort()` does the zero-in-degree queue drain:
 
 {{< code-diff title="v2 — Edge building + Kahn's topological sort" >}}
+@@ RenderPass — new fields for the sort @@
+ struct RenderPass {
+     ...
++    std::vector<uint32_t> successors;      // passes that depend on this one
++    uint32_t inDegree = 0;                 // incoming edge count (Kahn's)
+ };
+
 @@ buildEdges() — deduplicate and build adjacency list @@
 +    void buildEdges() {
 +        for (uint32_t i = 0; i < passes_.size(); i++) {
@@ -542,9 +543,15 @@ Every `write()` pushes a new version. Every `read()` finds the current version's
 
 ### ✂️ Pass culling
 
-[Part I](/posts/frame-graph-theory/#sorting-and-culling) described culling as "dead-code elimination for GPU work." The implementation is a single backward walk — mark the final pass alive, then propagate backward through `dependsOn` edges:
+A sorted graph still runs passes nobody reads from. Culling is dead-code elimination for GPU work ([theory refresher](/posts/frame-graph-theory/#sorting-and-culling)) — a single backward walk marks the final pass alive, then propagates through `dependsOn` edges:
 
 {{< code-diff title="v2 — Pass culling" >}}
+@@ RenderPass — new field for culling @@
+ struct RenderPass {
+     ...
++    bool alive = false;                    // survives the cull?
+ };
+
 @@ cull() — backward reachability from output @@
 +    void cull(const std::vector<uint32_t>& sorted) {
 +        if (sorted.empty()) return;
@@ -563,9 +570,25 @@ Every `write()` pushes a new version. Every `read()` finds the current version's
 
 ### 🚧 Barrier insertion
 
-[Part I](/posts/frame-graph-theory/#barriers) explained *why* barriers exist and how the compiler infers them from read/write edges. The implementation walks each pass's resources, comparing the tracked state to what the pass needs. If they differ — emit a barrier and update:
+The GPU needs explicit state transitions between usages — color attachment, shader read, depth, etc. Because the graph already knows every resource’s read/write history ([theory refresher](/posts/frame-graph-theory/#barriers)), the compiler can emit them automatically. Walk each pass’s resources, compare tracked state to what the pass needs, and insert a barrier when they differ:
 
 {{< code-diff title="v2 — Barrier insertion + execute() rewrite" >}}
+@@ New type — resource state tracking @@
++enum class ResourceState { Undefined, ColorAttachment, DepthAttachment,
++                           ShaderRead, Present };
+
+@@ ResourceEntry — track current state @@
+ struct ResourceEntry {
+     ...
++    ResourceState currentState = ResourceState::Undefined;
+ };
+
+@@ importResource — now accepts an initial state @@
++    ResourceHandle importResource(const ResourceDesc& desc, ResourceState initial) {
++        entries_.push_back({desc, {{}}, initial, /*imported=*/true});
++        return { static_cast<uint32_t>(entries_.size() - 1) };
++    }
+
 @@ insertBarriers() — emit transitions where state changes @@
 +    void insertBarriers(uint32_t passIdx) {
 +        auto stateForUsage = [](bool isWrite, Format fmt) {
@@ -625,7 +648,7 @@ UE5's RDG does the same thing. When you call `FRDGBuilder::AddPass`, RDG builds 
 🎯 <strong>Goal:</strong> Non-overlapping transient resources share physical memory — automatic VRAM aliasing with ~50% savings.
 </div>
 
-V2 gives us ordering, culling, and barriers — but every transient resource still gets its own VRAM for the entire frame. [Part I](/posts/frame-graph-theory/#allocation-and-aliasing) showed how non-overlapping lifetimes let the allocator share physical memory (aliasing). Now we implement it.
+V2 gives us ordering, culling, and barriers — but every transient resource still gets its own VRAM for the entire frame. Resources whose lifetimes don’t overlap can share the same physical memory ([theory refresher](/posts/frame-graph-theory/#allocation-and-aliasing)). Time to implement that.
 
 Two new structs — a `Lifetime` per resource and a `PhysicalBlock` per heap slot. The lifetime scan walks the sorted pass list, recording each transient resource's `firstUse` / `lastUse` indices:
 

@@ -16,7 +16,7 @@ ResourceHandle FrameGraph::importResource(const ResourceDesc& desc) {
 void FrameGraph::execute() {
     // v1: no compile step — no sorting, no culling, no barriers.
     // Just run every pass in the order it was added.
-    printf("\n[1] Executing (declaration order — no compile step):\n");
+    printf("\n[1] Executing (declaration order -- no compile step):\n");
     for (auto& pass : passes_) {
         printf("  >> exec: %s\n", pass.name.c_str());
         pass.execute(/* &cmdList */);

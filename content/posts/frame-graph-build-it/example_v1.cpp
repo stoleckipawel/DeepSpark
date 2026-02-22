@@ -24,7 +24,7 @@ int main() {
 
     fg.addPass("GBuffer",
         [&]() { /* setup */ },
-        [&](/*cmd*/) { printf("     draw scene → GBuffer MRTs\n"); });
+        [&](/*cmd*/) { printf("     draw scene -> GBuffer MRTs\n"); });
 
     fg.addPass("Lighting",
         [&]() { /* setup */ },
@@ -32,7 +32,7 @@ int main() {
 
     fg.addPass("Present",
         [&]() { /* setup */ },
-        [&](/*cmd*/) { printf("     copy HDR → backbuffer\n"); });
+        [&](/*cmd*/) { printf("     copy HDR -> backbuffer\n"); });
 
     fg.execute();
     return 0;
