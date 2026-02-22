@@ -192,10 +192,6 @@ The passes between begin and end are the **overlap gap** — they execute while 
   </div>
 </div>
 
-Try it — drag the BEGIN marker left to widen the overlap gap and watch the stall disappear:
-
-{{< interactive-split-barriers >}}
-
 ---
 
 ## 🎛 Putting It All Together

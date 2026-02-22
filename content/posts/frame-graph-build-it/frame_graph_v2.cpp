@@ -45,26 +45,39 @@ void FrameGraph::ReadWrite(PassIndex passIdx, ResourceHandle h) {
     passes[passIdx].readWrites.push_back(h);
 }
 
-void FrameGraph::Execute() {
+// == v2: compile — precompute sort, cull, barriers ============
+
+FrameGraph::CompiledPlan FrameGraph::Compile() {
     printf("\n[1] Building dependency edges...\n");
     BuildEdges();
     printf("[2] Topological sort...\n");
     auto sorted = TopoSort();
     printf("[3] Culling dead passes...\n");
     Cull(sorted);
+    printf("[4] Computing barriers...\n");
+    auto barriers = ComputeBarriers(sorted);
+    return { std::move(sorted), std::move(barriers) };
+}
 
-    printf("[4] Executing (with automatic barriers):\n");
-    for (PassIndex idx : sorted) {
-        if (!passes[idx].alive) {
-            printf("  -- skip: %s (CULLED)\n", passes[idx].name.c_str());
+// == Execute (replay compiled plan) ===========================
+
+void FrameGraph::Execute(const CompiledPlan& plan) {
+    printf("[5] Executing (replaying precomputed barriers):\n");
+    for (PassIndex orderIdx = 0; orderIdx < plan.sorted.size(); orderIdx++) {
+        PassIndex passIdx = plan.sorted[orderIdx];
+        if (!passes[passIdx].alive) {
+            printf("  -- skip: %s (CULLED)\n", passes[passIdx].name.c_str());
             continue;
         }
-        EmitBarriers(idx);
-        passes[idx].Execute(/* &cmdList */);
+        EmitBarriers(plan.barriers[orderIdx]);
+        passes[passIdx].Execute(/* &cmdList */);
     }
     passes.clear();
     entries.clear();
 }
+
+// convenience: compile + execute in one call
+void FrameGraph::Execute() { Execute(Compile()); }
 
 // == Build dependency edges ====================================
 
@@ -102,7 +115,7 @@ std::vector<PassIndex> FrameGraph::TopoSort() {
     }
     assert(order.size() == passes.size() && "Cycle detected!");
     printf("  Topological order: ");
-    for (uint32_t i = 0; i < order.size(); i++) {
+    for (PassIndex i = 0; i < order.size(); i++) {
         printf("%s%s", passes[order[i]].name.c_str(),
                i + 1 < order.size() ? " -> " : "\n");
     }
@@ -128,40 +141,53 @@ void FrameGraph::Cull(const std::vector<PassIndex>& sorted) {
     }
 }
 
-// == Emit barriers where resource state changes ===============
+// == Precompute barriers (state transitions) ==================
 
-void FrameGraph::EmitBarriers(PassIndex passIdx) {
-    auto IsUAV = [&](ResourceHandle h) {
-        for (auto& rw : passes[passIdx].readWrites)
-            if (rw.index == h.index) return true;
-        return false;
-    };
-    auto StateForUsage = [&](ResourceHandle h, bool isWrite) {
-        if (IsUAV(h)) return ResourceState::UnorderedAccess;
-        if (isWrite)
-            return (entries[h.index].desc.format == Format::D32F)
-                ? ResourceState::DepthAttachment : ResourceState::ColorAttachment;
-        return ResourceState::ShaderRead;
-    };
+std::vector<std::vector<Barrier>> FrameGraph::ComputeBarriers(
+        const std::vector<PassIndex>& sorted) {
+    std::vector<std::vector<Barrier>> result(sorted.size());
 
-    for (auto& h : passes[passIdx].reads) {
-        ResourceState needed = StateForUsage(h, false);
-        if (entries[h.index].currentState != needed) {
-            printf("    barrier: resource[%u] %s -> %s\n",
-                   h.index,
-                   StateName(entries[h.index].currentState),
-                   StateName(needed));
-            entries[h.index].currentState = needed;
-        }
+    for (PassIndex orderIdx = 0; orderIdx < sorted.size(); orderIdx++) {
+        PassIndex passIdx = sorted[orderIdx];
+        if (!passes[passIdx].alive) continue;
+
+        auto IsUAV = [&](ResourceHandle h) {
+            for (auto& rw : passes[passIdx].readWrites)
+                if (rw.index == h.index) return true;
+            return false;
+        };
+        auto StateForUsage = [&](ResourceHandle h, bool isWrite) {
+            if (IsUAV(h)) return ResourceState::UnorderedAccess;
+            if (isWrite)
+                return (entries[h.index].desc.format == Format::D32F)
+                    ? ResourceState::DepthAttachment : ResourceState::ColorAttachment;
+            return ResourceState::ShaderRead;
+        };
+
+        auto recordTransition = [&](ResourceHandle h, bool isWrite) {
+            ResourceState needed = StateForUsage(h, isWrite);
+            if (entries[h.index].currentState != needed) {
+                result[orderIdx].push_back(
+                    { h.index, entries[h.index].currentState, needed });
+                entries[h.index].currentState = needed;
+            }
+        };
+        for (auto& h : passes[passIdx].reads)  recordTransition(h, false);
+        for (auto& h : passes[passIdx].writes) recordTransition(h, true);
     }
-    for (auto& h : passes[passIdx].writes) {
-        ResourceState needed = StateForUsage(h, true);
-        if (entries[h.index].currentState != needed) {
-            printf("    barrier: resource[%u] %s -> %s\n",
-                   h.index,
-                   StateName(entries[h.index].currentState),
-                   StateName(needed));
-            entries[h.index].currentState = needed;
-        }
+
+    uint32_t total = 0;
+    for (auto& v : result) total += static_cast<uint32_t>(v.size());
+    printf("  Barriers computed: %u transition(s) across %u passes\n",
+           total, static_cast<uint32_t>(sorted.size()));
+    return result;
+}
+
+// == Emit barriers (replay precomputed transitions) ===========
+
+void FrameGraph::EmitBarriers(const std::vector<Barrier>& barriers) {
+    for (auto& b : barriers) {
+        printf("    barrier: resource[%u] %s -> %s\n",
+               b.resourceIndex, StateName(b.oldState), StateName(b.newState));
     }
 }

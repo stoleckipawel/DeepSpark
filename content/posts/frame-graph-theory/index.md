@@ -77,7 +77,7 @@ Behind every smooth frame is a brutal scheduling problem — which passes can ru
     <div style="padding:1em;text-align:center;border-right:1px solid rgba(var(--ds-indigo-rgb),.12);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.12);">
       <div style="font-size:1.6em;margin-bottom:.15em;">🔨</div>
       <div style="font-weight:800;font-size:.95em;">Build MVP</div>
-      <div style="font-size:.82em;opacity:.7;line-height:1.4;margin-top:.2em;">Working C++ frame graph, from scratch to prototype in ~400 lines</div>
+      <div style="font-size:.82em;opacity:.7;line-height:1.4;margin-top:.2em;">Working C++ frame graph, from scratch to prototype in ~500 lines</div>
     </div>
     <div style="padding:1em;text-align:center;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.12);">
       <div style="font-size:1.6em;margin-bottom:.15em;">🗺</div>
@@ -361,9 +361,9 @@ The declared DAG goes in; an optimized execution plan comes out — all on the C
     <div style="display:grid;grid-template-columns:auto 1fr;gap:.35em 1em;align-items:center;font-size:.88em;">
       <span style="font-weight:700;color:var(--ds-code);">①</span><span><strong>Sort</strong> passes into dependency order</span>
       <span style="font-weight:700;color:var(--ds-code);">②</span><span><strong>Cull</strong> passes whose outputs are never read</span>
-      <span style="font-weight:700;color:var(--ds-code);">③</span><span><strong>Barrier</strong> — insert transitions at every resource state change</span>
-      <span style="font-weight:700;color:var(--ds-code);">④</span><span><strong>Alias</strong> — scan lifetimes and assign non-overlapping resources to shared memory slots</span>
-      <span style="font-weight:700;color:var(--ds-code);">⑤</span><span><strong>Allocate</strong> — acquire a real GPU resource for each slot, reusing from a pool when possible</span>
+      <span style="font-weight:700;color:var(--ds-code);">③</span><span><strong>Scan lifetimes</strong> — record each transient resource's first and last use</span>
+      <span style="font-weight:700;color:var(--ds-code);">④</span><span><strong>Alias</strong> — assign non-overlapping resources to shared memory slots</span>
+      <span style="font-weight:700;color:var(--ds-code);">⑤</span><span><strong>Compute barriers</strong> — insert transitions at every resource state change</span>
     </div>
   </div>
   <!-- OUTPUT -->

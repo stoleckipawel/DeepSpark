@@ -81,7 +81,7 @@ showTableOfContents: false
     <div class="mvp-card" style="padding:.8em 1em;border-radius:10px;border:2px solid rgba(var(--ds-success-rgb),.3);background:linear-gradient(135deg,rgba(var(--ds-success-rgb),.09) 0%,rgba(var(--ds-success-rgb),.02) 40%,transparent 70%);transition:all .2s ease;box-shadow:0 2px 16px rgba(var(--ds-success-rgb),.08);">
       <div style="display:flex;align-items:baseline;gap:.5em;margin-bottom:.3em;">
         <span style="font-weight:900;font-size:1.05em;color:var(--ds-success);">Lifetimes & Aliasing</span>
-        <span style="font-size:.65em;font-weight:700;padding:.15em .5em;border-radius:9px;background:rgba(var(--ds-success-rgb),.12);color:var(--ds-success);white-space:nowrap;">~400 LOC</span>
+        <span style="font-size:.65em;font-weight:700;padding:.15em .5em;border-radius:9px;background:rgba(var(--ds-success-rgb),.12);color:var(--ds-success);white-space:nowrap;">~500 LOC</span>
         <span style="font-size:.62em;font-weight:800;padding:.15em .5em;border-radius:9px;background:var(--ds-success);color:#fff;white-space:nowrap;">★ FULL MVP</span>
       </div>
       <div style="font-size:.84em;line-height:1.5;opacity:.85;margin-bottom:.5em;">Compile precomputes everything — sort, cull, lifetimes, aliasing, barriers — into a <code>CompiledPlan</code>.</div>
@@ -107,9 +107,15 @@ showTableOfContents: false
 We start from the API you *want* to write, then build toward it — starting with bare scaffolding and ending with automatic barriers and memory aliasing.
 
 <!-- UML class diagram — API overview -->
+<div style="display:flex;justify-content:center;gap:1.8em;margin:0 0 .5em;font-size:.78em;font-weight:600;opacity:.85;">
+  <span style="display:inline-flex;align-items:center;gap:.35em;"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:transparent;border:2.5px solid #ca8a04;"></span> v1 — Scaffold</span>
+  <span style="display:inline-flex;align-items:center;gap:.35em;"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:transparent;border:2.5px solid #6366f1;"></span> v2 — Dependencies</span>
+  <span style="display:inline-flex;align-items:center;gap:.35em;"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:transparent;border:2.5px solid #059669;"></span> v3 — Aliasing</span>
+</div>
 {{< mermaid >}}
 classDiagram
 direction TB
+
 class FrameGraph{
   +ResourceHandle CreateResource(desc)
   +ResourceHandle ImportResource(desc, state)
@@ -123,9 +129,25 @@ class FrameGraph{
   -PassIndex[] TopoSort()
   -Cull(sortedPasses)
   -Lifetime[] ScanLifetimes(sortedPasses)
-  -uint32[] AliasResources(lifetimes)
-  -Barrier[] ComputeBarriers(sortedPasses)
+  -BlockIndex[] AliasResources(lifetimes)
+  -ResourceState StateForUsage(passIdx, handle, isWrite)
+  -Barrier[][] ComputeBarriers(sortedPasses, mapping)
   -EmitBarriers(barriers)
+}
+class ResourceHandle{
+  +ResourceIndex index
+  +bool IsValid()
+}
+class ResourceDesc{
+  +uint32 width
+  +uint32 height
+  +Format format
+}
+class Format{
+  RGBA8
+  RGBA16F
+  R8
+  D32F
 }
 class RenderPass{
   +string name
@@ -133,7 +155,7 @@ class RenderPass{
   +function Execute
   +ResourceHandle[] reads
   +ResourceHandle[] writes
-  +ResourceHandle[] readWrites ← UAV
+  +ResourceHandle[] readWrites
   +PassIndex[] dependsOn
   +PassIndex[] successors
   +uint32 inDegree
@@ -145,23 +167,22 @@ class ResourceEntry{
   +ResourceState currentState
   +bool imported
 }
-class ResourceHandle{
-  +ResourceIndex index
-  +bool IsValid()
-}
-class ResourceDesc{
-  +uint32 width
-  +uint32 height
-  +Format format
-}
 class ResourceVersion{
   +PassIndex writerPass
   +PassIndex[] readerPasses
 }
+class ResourceState{
+  Undefined
+  ColorAttachment
+  DepthAttachment
+  ShaderRead
+  UnorderedAccess
+  Present
+}
 class CompiledPlan{
-  +PassIndex[] sortedPassOrder
-  +uint32[] virtualToPhysicalBlock
-  +Barrier[] barriersPerPass
+  +PassIndex[] sorted
+  +BlockIndex[] mapping
+  +Barrier[][] barriers
 }
 class Barrier{
   +ResourceIndex resourceIndex
@@ -177,21 +198,7 @@ class Lifetime{
 }
 class PhysicalBlock{
   +uint32 sizeBytes
-  +PassIndex freeAfterPass
-}
-class Format{
-  RGBA8
-  RGBA16F
-  R8
-  D32F
-}
-class ResourceState{
-  Undefined
-  ColorAttachment
-  DepthAttachment
-  ShaderRead
-  UnorderedAccess
-  Present
+  +PassIndex availAfter
 }
 FrameGraph *-- RenderPass : owns passes
 FrameGraph *-- ResourceEntry : owns resources
@@ -206,6 +213,18 @@ ResourceEntry --> ResourceState : current state
 ResourceDesc --> Format : pixel format
 CompiledPlan *-- Barrier : pre-pass transitions
 Barrier --> ResourceState : old/new state
+
+style ResourceHandle stroke:#ca8a04,stroke-width:2.5px
+style ResourceDesc stroke:#ca8a04,stroke-width:2.5px
+style Format stroke:#ca8a04,stroke-width:2.5px
+style RenderPass stroke:#ca8a04,stroke-width:2.5px
+style ResourceEntry stroke:#6366f1,stroke-width:2.5px
+style ResourceVersion stroke:#6366f1,stroke-width:2.5px
+style ResourceState stroke:#6366f1,stroke-width:2.5px
+style Barrier stroke:#6366f1,stroke-width:2.5px
+style CompiledPlan stroke:#6366f1,stroke-width:2.5px
+style Lifetime stroke:#059669,stroke-width:2.5px
+style PhysicalBlock stroke:#059669,stroke-width:2.5px
 {{< /mermaid >}}
 
 ### 🔀 Design choices
@@ -628,12 +647,19 @@ A sorted graph still runs passes nobody reads from. Culling is dead-code elimina
 
 GPUs need explicit state transitions between resource usages — color attachment → shader read, undefined → depth, etc. The graph already knows every resource's read/write history ([theory refresher](/posts/frame-graph-theory/#barriers)), so the compiler can figure out every transition *before* execution starts.
 
-The idea: walk the sorted pass list, compare each resource's tracked state to what the pass needs, and record a barrier when they differ. In the final architecture (v3), this happens entirely during `Compile()` — every transition is precomputed and stored in `CompiledPlan`, and `Execute()` just replays them. But v2 doesn't have a compile/execute split yet, so `EmitBarriers()` runs inline during execution — compute the transition and submit it in one step. It's the simplest correct approach, and v3 will separate the two cleanly.
+The idea: walk the sorted pass list, compare each resource's tracked state to what the pass needs, and record a barrier when they differ. This is where we introduce the **compile / execute split** — `Compile()` precomputes every transition into a `CompiledPlan`, and `Execute()` replays them. No state tracking at execution time, no decisions — just playback. v3 will extend both `CompiledPlan` and `ComputeBarriers()` with aliasing context, but the architecture is established here.
 
-{{< code-diff title="v2 — Barrier insertion + Execute() rewrite" >}}
-@@ frame_graph_v2.h — ResourceState enum @@
+{{< code-diff title="v2 — Barriers, CompiledPlan & compile/execute split" >}}
+@@ frame_graph_v2.h — ResourceState enum + Barrier struct @@
 +enum class ResourceState { Undefined, ColorAttachment, DepthAttachment,
 +                           ShaderRead, UnorderedAccess, Present };
++
++// A single resource-state transition (NEW v2).
++struct Barrier {
++    ResourceIndex resourceIndex;    // which resource to transition
++    ResourceState oldState;         // state before this pass
++    ResourceState newState;         // state this pass requires
++};
 
 @@ frame_graph_v2.h — ResourceEntry gets currentState @@
  struct ResourceEntry {
@@ -645,6 +671,16 @@ The idea: walk the sorted pass list, compare each resource's tracked state to wh
 -    ResourceHandle ImportResource(const ResourceDesc& desc);
 +    ResourceHandle ImportResource(const ResourceDesc& desc,
 +                                  ResourceState initialState = ResourceState::Undefined);
+
+@@ frame_graph_v2.h — CompiledPlan + Compile/Execute split @@
++    struct CompiledPlan {
++        std::vector<PassIndex> sorted;                    // topological execution order
++        std::vector<std::vector<Barrier>> barriers;       // barriers[orderIdx] → pre-pass transitions
++    };
++
++    CompiledPlan Compile();
++    void Execute(const CompiledPlan& plan);
+     void Execute();  // convenience: compile + execute in one call
 
 @@ frame_graph_v2.cpp — CreateResource / ImportResource updated for ResourceState @@
  ResourceHandle FrameGraph::CreateResource(const ResourceDesc& desc) {
@@ -661,52 +697,74 @@ The idea: walk the sorted pass list, compare each resource's tracked state to wh
      return { static_cast<ResourceIndex>(entries.size() - 1) };
  }
 
-@@ frame_graph_v2.cpp — EmitBarriers() @@
-+// Compare tracked state to what this pass needs, emit a transition if they differ. v2 computes+submits inline; v3 splits into ComputeBarriers() + EmitBarriers().
-+void FrameGraph::EmitBarriers(PassIndex passIdx) {
-+    auto IsUAV = [&](ResourceHandle h) {
-+        for (auto& rw : passes[passIdx].readWrites)
-+            if (rw.index == h.index) return true;
-+        return false;
-+    };
-+    auto StateForUsage = [&](ResourceHandle h, bool isWrite) {
-+        if (IsUAV(h)) return ResourceState::UnorderedAccess;
-+        if (isWrite)
-+            return (entries[h.index].desc.format == Format::D32F)
-+                ? ResourceState::DepthAttachment : ResourceState::ColorAttachment;
-+        return ResourceState::ShaderRead;
-+    };
-+    for (auto& h : passes[passIdx].reads) {
-+        ResourceState needed = StateForUsage(h, false);
-+        if (entries[h.index].currentState != needed) {
-+            entries[h.index].currentState = needed;
-+        }
+@@ frame_graph_v2.cpp — ComputeBarriers() @@
++// Walk sorted passes, compare tracked state to each resource's needed state, record transitions.
++std::vector<std::vector<Barrier>> FrameGraph::ComputeBarriers(
++        const std::vector<PassIndex>& sorted) {
++    std::vector<std::vector<Barrier>> result(sorted.size());
++    for (PassIndex orderIdx = 0; orderIdx < sorted.size(); orderIdx++) {
++        PassIndex passIdx = sorted[orderIdx];
++        if (!passes[passIdx].alive) continue;
++
++        auto IsUAV = [&](ResourceHandle h) {
++            for (auto& rw : passes[passIdx].readWrites)
++                if (rw.index == h.index) return true;
++            return false;
++        };
++        auto StateForUsage = [&](ResourceHandle h, bool isWrite) {
++            if (IsUAV(h)) return ResourceState::UnorderedAccess;
++            if (isWrite)
++                return (entries[h.index].desc.format == Format::D32F)
++                    ? ResourceState::DepthAttachment : ResourceState::ColorAttachment;
++            return ResourceState::ShaderRead;
++        };
++
++        auto recordTransition = [&](ResourceHandle h, bool isWrite) {
++            ResourceState needed = StateForUsage(h, isWrite);
++            if (entries[h.index].currentState != needed) {
++                result[orderIdx].push_back(
++                    { h.index, entries[h.index].currentState, needed });
++                entries[h.index].currentState = needed;
++            }
++        };
++        for (auto& h : passes[passIdx].reads)  recordTransition(h, false);
++        for (auto& h : passes[passIdx].writes) recordTransition(h, true);
 +    }
-+    for (auto& h : passes[passIdx].writes) {
-+        ResourceState needed = StateForUsage(h, true);
-+        if (entries[h.index].currentState != needed) {
-+            entries[h.index].currentState = needed;
-+        }
-+    }
++    return result;
 +}
 
-@@ frame_graph_v2.cpp — Execute() @@
-+// Full v2 pipeline: BuildEdges → TopoSort → Cull → emit barriers + execute each surviving pass.
-+void FrameGraph::Execute() {
+@@ frame_graph_v2.cpp — EmitBarriers() (replay) @@
++// Replay precomputed transitions — in production this calls the GPU API.
++void FrameGraph::EmitBarriers(const std::vector<Barrier>& barriers) {
++    for (auto& b : barriers) { /* vkCmdPipelineBarrier / ResourceBarrier */ }
++}
+
+@@ frame_graph_v2.cpp — Compile() + Execute() @@
++// Full compile pipeline: sort → cull → precompute barriers. Returns a self-contained plan.
++FrameGraph::CompiledPlan FrameGraph::Compile() {
 +    BuildEdges();
-+    auto sorted = TopoSort();
++    auto sorted  = TopoSort();
 +    Cull(sorted);
-+    for (PassIndex idx : sorted) {
-+        if (!passes[idx].alive) continue;  // culled — skip
-+        EmitBarriers(idx);                 // transition resources to correct state
-+        passes[idx].Execute(/* &cmdList */);
++    auto barriers = ComputeBarriers(sorted);
++    return { std::move(sorted), std::move(barriers) };
++}
++
++// Pure playback — emit precomputed barriers, call execute lambdas. No analysis.
++void FrameGraph::Execute(const CompiledPlan& plan) {
++    for (PassIndex orderIdx = 0; orderIdx < plan.sorted.size(); orderIdx++) {
++        PassIndex passIdx = plan.sorted[orderIdx];
++        if (!passes[passIdx].alive) continue;
++        EmitBarriers(plan.barriers[orderIdx]);
++        passes[passIdx].Execute(/* &cmdList */);
 +    }
-+    passes.clear();     // reset for next frame
++    passes.clear();
 +    entries.clear();
 +}
++
++void FrameGraph::Execute() { Execute(Compile()); }
 {{< /code-diff >}}
 
-All four pieces — versioning, sorting, culling, barriers — compose into that `Execute()` body. Each step feeds the next: versioning creates edges, edges feed the sort, the sort enables culling, and the surviving sorted passes get automatic barriers.
+All four pieces — versioning, sorting, culling, barriers — compose into `Compile()`. Each step feeds the next: versioning creates edges, edges feed the sort, the sort enables culling, and the surviving sorted passes get precomputed barriers. `Execute()` is pure playback.
 
 ---
 
@@ -720,7 +778,7 @@ All four pieces — versioning, sorting, culling, barriers — compose into that
 {{< include-code file="frame_graph_v2.cpp" lang="cpp" compact="true" >}}
 {{< include-code file="example_v2.cpp" lang="cpp" compile="true" deps="frame_graph_v2.h,frame_graph_v2.cpp" compact="true" >}}
 
-That's three of the four intro promises delivered — automatic ordering, barrier insertion, and dead-pass culling. The only piece missing: resources still live for the entire frame. Version 3 fixes that with lifetime analysis, memory aliasing, and the proper compile/execute barrier separation.
+That's three of the four intro promises delivered — automatic ordering, barrier insertion, and dead-pass culling — plus a clean compile/execute split that v3 will extend. The only piece missing: resources still live for the entire frame. Version 3 fixes that with lifetime analysis and memory aliasing.
 
 UE5's RDG follows the same pattern. When you call `FRDGBuilder::AddPass`, RDG builds the dependency graph from your declared reads/writes, topologically sorts it, culls dead passes, computes barriers, and stores them in the compiled plan — all before recording a single GPU command.
 
@@ -734,10 +792,10 @@ UE5's RDG follows the same pattern. When you call `FRDGBuilder::AddPass`, RDG bu
 
 V2 gives us ordering, culling, and barriers — but every transient resource still gets its own VRAM for the entire frame. Resources whose lifetimes don’t overlap can share the same physical memory ([theory refresher](/posts/frame-graph-theory/#allocation-and-aliasing)). Time to implement that.
 
-Two new structs — a `Lifetime` per resource, a `PhysicalBlock` per heap slot, and a `Barrier` to store precomputed transitions. The lifetime scan walks the sorted pass list, recording each transient resource's `firstUse` / `lastUse` indices:
+Two new structs — a `Lifetime` per resource and a `PhysicalBlock` per heap slot — plus the existing `Barrier` gets extended with aliasing context. The lifetime scan walks the sorted pass list, recording each transient resource's `firstUse` / `lastUse` indices:
 
-{{< code-diff title="v2 → v3 — Lifetime structs, barrier struct & scan" >}}
-@@ frame_graph_v3.h — PhysicalBlock, Lifetime, Barrier structs @@
+{{< code-diff title="v2 → v3 — Lifetime structs, aliasing barrier extension & scan" >}}
+@@ frame_graph_v3.h — PhysicalBlock, Lifetime structs @@
 +// A physical memory slot — multiple virtual resources can reuse it if their lifetimes don't overlap.
 +struct PhysicalBlock {
 +    uint32_t sizeBytes  = 0;        // block size (aligned)
@@ -751,14 +809,15 @@ Two new structs — a `Lifetime` per resource, a `PhysicalBlock` per heap slot, 
 +    bool      isTransient = true;    // false for imported resources (externally owned)
 +};
 +
-+// Precomputed barrier — stored during Compile(), replayed during Execute().
-+struct Barrier {
-+    ResourceIndex resourceIndex;    // which resource to transition
-+    ResourceState oldState;         // state before this pass
-+    ResourceState newState;         // state this pass requires
-+    bool          isAliasing   = false;     // true = aliasing barrier (block changes occupant)
-+    ResourceIndex aliasBefore  = UINT32_MAX; // resource being evicted (only when isAliasing)
-+};
+@@ frame_graph_v3.h — Barrier extended with aliasing fields @@
+ // Base Barrier already defined in v2 — v3 adds aliasing context.
+ struct Barrier {
+     ResourceIndex resourceIndex;
+     ResourceState oldState;
+     ResourceState newState;
++    bool          isAliasing   = false;     // NEW v3: aliasing barrier (block changes occupant)
++    ResourceIndex aliasBefore  = UINT32_MAX; // NEW v3: resource being evicted
+ };
 
 @@ frame_graph_v3.h — Allocation helpers @@
 +// Minimum placement alignment for aliased heap resources (real APIs enforce similar, e.g. 64 KB).
@@ -816,29 +875,30 @@ This requires **placed resources** at the API level — GPU memory allocated fro
 
 The second half of the algorithm — the greedy free-list allocator. Sort resources by `firstUse`, then try to fit each one into an existing block whose previous user has finished:
 
-{{< code-diff title="v3 — Greedy free-list aliasing + Compile() integration" >}}
-@@ frame_graph_v3.h — CompiledPlan + Compile() / Execute(plan) @@
-+    struct CompiledPlan {
-+        std::vector<PassIndex> sorted;
-+        std::vector<uint32_t> mapping;                  // mapping[virtualIdx] → physicalBlock
-+        std::vector<std::vector<Barrier>> barriers;     // barriers[orderIdx] → pre-pass transitions
-+    };
-+
-+    CompiledPlan Compile();
-+    void Execute(const CompiledPlan& plan);
-     void Execute();  // now: convenience wrapper — compile + execute in one call
+{{< code-diff title="v3 — Greedy free-list aliasing + aliasing barriers" >}}
+@@ frame_graph_v3.h — BlockIndex typedef @@
++using BlockIndex = uint32_t;   // index into the physical-block free list
+
+@@ frame_graph_v3.h — CompiledPlan extended with mapping @@
+ struct CompiledPlan {
+     std::vector<PassIndex> sorted;
++    std::vector<BlockIndex> mapping;               // NEW v3: mapping[ResourceIndex] → physical block
+     std::vector<std::vector<Barrier>> barriers;
+ };
 
 @@ frame_graph_v3.h — new private methods @@
-+    std::vector<Lifetime> ScanLifetimes(const std::vector<PassIndex>& sorted);
-+    std::vector<uint32_t> AliasResources(const std::vector<Lifetime>& lifetimes);
++    std::vector<Lifetime>   ScanLifetimes(const std::vector<PassIndex>& sorted);
++    std::vector<BlockIndex> AliasResources(const std::vector<Lifetime>& lifetimes);
++    ResourceState StateForUsage(PassIndex passIdx, ResourceHandle h, bool isWrite) const;
+-    std::vector<std::vector<Barrier>> ComputeBarriers(const std::vector<PassIndex>& sorted);
 +    std::vector<std::vector<Barrier>> ComputeBarriers(const std::vector<PassIndex>& sorted,
-+                                                       const std::vector<uint32_t>& mapping);
++                                                       const std::vector<BlockIndex>& mapping);
 
 @@ frame_graph_v3.cpp — AliasResources() @@
 +// Greedy first-fit: sort by firstUse, reuse any free block that fits, else allocate a new one.
-+std::vector<uint32_t> FrameGraph::AliasResources(const std::vector<Lifetime>& lifetimes) {
++std::vector<BlockIndex> FrameGraph::AliasResources(const std::vector<Lifetime>& lifetimes) {
 +    std::vector<PhysicalBlock> freeList;
-+    std::vector<uint32_t> mapping(entries.size(), UINT32_MAX);
++    std::vector<BlockIndex> mapping(entries.size(), UINT32_MAX);
 +
 +    // Process resources in the order they're first used.
 +    std::vector<ResourceIndex> indices(entries.size());
@@ -855,7 +915,7 @@ The second half of the algorithm — the greedy free-list allocator. Sort resour
 +        bool reused = false;
 +
 +        // Scan existing blocks — can we reuse one that's now free?
-+        for (uint32_t b = 0; b < freeList.size(); b++) {
++        for (BlockIndex b = 0; b < freeList.size(); b++) {
 +            if (freeList[b].availAfter < lifetimes[resIdx].firstUse  // block is free
 +                && freeList[b].sizeBytes >= needed) {                 // and large enough
 +                mapping[resIdx] = b;         // reuse this block
@@ -866,126 +926,94 @@ The second half of the algorithm — the greedy free-list allocator. Sort resour
 +        }
 +
 +        if (!reused) {  // no fit found → allocate a new physical block
-+            mapping[resIdx] = static_cast<uint32_t>(freeList.size());
++            mapping[resIdx] = static_cast<BlockIndex>(freeList.size());
 +            freeList.push_back({ needed, lifetimes[resIdx].lastUse });
 +        }
 +    }
 +    return mapping;
 +}
 
-@@ frame_graph_v3.cpp — Compile() @@
-+// Full compile pipeline — all analysis runs here before any GPU commands. Returns a self-contained plan.
-+FrameGraph::CompiledPlan FrameGraph::Compile() {
-+    BuildEdges();                                // 1. deduplicate dependency edges
-+    auto sorted   = TopoSort();                  // 2. valid execution order
-+    Cull(sorted);                                // 3. remove unreachable passes
-+    auto lifetimes = ScanLifetimes(sorted);      // 4. when is each resource alive?
-+    auto mapping   = AliasResources(lifetimes);  // 5. share memory where lifetimes don't overlap
-+    auto barriers  = ComputeBarriers(sorted, mapping); // 6. precompute every state + aliasing transition
+@@ frame_graph_v3.cpp — Compile() extended with lifetime analysis + aliasing @@
+ FrameGraph::CompiledPlan FrameGraph::Compile() {
+     BuildEdges();
+     auto sorted   = TopoSort();
+     Cull(sorted);
++    auto lifetimes = ScanLifetimes(sorted);      // NEW v3: when is each resource alive?
++    auto mapping   = AliasResources(lifetimes);  // NEW v3: share memory where lifetimes don't overlap
+-    auto barriers  = ComputeBarriers(sorted);
++    auto barriers  = ComputeBarriers(sorted, mapping); // extended: also emits aliasing transitions
+-    return { std::move(sorted), std::move(barriers) };
 +    return { std::move(sorted), std::move(mapping), std::move(barriers) };
+ }
+
+@@ frame_graph_v3.cpp — StateForUsage() extracted as class method @@
++// Infer the ResourceState a pass needs for a given resource handle.
++ResourceState FrameGraph::StateForUsage(PassIndex passIdx, ResourceHandle h, bool isWrite) const {
++    for (auto& rw : passes[passIdx].readWrites)
++        if (rw.index == h.index) return ResourceState::UnorderedAccess;
++    if (isWrite)
++        return (entries[h.index].desc.format == Format::D32F)
++            ? ResourceState::DepthAttachment : ResourceState::ColorAttachment;
++    return ResourceState::ShaderRead;
 +}
 
-@@ frame_graph_v3.cpp — ComputeBarriers() @@
-+// Pure analysis — track each resource's state, record a Barrier when a pass needs a different one.
-+// Also detects aliasing barriers: when a physical block's occupant changes.
-+std::vector<std::vector<Barrier>> FrameGraph::ComputeBarriers(
+@@ frame_graph_v3.cpp — ComputeBarriers() extended with aliasing Phase 1 @@
++// Walk sorted passes, emit aliasing + state-transition barriers into per-pass lists.
+ std::vector<std::vector<Barrier>> FrameGraph::ComputeBarriers(
+-        const std::vector<PassIndex>& sorted) {
 +        const std::vector<PassIndex>& sorted,
-+        const std::vector<uint32_t>& mapping) {
-+    std::vector<std::vector<Barrier>> result(sorted.size());
-+    // Track which virtual resource currently occupies each physical block.
-+    std::vector<ResourceIndex> blockOwner(/* numBlocks */, UINT32_MAX);
-+    for (PassIndex orderIdx = 0; orderIdx < sorted.size(); orderIdx++) {
-+        PassIndex passIdx = sorted[orderIdx];
-+        if (!passes[passIdx].alive) continue;
-+        // Aliasing: if a resource's physical block has a different occupant, emit aliasing barrier.
++        const std::vector<BlockIndex>& mapping) {
+     std::vector<std::vector<Barrier>> result(sorted.size());
+
++    // blockOwner[block] = which virtual resource currently occupies it.
++    std::vector<ResourceIndex> blockOwner;
++    { BlockIndex maxBlock = 0;
++      for (auto m : mapping) if (m != UINT32_MAX) maxBlock = std::max(maxBlock, m + 1);
++      blockOwner.assign(maxBlock, UINT32_MAX); }
+
+     for (PassIndex orderIdx = 0; orderIdx < sorted.size(); orderIdx++) {
+         PassIndex passIdx = sorted[orderIdx];
+         if (!passes[passIdx].alive) continue;
+
++        // Phase 1: aliasing barriers — block changes occupant.
 +        auto emitAliasingIfNeeded = [&](ResourceHandle h) {
-+            uint32_t block = mapping[h.index];
-+            if (block == UINT32_MAX) return;                              // imported or unmapped
-+            if (blockOwner[block] != UINT32_MAX && blockOwner[block] != h.index) {
-+                Barrier ab{};
-+                ab.resourceIndex = h.index;       // the new occupant
-+                ab.isAliasing    = true;
-+                ab.aliasBefore   = blockOwner[block]; // the old occupant
-+                result[orderIdx].push_back(ab);   // emit before state transitions
-+            }
-+            blockOwner[block] = h.index;          // update block ownership
++            BlockIndex block = mapping[h.index];
++            if (block == UINT32_MAX) return;
++            if (blockOwner[block] != UINT32_MAX && blockOwner[block] != h.index)
++                result[orderIdx].push_back(
++                    { h.index, ResourceState::Undefined, ResourceState::Undefined,
++                      true, blockOwner[block] });
++            blockOwner[block] = h.index;
 +        };
 +        for (auto& h : passes[passIdx].reads)  emitAliasingIfNeeded(h);
 +        for (auto& h : passes[passIdx].writes) emitAliasingIfNeeded(h);
-+        // Same UAV-aware heuristic as v2's EmitBarriers — checks readWrites list.
-+        auto IsUAV = [&](ResourceHandle h) {
-+            for (auto& rw : passes[passIdx].readWrites)
-+                if (rw.index == h.index) return true;
-+            return false;
-+        };
-+        auto StateForUsage = [&](ResourceHandle h, bool isWrite) {
-+            if (IsUAV(h)) return ResourceState::UnorderedAccess;
-+            if (isWrite)
-+                return (entries[h.index].desc.format == Format::D32F)
-+                    ? ResourceState::DepthAttachment : ResourceState::ColorAttachment;
-+            return ResourceState::ShaderRead;
-+        };
-+        for (auto& h : passes[passIdx].reads) {
-+            ResourceState needed = StateForUsage(h, false);
-+            if (entries[h.index].currentState != needed) {
-+                result[orderIdx].push_back(                  // record transition
-+                    { h.index, entries[h.index].currentState, needed });
-+                entries[h.index].currentState = needed;       // update tracked state
-+            }
-+        }
-+        for (auto& h : passes[passIdx].writes) {
-+            ResourceState needed = StateForUsage(h, true);
-+            if (entries[h.index].currentState != needed) {
-+                result[orderIdx].push_back(                  // record transition
-+                    { h.index, entries[h.index].currentState, needed });
-+                entries[h.index].currentState = needed;       // update tracked state
-+            }
-+        }
-+    }
-+    return result;
-+}
 
-@@ frame_graph_v3.cpp — EmitBarriers() @@
-+void FrameGraph::EmitBarriers(const std::vector<Barrier>& barriers) {
-+    for (auto& b : barriers) {
+-        // (v2 used inline lambdas for IsUAV + StateForUsage here)
++        // Phase 2: state-transition barriers.
+         auto recordTransition = [&](ResourceHandle h, bool isWrite) {
+             ResourceState needed = StateForUsage(passIdx, h, isWrite);
+             ...
+         };
+         for (auto& h : passes[passIdx].reads)  recordTransition(h, false);
+         for (auto& h : passes[passIdx].writes) recordTransition(h, true);
+     }
+     return result;
+ }
+
+@@ frame_graph_v3.cpp — EmitBarriers() extended with aliasing handling @@
+ void FrameGraph::EmitBarriers(const std::vector<Barrier>& barriers) {
+     for (auto& b : barriers) {
+-        // (v2: only state transitions)
 +        if (b.isAliasing) {
 +            // D3D12: D3D12_RESOURCE_BARRIER_TYPE_ALIASING / Vulkan: memory barrier on the shared heap region.
 +        } else {
-+            // D3D12: ResourceBarrier(StateBefore→StateAfter) / Vulkan: vkCmdPipelineBarrier(oldLayout→newLayout).
+             // D3D12: ResourceBarrier(StateBefore→StateAfter) / Vulkan: vkCmdPipelineBarrier(oldLayout→newLayout).
 +        }
-+    }
-+}
-
-@@ frame_graph_v3.cpp — Execute() @@
-+// v3 Execute: pure playback — emit precomputed barriers and call execute lambdas, no analysis.
--void FrameGraph::Execute() {
--    BuildEdges();
--    auto sorted = TopoSort();
--    Cull(sorted);
--    for (PassIndex idx : sorted) {
--        if (!passes[idx].alive) continue;
--        EmitBarriers(idx);
--        passes[idx].Execute(/* &cmdList */);
--    }
--    passes.clear();
--    entries.clear();
--}
-+void FrameGraph::Execute(const CompiledPlan& plan) {
-+    for (PassIndex orderIdx = 0; orderIdx < plan.sorted.size(); orderIdx++) {
-+        PassIndex passIdx = plan.sorted[orderIdx];
-+        if (!passes[passIdx].alive) continue;
-+        EmitBarriers(plan.barriers[orderIdx]);  // replay precomputed transitions
-+        passes[passIdx].Execute(/* &cmdList */); // record GPU commands
-+    }
-+    passes.clear();     // reset for next frame
-+    entries.clear();
-+}
-+
-+// Convenience: compile + execute in one call.
-+void FrameGraph::Execute() { Execute(Compile()); }
+     }
+ }
 {{< /code-diff >}}
 
-~100 new lines on top of v2. **The key architectural change**: v3 separates barrier computation from submission. `ComputeBarriers()` walks the sorted passes during compile, detects every state transition, and stores them in the `CompiledPlan`. Execute is now a pure playback loop — it submits precomputed barriers and calls execute lambdas. No state tracking, no decisions.
+~170 new lines on top of v2. **The key v3 addition**: lifetime analysis and memory aliasing. `ScanLifetimes()` records each transient resource's first/last use in the sorted pass order, then `AliasResources()` packs non-overlapping lifetimes into shared physical blocks. `ComputeBarriers()` gains a Phase 1 that detects when a physical block changes occupant and emits aliasing barriers before the state transitions. Execute stays unchanged — still pure playback.
 
 Aliasing runs once per frame in O(R log R + R·B) — sort by first-use, then for each resource scan the free list for a fit. B is the number of physical blocks (bounded by R), so worst-case is O(R²) — but in practice B stays small (~3–5 blocks for ~15 resources), making the scan effectively linear. Sub-microsecond for 15 transient resources.
 
@@ -996,7 +1024,7 @@ Aliasing runs once per frame in O(R log R + R·B) — sort by first-use, then fo
 Our <code>AllocSize()</code> rounds up to a 64 KB placement alignment — the same constraint real GPUs enforce when placing resources into shared heaps. This matters because without alignment, two resources that appear to fit in the same block could overlap at the hardware level. The raw <code>BytesPerPixel()</code> calculation is still a simplification though: production allocators query the driver for actual sizes (which include row padding, tiling overhead, and per-resource alignment). The aliasing algorithm itself is unchanged — you just swap the size input.
 </div>
 
-That's the full value prop — automatic memory aliasing, precomputed barriers, and the clean compile/execute separation, all from a single `FrameGraph` class. UE5's transient resource allocator does the same thing: any `FRDGTexture` created through `FRDGBuilder::CreateTexture` (vs `RegisterExternalTexture`) is transient and eligible for aliasing, using the same lifetime analysis and free-list scan we just built.
+That's the full value prop — automatic memory aliasing and precomputed aliasing barriers on top of v2's compile/execute split. UE5's transient resource allocator does the same thing: any `FRDGTexture` created through `FRDGBuilder::CreateTexture` (vs `RegisterExternalTexture`) is transient and eligible for aliasing, using the same lifetime analysis and free-list scan we just built.
 
 ---
 

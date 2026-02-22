@@ -136,7 +136,7 @@ std::vector<PassIndex> FrameGraph::TopoSort() {
     }
     assert(order.size() == passes.size() && "Cycle detected!");
     printf("  Topological order: ");
-    for (uint32_t i = 0; i < order.size(); i++) {
+    for (PassIndex i = 0; i < order.size(); i++) {
         printf("%s%s", passes[order[i]].name.c_str(),
                i + 1 < order.size() ? " -> " : "\n");
     }
@@ -161,18 +161,29 @@ void FrameGraph::Cull(const std::vector<PassIndex>& sorted) {
     }
 }
 
+// == State inference (NEW v3 — shared by ComputeBarriers) =====
+
+ResourceState FrameGraph::StateForUsage(PassIndex passIdx, ResourceHandle h, bool isWrite) const {
+    // If the caller registered this handle via ReadWrite(), it's a UAV.
+    for (auto& rw : passes[passIdx].readWrites)
+        if (rw.index == h.index) return ResourceState::UnorderedAccess;
+    if (isWrite)
+        return (entries[h.index].desc.format == Format::D32F)
+            ? ResourceState::DepthAttachment : ResourceState::ColorAttachment;
+    return ResourceState::ShaderRead;
+}
+
 // == Compute barriers (NEW v3 — runs during Compile) ==========
 
 std::vector<std::vector<Barrier>> FrameGraph::ComputeBarriers(
         const std::vector<PassIndex>& sorted,
-        const std::vector<uint32_t>& mapping) {
+        const std::vector<BlockIndex>& mapping) {
     std::vector<std::vector<Barrier>> result(sorted.size());
 
-    // Track which virtual resource currently occupies each physical block.
-    // When a block's occupant changes, we need an aliasing barrier.
-    std::vector<ResourceIndex> blockOwner;  // blockOwner[physicalBlock] = virtualResourceIndex
+    // blockOwner[block] = which virtual resource currently occupies it.
+    std::vector<ResourceIndex> blockOwner;
     {
-        uint32_t maxBlock = 0;
+        BlockIndex maxBlock = 0;
         for (auto m : mapping) if (m != UINT32_MAX) maxBlock = std::max(maxBlock, m + 1);
         blockOwner.assign(maxBlock, UINT32_MAX);
     }
@@ -181,55 +192,31 @@ std::vector<std::vector<Barrier>> FrameGraph::ComputeBarriers(
         PassIndex passIdx = sorted[orderIdx];
         if (!passes[passIdx].alive) continue;
 
-        // Check all resources this pass touches for aliasing conflicts.
+        // --- Phase 1: aliasing barriers (block changes occupant) ---
         auto emitAliasingIfNeeded = [&](ResourceHandle h) {
-            uint32_t block = mapping[h.index];
-            if (block == UINT32_MAX) return;  // imported or unmapped
+            BlockIndex block = mapping[h.index];
+            if (block == UINT32_MAX) return;
             if (blockOwner[block] != UINT32_MAX && blockOwner[block] != h.index) {
-                // Physical block changes occupant → aliasing barrier.
-                Barrier ab{};
-                ab.resourceIndex = h.index;
-                ab.oldState      = ResourceState::Undefined;
-                ab.newState      = ResourceState::Undefined;
-                ab.isAliasing    = true;
-                ab.aliasBefore   = blockOwner[block];
-                result[orderIdx].push_back(ab);
+                result[orderIdx].push_back(
+                    { h.index, ResourceState::Undefined, ResourceState::Undefined,
+                      true, blockOwner[block] });
             }
             blockOwner[block] = h.index;
         };
-
         for (auto& h : passes[passIdx].reads)  emitAliasingIfNeeded(h);
         for (auto& h : passes[passIdx].writes) emitAliasingIfNeeded(h);
 
-        auto IsUAV = [&](ResourceHandle h) {
-            for (auto& rw : passes[passIdx].readWrites)
-                if (rw.index == h.index) return true;
-            return false;
-        };
-        auto StateForUsage = [&](ResourceHandle h, bool isWrite) {
-            if (IsUAV(h)) return ResourceState::UnorderedAccess;
-            if (isWrite)
-                return (entries[h.index].desc.format == Format::D32F)
-                    ? ResourceState::DepthAttachment : ResourceState::ColorAttachment;
-            return ResourceState::ShaderRead;
-        };
-
-        for (auto& h : passes[passIdx].reads) {
-            ResourceState needed = StateForUsage(h, false);
+        // --- Phase 2: state-transition barriers ---
+        auto recordTransition = [&](ResourceHandle h, bool isWrite) {
+            ResourceState needed = StateForUsage(passIdx, h, isWrite);
             if (entries[h.index].currentState != needed) {
                 result[orderIdx].push_back(
                     { h.index, entries[h.index].currentState, needed });
                 entries[h.index].currentState = needed;
             }
-        }
-        for (auto& h : passes[passIdx].writes) {
-            ResourceState needed = StateForUsage(h, true);
-            if (entries[h.index].currentState != needed) {
-                result[orderIdx].push_back(
-                    { h.index, entries[h.index].currentState, needed });
-                entries[h.index].currentState = needed;
-            }
-        }
+        };
+        for (auto& h : passes[passIdx].reads)  recordTransition(h, false);
+        for (auto& h : passes[passIdx].writes) recordTransition(h, true);
     }
 
     uint32_t total = 0;
@@ -276,9 +263,9 @@ std::vector<Lifetime> FrameGraph::ScanLifetimes(const std::vector<PassIndex>& so
 
 // == Greedy free-list aliasing (NEW v3) ========================
 
-std::vector<uint32_t> FrameGraph::AliasResources(const std::vector<Lifetime>& lifetimes) {
+std::vector<BlockIndex> FrameGraph::AliasResources(const std::vector<Lifetime>& lifetimes) {
     std::vector<PhysicalBlock> freeList;
-    std::vector<uint32_t> mapping(entries.size(), UINT32_MAX);
+    std::vector<BlockIndex> mapping(entries.size(), UINT32_MAX);
     uint32_t totalWithout = 0;
 
     std::vector<ResourceIndex> indices(entries.size());
@@ -296,7 +283,7 @@ std::vector<uint32_t> FrameGraph::AliasResources(const std::vector<Lifetime>& li
         totalWithout += needed;
         bool reused = false;
 
-        for (uint32_t b = 0; b < freeList.size(); b++) {
+        for (BlockIndex b = 0; b < freeList.size(); b++) {
             if (freeList[b].availAfter < lifetimes[resIdx].firstUse
                 && freeList[b].sizeBytes >= needed) {
                 mapping[resIdx] = b;
@@ -312,10 +299,10 @@ std::vector<uint32_t> FrameGraph::AliasResources(const std::vector<Lifetime>& li
         }
 
         if (!reused) {
-            mapping[resIdx] = static_cast<uint32_t>(freeList.size());
+            mapping[resIdx] = static_cast<BlockIndex>(freeList.size());
             printf("    resource[%u] -> NEW physical block %u   "
                    "(%.1f MB, lifetime [%u..%u])\n",
-                   resIdx, static_cast<uint32_t>(freeList.size()),
+                   resIdx, static_cast<BlockIndex>(freeList.size()),
                    needed / (1024.0f * 1024.0f),
                    lifetimes[resIdx].firstUse,
                    lifetimes[resIdx].lastUse);

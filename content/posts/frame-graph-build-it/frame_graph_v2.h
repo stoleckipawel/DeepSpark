@@ -50,6 +50,13 @@ struct ResourceVersion {                 // NEW v2
     bool HasWriter() const { return writerPass != UINT32_MAX; }
 };
 
+// A single resource-state transition (NEW v2).
+struct Barrier {
+    ResourceIndex resourceIndex;
+    ResourceState oldState;
+    ResourceState newState;
+};
+
 // Extend ResourceDesc with tracking:
 struct ResourceEntry {
     ResourceDesc desc;
@@ -99,6 +106,16 @@ public:
         passes.back().Setup();
     }
 
+    // == v2: compile — precompute sort, cull, barriers =========
+    struct CompiledPlan {
+        std::vector<PassIndex> sorted;                    // topological execution order
+        std::vector<std::vector<Barrier>> barriers;       // barriers[orderIdx] → pre-pass transitions
+    };
+
+    CompiledPlan Compile();
+    void Execute(const CompiledPlan& plan);
+
+    // convenience: compile + execute in one call
     void Execute();
 
 private:
@@ -108,5 +125,6 @@ private:
     void BuildEdges();                                // NEW v2
     std::vector<PassIndex> TopoSort();                 // NEW v2
     void Cull(const std::vector<PassIndex>& sorted);   // NEW v2
-    void EmitBarriers(PassIndex passIdx);               // NEW v2
+    std::vector<std::vector<Barrier>> ComputeBarriers(const std::vector<PassIndex>& sorted); // NEW v2
+    void EmitBarriers(const std::vector<Barrier>& barriers);  // NEW v2
 };

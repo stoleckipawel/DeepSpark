@@ -22,6 +22,7 @@ struct ResourceDesc {
 
 using ResourceIndex = uint32_t;
 using PassIndex     = uint32_t;
+using BlockIndex    = uint32_t;   // index into the physical-block free list
 
 struct ResourceHandle {
     ResourceIndex index = UINT32_MAX;
@@ -49,8 +50,8 @@ struct Barrier {
     ResourceIndex resourceIndex;
     ResourceState oldState;
     ResourceState newState;
-    bool          isAliasing   = false;     // true = aliasing barrier (block changes occupant)
-    ResourceIndex aliasBefore  = UINT32_MAX; // resource being evicted (only when isAliasing)
+    bool          isAliasing   = false;     // NEW v3: aliasing barrier (block changes occupant)
+    ResourceIndex aliasBefore  = UINT32_MAX; // NEW v3: resource being evicted
 };
 
 struct ResourceVersion {
@@ -140,16 +141,14 @@ public:
         passes.back().Setup();
     }
 
-    // == v3: compile -- builds the execution plan + allocates memory ==
+    // == compile — builds the execution plan + allocates memory ==
     struct CompiledPlan {
         std::vector<PassIndex> sorted;
-        std::vector<uint32_t> mapping;                  // mapping[virtualIdx] → physicalBlock
-        std::vector<std::vector<Barrier>> barriers;     // barriers[orderIdx] → pre-pass transitions
+        std::vector<BlockIndex> mapping;                 // NEW v3: mapping[ResourceIndex] → physical block
+        std::vector<std::vector<Barrier>> barriers;
     };
 
     CompiledPlan Compile();
-
-    // == v3: execute -- runs the compiled plan =================
     void Execute(const CompiledPlan& plan);
 
     // convenience: compile + execute in one call
@@ -163,8 +162,9 @@ private:
     std::vector<PassIndex> TopoSort();
     void Cull(const std::vector<PassIndex>& sorted);
     std::vector<Lifetime> ScanLifetimes(const std::vector<PassIndex>& sorted);  // NEW v3
-    std::vector<uint32_t> AliasResources(const std::vector<Lifetime>& lifetimes); // NEW v3
+    std::vector<BlockIndex> AliasResources(const std::vector<Lifetime>& lifetimes); // NEW v3
+    ResourceState StateForUsage(PassIndex passIdx, ResourceHandle h, bool isWrite) const; // NEW v3
     std::vector<std::vector<Barrier>> ComputeBarriers(const std::vector<PassIndex>& sorted,
-                                                       const std::vector<uint32_t>& mapping); // NEW v3
-    void EmitBarriers(const std::vector<Barrier>& barriers);  // NEW v3
+                                                       const std::vector<BlockIndex>& mapping); // NEW v3: extended with aliasing
+    void EmitBarriers(const std::vector<Barrier>& barriers);
 };
