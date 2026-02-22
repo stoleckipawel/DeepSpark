@@ -65,7 +65,16 @@ struct PhysicalBlock {
     uint32_t availAfter  = 0;  // pass index after which this block is free
 };
 
-// == Bytes-per-pixel helper (NEW v3) ===========================
+// == Allocation helpers (NEW v3) ================================
+
+// Minimum placement alignment for aliased heap resources.
+// Real APIs enforce similar constraints (e.g. 64 KB on most GPUs).
+static constexpr uint32_t kPlacementAlignment = 65536;  // 64 KB
+
+inline uint32_t AlignUp(uint32_t value, uint32_t alignment) {
+    return (value + alignment - 1) & ~(alignment - 1);
+}
+
 inline uint32_t BytesPerPixel(Format fmt) {
     switch (fmt) {
         case Format::R8:      return 1;
@@ -74,6 +83,14 @@ inline uint32_t BytesPerPixel(Format fmt) {
         case Format::RGBA16F: return 8;
         default:              return 4;
     }
+}
+
+// Compute aligned allocation size for a resource.
+// Real drivers add row padding and tiling overhead; we approximate
+// with a simple alignment round-up to demonstrate the principle.
+inline uint32_t AllocSize(const ResourceDesc& desc) {
+    uint32_t raw = desc.width * desc.height * BytesPerPixel(desc.format);
+    return AlignUp(raw, kPlacementAlignment);
 }
 
 // == Lifetime info per resource (NEW v3) =======================

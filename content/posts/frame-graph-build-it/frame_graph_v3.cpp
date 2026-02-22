@@ -234,9 +234,7 @@ std::vector<uint32_t> FrameGraph::AliasResources(const std::vector<Lifetime>& li
         if (!lifetimes[resIdx].isTransient) continue;
         if (lifetimes[resIdx].firstUse == UINT32_MAX) continue;
 
-        uint32_t needed = entries[resIdx].desc.width
-                        * entries[resIdx].desc.height
-                        * BytesPerPixel(entries[resIdx].desc.format);
+        uint32_t needed = AllocSize(entries[resIdx].desc);
         totalWithout += needed;
         bool reused = false;
 

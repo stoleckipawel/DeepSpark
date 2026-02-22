@@ -56,7 +56,7 @@ showTableOfContents: false
       <svg viewBox="0 0 24 16" width="20" height="13" fill="none"><path d="M4 8h12m-4-4l5 4-5 4" stroke="var(--ds-success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity=".5"/></svg>
     </div>
     <div style="padding:.65em 1em;font-size:.88em;font-weight:700;color:var(--ds-success);">
-      Resources aliased — ~50 % less VRAM.
+      Resources aliased — up to 50% VRAM savings.
     </div>
   </div>
   <!-- Footer -->
@@ -70,7 +70,7 @@ Behind every smooth frame is a brutal scheduling problem — which passes can ru
 <div class="fg-reveal" style="margin:1.5em 0;border-radius:12px;overflow:hidden;border:1.5px solid rgba(var(--ds-indigo-rgb),.25);background:linear-gradient(135deg,rgba(var(--ds-indigo-rgb),.04),transparent);">
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0;">
     <div style="padding:1em;text-align:center;border-right:1px solid rgba(var(--ds-indigo-rgb),.12);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.12);">
-      <div style="font-size:1.6em;margin-bottom:.15em;">�</div>
+      <div style="font-size:1.6em;margin-bottom:.15em;">📖</div>
       <div style="font-weight:800;font-size:.95em;">Learn Theory</div>
       <div style="font-size:.82em;opacity:.7;line-height:1.4;margin-top:.2em;">What a frame graph is, why every engine uses one, and how each piece works</div>
     </div>
@@ -453,7 +453,7 @@ Toggle edges in the DAG below — disconnect a pass and the compiler removes it 
 
 ### Allocation and aliasing
 
-The sorted order tells the compiler exactly when each resource is first written and last read — its **lifetime**. Two resources that are never alive at the same time can share the same physical memory. Without aliasing, every transient resource holds its own allocation for the full frame — even if it's only used for 2–3 passes. In a typical deferred pipeline, that's ~50% wasted VRAM sitting idle.
+The sorted order tells the compiler exactly when each resource is first written and last read — its **lifetime**. Two resources that are never alive at the same time can share the same physical memory. Without aliasing, every transient resource holds its own allocation for the full frame — even if it's only used for 2–3 passes. The actual savings depend on pass topology, resolution, and how many transient resources have non-overlapping lifetimes — Frostbite's GDC 2017 talk reported roughly 50% transient VRAM reduction on Battlefield 1's deferred pipeline at full resolution. Your mileage will vary with different pass structures.
 
 The allocator is a two-step process:
 
@@ -511,6 +511,7 @@ The allocator is a two-step process:
     <div style="display:grid;grid-template-columns:auto 1fr;gap:.2em .8em;font-size:.85em;line-height:1.6;">
       <span style="font-weight:700;opacity:.7;">Garbage</span><span>Aliased memory has stale contents — first use must be a full clear or overwrite</span>
       <span style="font-weight:700;opacity:.7;">Transient only</span><span>Imported resources live across frames — only single-frame transients qualify</span>
+      <span style="font-weight:700;opacity:.7;">Alignment</span><span>Placed resources must respect the GPU's placement alignment (commonly 64 KB) — sizes and offsets must be rounded up, or two resources that look like they fit will overlap at the hardware level</span>
       <span style="font-weight:700;opacity:.7;">Sync</span><span>The old resource must finish all GPU access before the new one touches the same memory</span>
     </div>
   </div>
@@ -766,7 +767,7 @@ Most engines use **dynamic** or **hybrid**. The compile is so cheap that caching
     <strong>Memory aliasing</strong><br><span style="opacity:.65">Opt-in, fragile, rarely done</span>
   </div>
   <div style="padding:.55em .8em;font-size:.88em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.1);background:rgba(var(--ds-success-rgb),.02);">
-    <strong>Memory aliasing</strong><br>Automatic — compiler sees all lifetimes. <strong style="color:var(--ds-success);">30–50% VRAM saved.</strong>
+    <strong>Memory aliasing</strong><br>Automatic — compiler sees all lifetimes. <strong style="color:var(--ds-success);">Significant VRAM savings</strong> <span style="font-size:.85em;opacity:.7">(topology-dependent)</span>
   </div>
 
   <div style="padding:.55em .8em;font-size:.88em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.1);border-right:1.5px solid rgba(var(--ds-indigo-rgb),.15);background:rgba(var(--ds-danger-rgb),.02);">
@@ -813,7 +814,7 @@ Most engines use **dynamic** or **hybrid**. The compile is so cheap that caching
 </div>
 
 <div class="fg-reveal" style="margin:1.2em 0;padding:.8em 1em;border-radius:8px;background:linear-gradient(135deg,rgba(var(--ds-success-rgb),.06),rgba(var(--ds-info-rgb),.06));border:1px solid rgba(var(--ds-success-rgb),.2);font-size:.92em;line-height:1.6;">
-🏭 <strong>Not theoretical.</strong> Production engines report up to <strong>50% VRAM reduction</strong> from aliasing. UE5's RDG ships this optimization today — every <code>FRDGTexture</code> marked as transient goes through the same aliasing pipeline we build in <a href="../frame-graph-build-it/">Part II</a>.
+🏭 <strong>Not theoretical.</strong> Frostbite's <a href="https://www.gdcvault.com/play/1024612/FrameGraph-Extensible-Rendering-Architecture-in">GDC 2017 talk</a> reported ~50% transient VRAM reduction on Battlefield 1's deferred pipeline — a topology with many short-lived fullscreen targets at high resolution. Actual savings depend on pass count, resolution, and how many transient lifetimes overlap. UE5's RDG ships the same optimization today — every <code>FRDGTexture</code> marked as transient goes through the aliasing pipeline we build in <a href="../frame-graph-build-it/">Part II</a>.
 </div>
 
 ---

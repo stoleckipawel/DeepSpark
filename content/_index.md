@@ -108,7 +108,7 @@ description: "Graphics software engineering — real-time rendering notes, GPU e
 <div class="part-num" style="width:2em;height:2em;border-radius:50%;background:var(--ds-info);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:.85em;flex-shrink:0;">III</div>
 <div style="flex:1;min-width:0;">
 <div class="part-title" style="font-weight:700;font-size:.95em;transition:color .18s ease;">Beyond MVP</div>
-<div style="font-size:.82em;opacity:.6;line-height:1.5;margin-top:.1em;">Pass merging, async compute, and split barriers — how the compiler squeezes more performance from the same DAG.</div>
+<div style="font-size:.82em;opacity:.6;line-height:1.5;margin-top:.1em;">Async compute and split barriers — how the compiler squeezes more performance from the same DAG.</div>
 </div>
 <div style="font-size:.78em;opacity:.4;flex-shrink:0;">10 min read</div>
 </div>

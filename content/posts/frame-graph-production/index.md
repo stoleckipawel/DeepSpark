@@ -15,7 +15,7 @@ showTableOfContents: false
 📖 <strong>Part IV of IV.</strong>&ensp; <a href="../frame-graph-theory/">Theory</a> → <a href="../frame-graph-build-it/">Build It</a> → <a href="../frame-graph-advanced/">Beyond MVP</a> → <em>Production Engines</em>
 </div>
 
-[Part III](/posts/frame-graph-advanced/) showed how the compiler can go further — pass merging, async compute, and split barriers. Production engines face additional challenges we didn't cover: parallel command recording, managing thousands of passes across legacy codebases, and scaling all of these techniques simultaneously. This article examines how UE5 and Frostbite solved those problems, then maps out the path from MVP to production.
+[Part III](/posts/frame-graph-advanced/) showed how the compiler can go further — async compute and split barriers. Production engines face additional challenges we didn't cover: parallel command recording, managing thousands of passes across legacy codebases, and scaling all of these techniques simultaneously. This article examines how UE5 and Frostbite solved those problems, then maps out the path from MVP to production.
 
 ---
 
@@ -87,7 +87,7 @@ Frostbite's GDC 2017 talk described a similar lambda-based declaration — setup
 
 ## ② Compile — The Graph Compiler at Scale
 
-This is where production engines diverge most from our MVP. The compile phase runs entirely on the CPU, between declaration and execution. Our MVP does five things here: topo-sort, cull, scan lifetimes, alias, and compute barriers. Production engines do the same five — plus pass merging, async compute scheduling, split barrier placement, and barrier batching.
+This is where production engines diverge most from our MVP. The compile phase runs entirely on the CPU, between declaration and execution. Our MVP does five things here: topo-sort, cull, scan lifetimes, alias, and compute barriers. Production engines do the same five — plus async compute scheduling, split barrier placement, and barrier batching.
 
 <div class="diagram-phases">
   <div class="dph-col" style="border-color:var(--ds-code);flex:1;">
@@ -108,7 +108,6 @@ This is where production engines diverge most from our MVP. The compile phase ru
       ├ cull dead passes<br>
       ├ scan lifetimes<br>
       ├ alias memory <span style="opacity:.5">+ cross-frame pooling</span><br>
-      ├ <strong>merge passes</strong> (subpass optimization)<br>
       ├ <strong>schedule async compute</strong><br>
       ├ compute barriers <span style="opacity:.5">+ split begin/end</span><br>
       └ <strong>batch barriers</strong>
@@ -137,15 +136,6 @@ Both engines use the same core algorithm from [Part II](/posts/frame-graph-build
 </div>
 
 Our MVP allocates fresh each frame. Production engines **pool across frames** — once a heap is allocated, it persists and gets reused. UE5's `FRDGTransientResourceAllocator` tracks peak usage over several frames and only grows the pool when needed. This amortizes allocation cost to near zero in steady state.
-
-### 🔗 Pass merging
-
-Pass merging is a compile-time optimization: the compiler identifies adjacent passes that share render targets and fuses them into a single render pass. On consoles with fixed-function hardware and on PC with D3D12 Render Pass Tier 2, this lets the GPU keep data on-chip between fused subpasses, avoiding expensive DRAM round-trips.
-
-How each engine handles it:
-
-- **UE5 RDG** delegates to the RHI layer. The graph compiler doesn't merge passes itself — pass authors never see subpasses, and the graph has no subpass concept.
-- **Frostbite's** GDC talk described automatic merging in the graph compiler as a first-class feature.
 
 ### ⚡ Async compute scheduling
 
@@ -239,7 +229,6 @@ This boundary is shrinking every release as Epic migrates more passes to RDG, bu
   <div class="dl-item"><span class="dl-x">▸</span> <strong>Ongoing migration</strong> — Legacy FRHICommandList ←→ RDG boundary requires manual barriers; Epic is actively moving more passes into the graph each release</div>
   <div class="dl-item"><span class="dl-x">▸</span> <strong>Macro-based parameter declaration</strong> — BEGIN_SHADER_PARAMETER_STRUCT trades debuggability and dynamic composition for compile-time safety and code generation</div>
   <div class="dl-item"><span class="dl-x">▸</span> <strong>Transient-only aliasing</strong> — Imported resources are not aliased, even when lifetime is fully known within the frame — a deliberate simplification that may evolve</div>
-  <div class="dl-item"><span class="dl-x">▸</span> <strong>No automatic subpass merging</strong> — Delegated to the RHI layer; the graph compiler doesn't optimize render pass structure directly</div>
   <div class="dl-item"><span class="dl-x">▸</span> <strong>Async compute is opt-in</strong> — Manual ERDGPassFlags::AsyncCompute tagging. The compiler handles fence insertion but doesn't discover async opportunities automatically</div>
 </div>
 
@@ -249,7 +238,7 @@ This boundary is shrinking every release as Epic migrates more passes to RDG, bu
 
 A render graph is not always the right answer. If your project has a fixed pipeline with 3–4 passes that will never change, the overhead of a graph compiler is wasted complexity. But the moment your renderer needs to *grow* — new passes, new platforms, new debug tools — the graph pays for itself in the first week.
 
-Across these four articles, we covered the full arc: [Part I](/posts/frame-graph-theory/) laid out the core theory — the declare/compile/execute lifecycle, sorting, barriers, and aliasing. [Part II](/posts/frame-graph-build-it/) turned that into working C++. [Part III](/posts/frame-graph-advanced/) pushed further with pass merging, async compute, and split barriers. And this article mapped those ideas onto what ships in UE5 and Frostbite, showing how production engines implement the same concepts at scale.
+Across these four articles, we covered the full arc: [Part I](/posts/frame-graph-theory/) laid out the core theory — the declare/compile/execute lifecycle, sorting, barriers, and aliasing. [Part II](/posts/frame-graph-build-it/) turned that into working C++. [Part III](/posts/frame-graph-advanced/) pushed further with async compute and split barriers. And this article mapped those ideas onto what ships in UE5 and Frostbite, showing how production engines implement the same concepts at scale.
 
 You can now open `RenderGraphBuilder.h` in UE5 and *read* it, not reverse-engineer it. You know what `FRDGBuilder::AddPass` builds, how the transient allocator aliases memory, why `ERDGPassFlags::AsyncCompute` exists, and how the RDG boundary with legacy code works in practice.
 
@@ -263,7 +252,7 @@ The point isn't that every project needs a render graph. The point is that if yo
 - **[Render Graphs — GPUOpen](https://gpuopen.com/learn/render-graphs/)** — AMD's overview covering declare/compile/execute, barriers, and aliasing.
 - **[FrameGraph: Extensible Rendering Architecture in Frostbite (GDC 2017)](https://www.gdcvault.com/play/1024612/FrameGraph-Extensible-Rendering-Architecture-in)** — The original talk that introduced the modern frame graph concept.
 - **[Render Graphs — Riccardo Loggini](https://logins.github.io/graphics/2021/05/31/RenderGraphs.html)** — Practical walkthrough with D3D12 placed resources and transient aliasing.
-- **[Render graphs and Vulkan — themaister](https://themaister.net/blog/2017/08/15/render-graphs-and-vulkan-a-deep-dive/)** — Full Vulkan implementation covering subpass merging, barriers, and async compute.
+- **[Render graphs and Vulkan — themaister](https://themaister.net/blog/2017/08/15/render-graphs-and-vulkan-a-deep-dive/)** — Full Vulkan implementation covering barriers, subpass optimization, and async compute.
 - **[Render Dependency Graph — Unreal Engine](https://dev.epicgames.com/documentation/en-us/unreal-engine/render-dependency-graph-in-unreal-engine/)** — Epic's official RDG documentation.
 - **[Understanding Vulkan Synchronization — Khronos Blog](https://www.khronos.org/blog/understanding-vulkan-synchronization)** — Pipeline barriers, events, semaphores, fences, and timeline semaphores.
 - **[Using Resource Barriers — Microsoft Learn](https://learn.microsoft.com/en-us/windows/win32/direct3d12/using-resource-barriers-to-synchronize-resource-states-in-direct3d-12)** — D3D12 transition, aliasing, UAV, and split barriers reference.
