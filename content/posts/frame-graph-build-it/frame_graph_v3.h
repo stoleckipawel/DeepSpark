@@ -50,8 +50,8 @@ struct Barrier {
     ResourceIndex resourceIndex;
     ResourceState oldState;
     ResourceState newState;
-    bool          isAliasing   = false;     // NEW v3: aliasing barrier (block changes occupant)
-    ResourceIndex aliasBefore  = UINT32_MAX; // NEW v3: resource being evicted
+    bool          isAliasing   = false;     // aliasing barrier (block changes occupant)
+    ResourceIndex aliasBefore  = UINT32_MAX; // resource being evicted
 };
 
 struct ResourceVersion {
@@ -67,13 +67,13 @@ struct ResourceEntry {
     bool imported = false;   // imported resources are not owned by the graph
 };
 
-// == Physical memory block (NEW v3) ============================
+// == Physical memory block ======================================
 struct PhysicalBlock {
     uint32_t sizeBytes   = 0;
     PassIndex availAfter = 0;  // sorted pass after which this block is free
 };
 
-// == Allocation helpers (NEW v3) ================================
+// == Allocation helpers ========================================
 
 // Minimum placement alignment for aliased heap resources.
 // Real APIs enforce similar constraints (e.g. 64 KB on most GPUs).
@@ -101,7 +101,7 @@ inline uint32_t AllocSize(const ResourceDesc& desc) {
     return AlignUp(raw, kPlacementAlignment);
 }
 
-// == Lifetime info per resource (NEW v3) =======================
+// == Lifetime info per resource =================================
 struct Lifetime {
     PassIndex firstUse = UINT32_MAX;
     PassIndex lastUse  = 0;
@@ -144,7 +144,7 @@ public:
     // == compile — builds the execution plan + allocates memory ==
     struct CompiledPlan {
         std::vector<PassIndex> sorted;
-        std::vector<BlockIndex> mapping;                 // NEW v3: mapping[ResourceIndex] → physical block
+        std::vector<BlockIndex> mapping;                 // mapping[ResourceIndex] → physical block
         std::vector<std::vector<Barrier>> barriers;
     };
 
@@ -161,10 +161,10 @@ private:
     void BuildEdges();
     std::vector<PassIndex> TopoSort();
     void Cull(const std::vector<PassIndex>& sorted);
-    std::vector<Lifetime> ScanLifetimes(const std::vector<PassIndex>& sorted);  // NEW v3
-    std::vector<BlockIndex> AliasResources(const std::vector<Lifetime>& lifetimes); // NEW v3
-    ResourceState StateForUsage(PassIndex passIdx, ResourceHandle h, bool isWrite) const; // NEW v3
+    std::vector<Lifetime> ScanLifetimes(const std::vector<PassIndex>& sorted);
+    std::vector<BlockIndex> AliasResources(const std::vector<Lifetime>& lifetimes);
+    ResourceState StateForUsage(PassIndex passIdx, ResourceHandle h, bool isWrite) const;
     std::vector<std::vector<Barrier>> ComputeBarriers(const std::vector<PassIndex>& sorted,
-                                                       const std::vector<BlockIndex>& mapping); // NEW v3: extended with aliasing
+                                                       const std::vector<BlockIndex>& mapping);
     void EmitBarriers(const std::vector<Barrier>& barriers);
 };

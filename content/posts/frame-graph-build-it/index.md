@@ -654,7 +654,7 @@ The idea: walk the sorted pass list, compare each resource's tracked state to wh
 +enum class ResourceState { Undefined, ColorAttachment, DepthAttachment,
 +                           ShaderRead, UnorderedAccess, Present };
 +
-+// A single resource-state transition (NEW v2).
++// A single resource-state transition.
 +struct Barrier {
 +    ResourceIndex resourceIndex;    // which resource to transition
 +    ResourceState oldState;         // state before this pass
@@ -815,8 +815,8 @@ Two new structs — a `Lifetime` per resource and a `PhysicalBlock` per heap slo
      ResourceIndex resourceIndex;
      ResourceState oldState;
      ResourceState newState;
-+    bool          isAliasing   = false;     // NEW v3: aliasing barrier (block changes occupant)
-+    ResourceIndex aliasBefore  = UINT32_MAX; // NEW v3: resource being evicted
++    bool          isAliasing   = false;     // aliasing barrier (block changes occupant)
++    ResourceIndex aliasBefore  = UINT32_MAX; // resource being evicted
  };
 
 @@ frame_graph_v3.h — Allocation helpers @@
@@ -882,7 +882,7 @@ The second half of the algorithm — the greedy free-list allocator. Sort resour
 @@ frame_graph_v3.h — CompiledPlan extended with mapping @@
  struct CompiledPlan {
      std::vector<PassIndex> sorted;
-+    std::vector<BlockIndex> mapping;               // NEW v3: mapping[ResourceIndex] → physical block
++    std::vector<BlockIndex> mapping;               // mapping[ResourceIndex] → physical block
      std::vector<std::vector<Barrier>> barriers;
  };
 
@@ -938,8 +938,8 @@ The second half of the algorithm — the greedy free-list allocator. Sort resour
      BuildEdges();
      auto sorted   = TopoSort();
      Cull(sorted);
-+    auto lifetimes = ScanLifetimes(sorted);      // NEW v3: when is each resource alive?
-+    auto mapping   = AliasResources(lifetimes);  // NEW v3: share memory where lifetimes don't overlap
++    auto lifetimes = ScanLifetimes(sorted);      // when is each resource alive?
++    auto mapping   = AliasResources(lifetimes);  // share memory where lifetimes don't overlap
 -    auto barriers  = ComputeBarriers(sorted);
 +    auto barriers  = ComputeBarriers(sorted, mapping); // extended: also emits aliasing transitions
 -    return { std::move(sorted), std::move(barriers) };
@@ -957,42 +957,50 @@ The second half of the algorithm — the greedy free-list allocator. Sort resour
 +    return ResourceState::ShaderRead;
 +}
 
-@@ frame_graph_v3.cpp — ComputeBarriers() extended with aliasing Phase 1 @@
-+// Walk sorted passes, emit aliasing + state-transition barriers into per-pass lists.
+@@ frame_graph_v3.cpp — ComputeBarriers() rewritten with aliasing @@
++// v3 ComputeBarriers: two phases per pass instead of v2's one.
++//   Phase 1 — aliasing:  did this physical block change occupant? If so, emit an aliasing barrier.
++//   Phase 2 — state:     did this resource's state change? If so, emit a state-transition barrier.
++//
++// v2's version only had Phase 2. v3 adds Phase 1 because aliased resources
++// share physical memory — the GPU needs to know when one occupant replaces another.
+
  std::vector<std::vector<Barrier>> FrameGraph::ComputeBarriers(
--        const std::vector<PassIndex>& sorted) {
-+        const std::vector<PassIndex>& sorted,
-+        const std::vector<BlockIndex>& mapping) {
+         const std::vector<PassIndex>& sorted,
+         const std::vector<BlockIndex>& mapping) {    // mapping: which physical block owns each resource
+
      std::vector<std::vector<Barrier>> result(sorted.size());
 
-+    // blockOwner[block] = which virtual resource currently occupies it.
-+    std::vector<ResourceIndex> blockOwner;
-+    { BlockIndex maxBlock = 0;
-+      for (auto m : mapping) if (m != UINT32_MAX) maxBlock = std::max(maxBlock, m + 1);
-+      blockOwner.assign(maxBlock, UINT32_MAX); }
++    // Track which virtual resource currently occupies each physical block.
++    // Starts as UINT32_MAX (nobody) — updated as we walk passes in order.
++    std::vector<ResourceIndex> blockOwner(mapping.size(), UINT32_MAX);
 
      for (PassIndex orderIdx = 0; orderIdx < sorted.size(); orderIdx++) {
          PassIndex passIdx = sorted[orderIdx];
          if (!passes[passIdx].alive) continue;
 
-+        // Phase 1: aliasing barriers — block changes occupant.
-+        auto emitAliasingIfNeeded = [&](ResourceHandle h) {
-+            BlockIndex block = mapping[h.index];
-+            if (block == UINT32_MAX) return;
-+            if (blockOwner[block] != UINT32_MAX && blockOwner[block] != h.index)
-+                result[orderIdx].push_back(
-+                    { h.index, ResourceState::Undefined, ResourceState::Undefined,
-+                      true, blockOwner[block] });
-+            blockOwner[block] = h.index;
-+        };
-+        for (auto& h : passes[passIdx].reads)  emitAliasingIfNeeded(h);
-+        for (auto& h : passes[passIdx].writes) emitAliasingIfNeeded(h);
++        // ── Phase 1: aliasing barriers ──────────────────────────
++        // For each resource this pass touches, check if its physical block
++        // was previously occupied by a *different* resource. If so, the GPU
++        // needs an aliasing barrier to flush caches before reuse.
++        for (auto& h : passes[passIdx].reads)  CheckAliasing(h, ...);
++        for (auto& h : passes[passIdx].writes) CheckAliasing(h, ...);
++
++        // CheckAliasing logic (inlined as lambda in full source):
++        //   block = mapping[h.index];         // which physical block?
++        //   if (block == UINT32_MAX) return;   // imported — no aliasing
++        //   if (blockOwner[block] != h.index)  // different occupant?
++        //       emit Barrier{ .isAliasing=true, .aliasBefore=blockOwner[block] }
++        //   blockOwner[block] = h.index;       // update current occupant
 
--        // (v2 used inline lambdas for IsUAV + StateForUsage here)
-+        // Phase 2: state-transition barriers.
+-        // (v2: only state-transition barriers — no Phase 1)
++        // ── Phase 2: state-transition barriers (same as v2) ────
          auto recordTransition = [&](ResourceHandle h, bool isWrite) {
              ResourceState needed = StateForUsage(passIdx, h, isWrite);
-             ...
+             if (entries[h.index].currentState != needed) {
+                 result[orderIdx].push_back({ h.index, entries[h.index].currentState, needed });
+                 entries[h.index].currentState = needed;
+             }
          };
          for (auto& h : passes[passIdx].reads)  recordTransition(h, false);
          for (auto& h : passes[passIdx].writes) recordTransition(h, true);

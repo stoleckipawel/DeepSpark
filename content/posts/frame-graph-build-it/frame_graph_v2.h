@@ -28,7 +28,7 @@ struct ResourceHandle {
     bool IsValid() const { return index != UINT32_MAX; }
 };
 
-// == Resource state tracking (NEW v2) ==========================
+// == Resource state tracking ====================================
 enum class ResourceState { Undefined, ColorAttachment, DepthAttachment,
                            ShaderRead, UnorderedAccess, Present };
 
@@ -44,13 +44,13 @@ inline const char* StateName(ResourceState s) {
     }
 }
 
-struct ResourceVersion {                 // NEW v2
+struct ResourceVersion {
     PassIndex writerPass = UINT32_MAX;   // which pass wrote this version
     std::vector<PassIndex> readerPasses; // which passes read it
     bool HasWriter() const { return writerPass != UINT32_MAX; }
 };
 
-// A single resource-state transition (NEW v2).
+// A single resource-state transition.
 struct Barrier {
     ResourceIndex resourceIndex;
     ResourceState oldState;
@@ -71,13 +71,13 @@ struct RenderPass {
     std::function<void()>             Setup;
     std::function<void(/*cmd list*/)> Execute;
 
-    std::vector<ResourceHandle> reads;      // NEW v2
-    std::vector<ResourceHandle> writes;     // NEW v2
-    std::vector<ResourceHandle> readWrites; // NEW v2 -- UAV (explicit)
-    std::vector<PassIndex> dependsOn;     // NEW v2 -- passes this pass depends on
-    std::vector<PassIndex> successors;    // NEW v2 -- passes that depend on this pass
-    uint32_t inDegree = 0;                // NEW v2 -- for Kahn's
-    bool     alive    = false;            // NEW v2 -- for culling
+    std::vector<ResourceHandle> reads;
+    std::vector<ResourceHandle> writes;
+    std::vector<ResourceHandle> readWrites; // UAV (explicit)
+    std::vector<PassIndex> dependsOn;     // passes this pass depends on
+    std::vector<PassIndex> successors;    // passes that depend on this pass
+    uint32_t inDegree = 0;                // for Kahn's
+    bool     alive    = false;            // for culling
 };
 
 // == Updated FrameGraph ========================================
@@ -91,13 +91,13 @@ public:
                                   ResourceState initialState = ResourceState::Undefined);
 
     // Declare a read -- links this pass to the resource's current version.
-    void Read(PassIndex passIdx, ResourceHandle h);    // NEW v2
+    void Read(PassIndex passIdx, ResourceHandle h);
 
     // Declare a write -- creates a new version of the resource.
-    void Write(PassIndex passIdx, ResourceHandle h);   // NEW v2
+    void Write(PassIndex passIdx, ResourceHandle h);
 
     // Declare a UAV access -- read + write on the same version.
-    void ReadWrite(PassIndex passIdx, ResourceHandle h); // NEW v2
+    void ReadWrite(PassIndex passIdx, ResourceHandle h);
 
     template <typename SetupFn, typename ExecFn>
     void AddPass(const std::string& name, SetupFn&& setup, ExecFn&& exec) {
@@ -122,9 +122,9 @@ private:
     std::vector<RenderPass>    passes;
     std::vector<ResourceEntry> entries;
 
-    void BuildEdges();                                // NEW v2
-    std::vector<PassIndex> TopoSort();                 // NEW v2
-    void Cull(const std::vector<PassIndex>& sorted);   // NEW v2
-    std::vector<std::vector<Barrier>> ComputeBarriers(const std::vector<PassIndex>& sorted); // NEW v2
-    void EmitBarriers(const std::vector<Barrier>& barriers);  // NEW v2
+    void BuildEdges();
+    std::vector<PassIndex> TopoSort();
+    void Cull(const std::vector<PassIndex>& sorted);
+    std::vector<std::vector<Barrier>> ComputeBarriers(const std::vector<PassIndex>& sorted);
+    void EmitBarriers(const std::vector<Barrier>& barriers);
 };

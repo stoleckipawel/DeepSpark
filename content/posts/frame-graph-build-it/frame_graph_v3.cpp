@@ -56,11 +56,11 @@ FrameGraph::CompiledPlan FrameGraph::Compile() {
     printf("[3] Culling dead passes...\n");
     Cull(sorted);
     printf("[4] Scanning resource lifetimes...\n");
-    auto lifetimes = ScanLifetimes(sorted);   // NEW v3
+    auto lifetimes = ScanLifetimes(sorted);
     printf("[5] Aliasing resources (greedy free-list)...\n");
-    auto mapping   = AliasResources(lifetimes); // NEW v3
+    auto mapping   = AliasResources(lifetimes);
     printf("[6] Computing barriers...\n");
-    auto barriers  = ComputeBarriers(sorted, mapping);   // NEW v3
+    auto barriers  = ComputeBarriers(sorted, mapping);
 
     // The compiled plan is fully determined — execution order, memory
     // mapping, and every barrier transition.  Execute is pure playback.
@@ -161,7 +161,7 @@ void FrameGraph::Cull(const std::vector<PassIndex>& sorted) {
     }
 }
 
-// == State inference (NEW v3 — shared by ComputeBarriers) =====
+// == State inference ===========================================
 
 ResourceState FrameGraph::StateForUsage(PassIndex passIdx, ResourceHandle h, bool isWrite) const {
     // If the caller registered this handle via ReadWrite(), it's a UAV.
@@ -173,7 +173,7 @@ ResourceState FrameGraph::StateForUsage(PassIndex passIdx, ResourceHandle h, boo
     return ResourceState::ShaderRead;
 }
 
-// == Compute barriers (NEW v3 — runs during Compile) ==========
+// == Compute barriers ==========================================
 
 std::vector<std::vector<Barrier>> FrameGraph::ComputeBarriers(
         const std::vector<PassIndex>& sorted,
@@ -226,7 +226,7 @@ std::vector<std::vector<Barrier>> FrameGraph::ComputeBarriers(
     return result;
 }
 
-// == Scan lifetimes (NEW v3) ===================================
+// == Scan lifetimes ============================================
 
 std::vector<Lifetime> FrameGraph::ScanLifetimes(const std::vector<PassIndex>& sorted) {
     std::vector<Lifetime> life(entries.size());
@@ -261,7 +261,7 @@ std::vector<Lifetime> FrameGraph::ScanLifetimes(const std::vector<PassIndex>& so
     return life;
 }
 
-// == Greedy free-list aliasing (NEW v3) ========================
+// == Greedy free-list aliasing ==================================
 
 std::vector<BlockIndex> FrameGraph::AliasResources(const std::vector<Lifetime>& lifetimes) {
     std::vector<PhysicalBlock> freeList;
