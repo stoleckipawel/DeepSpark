@@ -7,39 +7,39 @@
 
 // == FrameGraph implementation =================================
 
-ResourceHandle FrameGraph::createResource(const ResourceDesc& desc) {
+ResourceHandle FrameGraph::CreateResource(const ResourceDesc& desc) {
     entries.push_back({ desc, {{}}, ResourceState::Undefined, false });
     return { static_cast<uint32_t>(entries.size() - 1) };
 }
 
-ResourceHandle FrameGraph::importResource(const ResourceDesc& desc,
+ResourceHandle FrameGraph::ImportResource(const ResourceDesc& desc,
                                           ResourceState initialState) {
     entries.push_back({ desc, {{}}, initialState, true });
     return { static_cast<uint32_t>(entries.size() - 1) };
 }
 
-void FrameGraph::read(uint32_t passIdx, ResourceHandle h) {
+void FrameGraph::Read(uint32_t passIdx, ResourceHandle h) {
     auto& ver = entries[h.index].versions.back();
-    if (ver.writerPass != UINT32_MAX) {
+    if (ver.HasWriter()) {
         passes[passIdx].dependsOn.push_back(ver.writerPass);
     }
     ver.readerPasses.push_back(passIdx);
     passes[passIdx].reads.push_back(h);
 }
 
-void FrameGraph::write(uint32_t passIdx, ResourceHandle h) {
+void FrameGraph::Write(uint32_t passIdx, ResourceHandle h) {
     entries[h.index].versions.push_back({});
     entries[h.index].versions.back().writerPass = passIdx;
     passes[passIdx].writes.push_back(h);
 }
 
-void FrameGraph::execute() {
+void FrameGraph::Execute() {
     printf("\n[1] Building dependency edges...\n");
-    buildEdges();
+    BuildEdges();
     printf("[2] Topological sort...\n");
-    auto sorted = topoSort();
+    auto sorted = TopoSort();
     printf("[3] Culling dead passes...\n");
-    cull(sorted);
+    Cull(sorted);
 
     printf("[4] Executing (with automatic barriers):\n");
     for (uint32_t idx : sorted) {
@@ -47,8 +47,8 @@ void FrameGraph::execute() {
             printf("  -- skip: %s (CULLED)\n", passes[idx].name.c_str());
             continue;
         }
-        insertBarriers(idx);
-        passes[idx].execute(/* &cmdList */);
+        InsertBarriers(idx);
+        passes[idx].Execute(/* &cmdList */);
     }
     passes.clear();
     entries.clear();
@@ -56,7 +56,7 @@ void FrameGraph::execute() {
 
 // == Build dependency edges ====================================
 
-void FrameGraph::buildEdges() {
+void FrameGraph::BuildEdges() {
     for (uint32_t i = 0; i < passes.size(); i++) {
         // Deduplicate dependency edges and build successor list.
         std::unordered_set<uint32_t> seen;
@@ -71,7 +71,7 @@ void FrameGraph::buildEdges() {
 
 // == Kahn's topological sort â€” O(V + E) ========================
 
-std::vector<uint32_t> FrameGraph::topoSort() {
+std::vector<uint32_t> FrameGraph::TopoSort() {
     std::queue<uint32_t> q;
     std::vector<uint32_t> inDeg(passes.size());
     for (uint32_t i = 0; i < passes.size(); i++) {
@@ -99,7 +99,7 @@ std::vector<uint32_t> FrameGraph::topoSort() {
 
 // == Cull dead passes (backward walk from output) ==============
 
-void FrameGraph::cull(const std::vector<uint32_t>& sorted) {
+void FrameGraph::Cull(const std::vector<uint32_t>& sorted) {
     // Mark the last pass (present) as alive, then walk backward.
     if (sorted.empty()) return;
     passes[sorted.back()].alive = true;
@@ -118,8 +118,8 @@ void FrameGraph::cull(const std::vector<uint32_t>& sorted) {
 
 // == Insert barriers where resource state changes ==============
 
-void FrameGraph::insertBarriers(uint32_t passIdx) {
-    auto stateForUsage = [](bool isWrite, Format fmt) {
+void FrameGraph::InsertBarriers(uint32_t passIdx) {
+    auto StateForUsage = [](bool isWrite, Format fmt) {
         if (isWrite)
             return (fmt == Format::D32F) ? ResourceState::DepthAttachment
                                          : ResourceState::ColorAttachment;
@@ -131,18 +131,18 @@ void FrameGraph::insertBarriers(uint32_t passIdx) {
         if (entries[h.index].currentState != needed) {
             printf("    barrier: resource[%u] %s -> %s\n",
                    h.index,
-                   stateName(entries[h.index].currentState),
-                   stateName(needed));
+                   StateName(entries[h.index].currentState),
+                   StateName(needed));
             entries[h.index].currentState = needed;
         }
     }
     for (auto& h : passes[passIdx].writes) {
-        ResourceState needed = stateForUsage(true, entries[h.index].desc.format);
+        ResourceState needed = StateForUsage(true, entries[h.index].desc.format);
         if (entries[h.index].currentState != needed) {
             printf("    barrier: resource[%u] %s -> %s\n",
                    h.index,
-                   stateName(entries[h.index].currentState),
-                   stateName(needed));
+                   StateName(entries[h.index].currentState),
+                   StateName(needed));
             entries[h.index].currentState = needed;
         }
     }

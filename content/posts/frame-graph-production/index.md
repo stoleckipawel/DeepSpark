@@ -67,7 +67,7 @@ Each `AddPass` takes a parameter struct + execute lambda. The struct *is* the se
   </div>
 </div>
 
-### ❄️ Frostbite
+### ❄ Frostbite
 
 Frostbite's GDC 2017 talk described a similar lambda-based declaration — setup lambda declares reads/writes, execute lambda records GPU commands. The exact current implementation isn't public.
 
@@ -118,7 +118,7 @@ This is where production engines diverge most from our MVP. The compile phase ru
 
 Every step below is a compile-time operation — no GPU work, no command recording. The compiler sees the full DAG and makes optimal decisions the pass author never has to think about.
 
-### ✂️ Pass culling
+### ✂ Pass culling
 
 Same algorithm as our MVP — backward reachability from the output — but at larger scale. UE5 uses refcount-based culling and skips allocation entirely for culled passes (saves transient allocator work). Culled passes never execute, never allocate resources, never emit barriers — they vanish as if they were never declared.
 
@@ -178,6 +178,22 @@ Our MVP records on a single thread. Production engines split the sorted pass lis
 
 UE5 creates parallel `FRHICommandList` instances — one per pass group — and joins them before queue submission. This is where the bulk of CPU frame time goes in a graph-based renderer, so parallelizing it matters.
 
+### 🔓 Bindless & the frame graph
+
+Traditional bound descriptors require the executor to know each pass's binding layout — which slots expect textures, which expect UAVs — and to set up descriptor sets or root signatures before every dispatch. Bindless flips that: one global descriptor heap holds every resource, and shaders index into it directly (`ResourceDescriptorHeap[idx]`). This changes the execute loop significantly.
+
+<div class="diagram-ftable">
+<table>
+  <tr><th>Concern</th><th>Bound descriptors</th><th>Bindless</th></tr>
+  <tr><td><strong>Execute loop</strong></td><td>Executor builds a per-pass descriptor set matching the pass's root signature layout</td><td>One root signature for all passes — executor just passes integer indices</td></tr>
+  <tr><td><strong>Descriptor lifetime</strong></td><td>Managed by API — bind, draw, release</td><td>Frame graph manages heap slots: allocate on resource creation, free when the resource is culled or the frame ends</td></tr>
+  <tr><td><strong>Aliased resources</strong></td><td>Descriptors implicitly invalidated on rebind</td><td>Two aliased resources share memory but have <em>different</em> descriptor indices — the graph must invalidate or recycle the old slot to prevent stale access</td></tr>
+  <tr><td><strong>Validation</strong></td><td>API validates state at bind time</td><td>No API-level safety — the graph's <code>read()</code>/<code>write()</code> declarations become the <em>only</em> correctness check</td></tr>
+</table>
+</div>
+
+Bindless doesn't change the DAG or the compile phase — sorting, culling, aliasing, and barriers work identically. What it simplifies is the *execution* side: the executor becomes a thin loop that sets a few root constants and dispatches, because every resource is already visible in the global heap. The cost is that you lose API-level validation — a missed `read()` declaration won't trigger a binding error, it'll silently access stale data.
+
 ### 🔗 The RDG–legacy boundary (UE5)
 
 The biggest practical consideration with RDG is the seam between RDG-managed passes and legacy `FRHICommandList` code. At this boundary:
@@ -195,7 +211,7 @@ This boundary is shrinking every release as Epic migrates more passes to RDG, bu
   <div style="font-size:.9em;line-height:1.55"><strong>RDG Insights.</strong> Enable via the Unreal editor to visualize the full pass graph, resource lifetimes, and barrier placement. Use <code>r.RDG.Debug</code> CVars for validation: <code>r.RDG.Debug.FlushGPU</code> serializes execution for debugging, <code>r.RDG.Debug.ExtendResourceLifetimes</code> disables aliasing to isolate corruption bugs. The frame is data — export it, diff it, analyze offline.</div>
 </div>
 
-### 🗺️ Navigating the UE5 RDG source
+### 🗺 Navigating the UE5 RDG source
 
 <div class="diagram-steps">
   <div class="ds-step">

@@ -10,29 +10,29 @@ int main() {
 
     // Import the swapchain backbuffer — the graph tracks barriers
     // but does not own its memory (it lives outside the frame).
-    auto backbuffer = fg.importResource({1920, 1080, Format::RGBA8});
+    auto backbuffer = fg.ImportResource({1920, 1080, Format::RGBA8});
 
-    auto depth = fg.createResource({1920, 1080, Format::D32F});
-    auto gbufA = fg.createResource({1920, 1080, Format::RGBA8});
-    auto gbufN = fg.createResource({1920, 1080, Format::RGBA8});
-    auto hdr   = fg.createResource({1920, 1080, Format::RGBA16F});
+    auto depth = fg.CreateResource({1920, 1080, Format::D32F});
+    auto gbufA = fg.CreateResource({1920, 1080, Format::RGBA8});
+    auto gbufN = fg.CreateResource({1920, 1080, Format::RGBA8});
+    auto hdr   = fg.CreateResource({1920, 1080, Format::RGBA16F});
 
-    fg.addPass("DepthPrepass",
+    fg.AddPass("DepthPrepass",
         [&]() { /* setup — v1 doesn't use this */ },
         [&](/*cmd*/) { printf("     draw scene depth-only\n"); });
 
-    fg.addPass("GBuffer",
+    fg.AddPass("GBuffer",
         [&]() { /* setup */ },
         [&](/*cmd*/) { printf("     draw scene -> GBuffer MRTs\n"); });
 
-    fg.addPass("Lighting",
+    fg.AddPass("Lighting",
         [&]() { /* setup */ },
         [&](/*cmd*/) { printf("     fullscreen lighting pass\n"); });
 
-    fg.addPass("Present",
+    fg.AddPass("Present",
         [&]() { /* setup */ },
         [&](/*cmd*/) { printf("     copy HDR -> backbuffer\n"); });
 
-    fg.execute();
+    fg.Execute();
     return 0;
 }

@@ -21,14 +21,14 @@ struct ResourceDesc {
 
 struct ResourceHandle {
     uint32_t index = UINT32_MAX;
-    bool isValid() const { return index != UINT32_MAX; }
+    bool IsValid() const { return index != UINT32_MAX; }
 };
 
 // == Resource state tracking ===================================
 enum class ResourceState { Undefined, ColorAttachment, DepthAttachment,
                            ShaderRead, Present };
 
-inline const char* stateName(ResourceState s) {
+inline const char* StateName(ResourceState s) {
     switch (s) {
         case ResourceState::Undefined:       return "Undefined";
         case ResourceState::ColorAttachment: return "ColorAttachment";
@@ -42,6 +42,7 @@ inline const char* stateName(ResourceState s) {
 struct ResourceVersion {
     uint32_t writerPass = UINT32_MAX;
     std::vector<uint32_t> readerPasses;
+    bool HasWriter() const { return writerPass != UINT32_MAX; }
 };
 
 struct ResourceEntry {
@@ -58,7 +59,7 @@ struct PhysicalBlock {
 };
 
 // == Bytes-per-pixel helper (NEW v3) ===========================
-inline uint32_t bytesPerPixel(Format fmt) {
+inline uint32_t BytesPerPixel(Format fmt) {
     switch (fmt) {
         case Format::R8:      return 1;
         case Format::RGBA8:   return 4;
@@ -78,8 +79,8 @@ struct Lifetime {
 // == Render pass ===============================================
 struct RenderPass {
     std::string name;
-    std::function<void()>             setup;
-    std::function<void(/*cmd list*/)> execute;
+    std::function<void()>             Setup;
+    std::function<void(/*cmd list*/)> Execute;
 
     std::vector<ResourceHandle> reads;
     std::vector<ResourceHandle> writes;
@@ -92,45 +93,42 @@ struct RenderPass {
 // == Frame graph (v3: full MVP) ================================
 class FrameGraph {
 public:
-    ResourceHandle createResource(const ResourceDesc& desc);
-    ResourceHandle importResource(const ResourceDesc& desc,
+    ResourceHandle CreateResource(const ResourceDesc& desc);
+    ResourceHandle ImportResource(const ResourceDesc& desc,
                                   ResourceState initialState = ResourceState::Undefined);
 
-    void read(uint32_t passIdx, ResourceHandle h);
-    void write(uint32_t passIdx, ResourceHandle h);
+    void Read(uint32_t passIdx, ResourceHandle h);
+    void Write(uint32_t passIdx, ResourceHandle h);
 
     template <typename SetupFn, typename ExecFn>
-    void addPass(const std::string& name, SetupFn&& setup, ExecFn&& exec) {
-        uint32_t idx = static_cast<uint32_t>(passes.size());
+    void AddPass(const std::string& name, SetupFn&& setup, ExecFn&& exec) {
         passes.push_back({ name, std::forward<SetupFn>(setup),
                                    std::forward<ExecFn>(exec) });
-        currentPass = idx;
-        passes.back().setup();
+        passes.back().Setup();
     }
 
     // == v3: compile â€” builds the execution plan + allocates memory ==
     struct CompiledPlan {
         std::vector<uint32_t> sorted;
-        std::vector<uint32_t> mapping;   // mapping[virtualIdx] â†’ physicalBlock
+        std::vector<uint32_t> mapping;   // mapping[virtualIdx] → physicalBlock
     };
 
-    CompiledPlan compile();
+    CompiledPlan Compile();
 
     // == v3: execute â€” runs the compiled plan =================
-    void execute(const CompiledPlan& plan);
+    void Execute(const CompiledPlan& plan);
 
     // convenience: compile + execute in one call
-    void execute();
+    void Execute();
 
 private:
-    uint32_t currentPass = 0;
     std::vector<RenderPass>    passes;
     std::vector<ResourceEntry> entries;
 
-    void buildEdges();
-    std::vector<uint32_t> topoSort();
-    void cull(const std::vector<uint32_t>& sorted);
-    void insertBarriers(uint32_t passIdx);
-    std::vector<Lifetime> scanLifetimes(const std::vector<uint32_t>& sorted);  // NEW v3
-    std::vector<uint32_t> aliasResources(const std::vector<Lifetime>& lifetimes); // NEW v3
+    void BuildEdges();
+    std::vector<uint32_t> TopoSort();
+    void Cull(const std::vector<uint32_t>& sorted);
+    void InsertBarriers(uint32_t passIdx);
+    std::vector<Lifetime> ScanLifetimes(const std::vector<uint32_t>& sorted);  // NEW v3
+    std::vector<uint32_t> AliasResources(const std::vector<Lifetime>& lifetimes); // NEW v3
 };

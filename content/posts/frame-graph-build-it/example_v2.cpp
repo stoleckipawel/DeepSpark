@@ -9,36 +9,36 @@ int main() {
     FrameGraph fg;
 
     // Import the swapchain backbuffer — externally owned.
-    auto backbuffer = fg.importResource({1920, 1080, Format::RGBA8},
+    auto backbuffer = fg.ImportResource({1920, 1080, Format::RGBA8},
                                         ResourceState::Present);
 
-    auto depth = fg.createResource({1920, 1080, Format::D32F});
-    auto gbufA = fg.createResource({1920, 1080, Format::RGBA8});
-    auto hdr   = fg.createResource({1920, 1080, Format::RGBA16F});
-    auto debug = fg.createResource({1920, 1080, Format::RGBA8});
+    auto depth = fg.CreateResource({1920, 1080, Format::D32F});
+    auto gbufA = fg.CreateResource({1920, 1080, Format::RGBA8});
+    auto hdr   = fg.CreateResource({1920, 1080, Format::RGBA16F});
+    auto debug = fg.CreateResource({1920, 1080, Format::RGBA8});
 
-    fg.addPass("DepthPrepass",
-        [&]() { fg.write(0, depth); },
+    fg.AddPass("DepthPrepass",
+        [&]() { fg.Write(0, depth); },
         [&](/*cmd*/) { printf("  >> exec: DepthPrepass\n"); });
 
-    fg.addPass("GBuffer",
-        [&]() { fg.read(1, depth); fg.write(1, gbufA); },
+    fg.AddPass("GBuffer",
+        [&]() { fg.Read(1, depth); fg.Write(1, gbufA); },
         [&](/*cmd*/) { printf("  >> exec: GBuffer\n"); });
 
-    fg.addPass("Lighting",
-        [&]() { fg.read(2, gbufA); fg.write(2, hdr); },
+    fg.AddPass("Lighting",
+        [&]() { fg.Read(2, gbufA); fg.Write(2, hdr); },
         [&](/*cmd*/) { printf("  >> exec: Lighting\n"); });
 
     // Present — writes to the imported backbuffer.
-    fg.addPass("Present",
-        [&]() { fg.read(3, hdr); fg.write(3, backbuffer); },
+    fg.AddPass("Present",
+        [&]() { fg.Read(3, hdr); fg.Write(3, backbuffer); },
         [&](/*cmd*/) { printf("  >> exec: Present\n"); });
 
     // Dead pass — nothing reads debug, so the graph will cull it.
-    fg.addPass("DebugOverlay",
-        [&]() { fg.write(4, debug); },
+    fg.AddPass("DebugOverlay",
+        [&]() { fg.Write(4, debug); },
         [&](/*cmd*/) { printf("  >> exec: DebugOverlay\n"); });
 
-    fg.execute();
+    fg.Execute();
     return 0;
 }

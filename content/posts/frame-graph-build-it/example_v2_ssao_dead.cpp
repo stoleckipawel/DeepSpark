@@ -7,29 +7,29 @@ int main() {
     printf("=== v2 Variant B: SSAO Disconnected ===\n");
 
     FrameGraph fg;
-    auto depth = fg.createResource({1920, 1080, Format::D32F});
-    auto gbufA = fg.createResource({1920, 1080, Format::RGBA8});
-    auto ssao  = fg.createResource({1920, 1080, Format::R8});
-    auto hdr   = fg.createResource({1920, 1080, Format::RGBA16F});
+    auto depth = fg.CreateResource({1920, 1080, Format::D32F});
+    auto gbufA = fg.CreateResource({1920, 1080, Format::RGBA8});
+    auto ssao  = fg.CreateResource({1920, 1080, Format::R8});
+    auto hdr   = fg.CreateResource({1920, 1080, Format::RGBA16F});
 
-    fg.addPass("DepthPrepass",
-        [&]() { fg.write(0, depth); },
+    fg.AddPass("DepthPrepass",
+        [&]() { fg.Write(0, depth); },
         [&](/*cmd*/) { printf("  >> exec: DepthPrepass\n"); });
 
-    fg.addPass("GBuffer",
-        [&]() { fg.read(1, depth); fg.write(1, gbufA); },
+    fg.AddPass("GBuffer",
+        [&]() { fg.Read(1, depth); fg.Write(1, gbufA); },
         [&](/*cmd*/) { printf("  >> exec: GBuffer\n"); });
 
-    fg.addPass("SSAO",
-        [&]() { fg.read(2, depth); fg.write(2, ssao); },
+    fg.AddPass("SSAO",
+        [&]() { fg.Read(2, depth); fg.Write(2, ssao); },
         [&](/*cmd*/) { printf("  >> exec: SSAO\n"); });
 
     // Lighting does NOT read ssao — only reads gbufA
-    fg.addPass("Lighting",
-        [&]() { fg.read(3, gbufA); fg.write(3, hdr); },
+    fg.AddPass("Lighting",
+        [&]() { fg.Read(3, gbufA); fg.Write(3, hdr); },
         [&](/*cmd*/) { printf("  >> exec: Lighting\n"); });
 
     printf("Lighting does NOT read SSAO -> SSAO gets culled.\n");
-    fg.execute();
+    fg.Execute();
     return 0;
 }

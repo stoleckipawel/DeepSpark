@@ -21,14 +21,14 @@ struct ResourceDesc {
 
 struct ResourceHandle {
     uint32_t index = UINT32_MAX;
-    bool isValid() const { return index != UINT32_MAX; }
+    bool IsValid() const { return index != UINT32_MAX; }
 };
 
 // == Resource state tracking (NEW v2) ==========================
 enum class ResourceState { Undefined, ColorAttachment, DepthAttachment,
                            ShaderRead, Present };
 
-inline const char* stateName(ResourceState s) {
+inline const char* StateName(ResourceState s) {
     switch (s) {
         case ResourceState::Undefined:       return "Undefined";
         case ResourceState::ColorAttachment: return "ColorAttachment";
@@ -42,6 +42,7 @@ inline const char* stateName(ResourceState s) {
 struct ResourceVersion {                 // NEW v2
     uint32_t writerPass = UINT32_MAX;    // which pass wrote this version
     std::vector<uint32_t> readerPasses;  // which passes read it
+    bool HasWriter() const { return writerPass != UINT32_MAX; }
 };
 
 // Extend ResourceDesc with tracking:
@@ -55,8 +56,8 @@ struct ResourceEntry {
 // == Updated render pass =======================================
 struct RenderPass {
     std::string name;
-    std::function<void()>             setup;
-    std::function<void(/*cmd list*/)> execute;
+    std::function<void()>             Setup;
+    std::function<void(/*cmd list*/)> Execute;
 
     std::vector<ResourceHandle> reads;    // NEW v2
     std::vector<ResourceHandle> writes;   // NEW v2
@@ -69,37 +70,34 @@ struct RenderPass {
 // == Updated FrameGraph ========================================
 class FrameGraph {
 public:
-    ResourceHandle createResource(const ResourceDesc& desc);
+    ResourceHandle CreateResource(const ResourceDesc& desc);
 
     // Import an external resource (e.g. swapchain backbuffer).
     // The graph tracks barriers but does not own or alias its memory.
-    ResourceHandle importResource(const ResourceDesc& desc,
+    ResourceHandle ImportResource(const ResourceDesc& desc,
                                   ResourceState initialState = ResourceState::Undefined);
 
     // Declare a read â€” links this pass to the resource's current version.
-    void read(uint32_t passIdx, ResourceHandle h);    // NEW v2
+    void Read(uint32_t passIdx, ResourceHandle h);    // NEW v2
 
     // Declare a write â€” creates a new version of the resource.
-    void write(uint32_t passIdx, ResourceHandle h);   // NEW v2
+    void Write(uint32_t passIdx, ResourceHandle h);   // NEW v2
 
     template <typename SetupFn, typename ExecFn>
-    void addPass(const std::string& name, SetupFn&& setup, ExecFn&& exec) {
-        uint32_t idx = static_cast<uint32_t>(passes.size());
+    void AddPass(const std::string& name, SetupFn&& setup, ExecFn&& exec) {
         passes.push_back({ name, std::forward<SetupFn>(setup),
                                    std::forward<ExecFn>(exec) });
-        currentPass = idx;   // NEW v2 â€” so setup can call read()/write()
-        passes.back().setup();
+        passes.back().Setup();
     }
 
-    void execute();
+    void Execute();
 
 private:
-    uint32_t currentPass = 0;
     std::vector<RenderPass>    passes;
     std::vector<ResourceEntry> entries;
 
-    void buildEdges();                                // NEW v2
-    std::vector<uint32_t> topoSort();                 // NEW v2
-    void cull(const std::vector<uint32_t>& sorted);   // NEW v2
-    void insertBarriers(uint32_t passIdx);             // NEW v2
+    void BuildEdges();                                // NEW v2
+    std::vector<uint32_t> TopoSort();                 // NEW v2
+    void Cull(const std::vector<uint32_t>& sorted);   // NEW v2
+    void InsertBarriers(uint32_t passIdx);             // NEW v2
 };

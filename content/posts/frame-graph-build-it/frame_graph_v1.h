@@ -23,36 +23,36 @@ struct ResourceDesc {
 // No GPU memory behind it yet -- just a number.
 struct ResourceHandle {
     uint32_t index = UINT32_MAX;
-    bool isValid() const { return index != UINT32_MAX; }
+    bool IsValid() const { return index != UINT32_MAX; }
 };
 
 // == Render pass ===============================================
 struct RenderPass {
     std::string                        name;
-    std::function<void()>              setup;    // build the DAG (v1: unused)
-    std::function<void(/*cmd list*/)>  execute;  // record GPU commands
+    std::function<void()>              Setup;    // build the DAG (v1: unused)
+    std::function<void(/*cmd list*/)>  Execute;  // record GPU commands
 };
 
 // == Frame graph ===============================================
 class FrameGraph {
 public:
     // Create a virtual resource -- returns a handle, not GPU memory.
-    ResourceHandle createResource(const ResourceDesc& desc);
+    ResourceHandle CreateResource(const ResourceDesc& desc);
 
     // Import an external resource (e.g. swapchain backbuffer).
     // Barriers are tracked, but the graph does not own its memory.
-    ResourceHandle importResource(const ResourceDesc& desc);
+    ResourceHandle ImportResource(const ResourceDesc& desc);
 
     // Register a pass. Setup runs now; execute is stored for later.
     template <typename SetupFn, typename ExecFn>
-    void addPass(const std::string& name, SetupFn&& setup, ExecFn&& exec) {
+    void AddPass(const std::string& name, SetupFn&& setup, ExecFn&& exec) {
         passes.push_back({ name, std::forward<SetupFn>(setup),
                                    std::forward<ExecFn>(exec) });
-        passes.back().setup();  // run setup immediately
+        passes.back().Setup();  // run setup immediately
     }
 
     // Compile + execute. v1 is trivial -- just run in declaration order.
-    void execute();
+    void Execute();
 
 private:
     std::vector<RenderPass>    passes;

@@ -80,7 +80,7 @@ Behind every smooth frame is a brutal scheduling problem — which passes can ru
       <div style="font-size:.82em;opacity:.7;line-height:1.4;margin-top:.2em;">Working C++ frame graph, from scratch to prototype in ~300 lines</div>
     </div>
     <div style="padding:1em;text-align:center;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.12);">
-      <div style="font-size:1.6em;margin-bottom:.15em;">🗺️</div>
+      <div style="font-size:1.6em;margin-bottom:.15em;">🗺</div>
       <div style="font-weight:800;font-size:.95em;">Map to UE5</div>
       <div style="font-size:.82em;opacity:.7;line-height:1.4;margin-top:.2em;">Every piece maps to RDG — read the source with confidence</div>
     </div>
@@ -346,7 +346,7 @@ When you declare a resource, the graph needs to know one thing: **does it live i
 
 ---
 
-## ⚙️ The Compile Step
+## ⚙ The Compile Step
 
 The declared DAG goes in; an optimized execution plan comes out — all on the CPU, in microseconds.
 
@@ -520,7 +520,7 @@ The allocator is a two-step process:
     <div style="font-size:.78em;font-weight:700;text-transform:uppercase;letter-spacing:.03em;opacity:.45;margin-bottom:.4em;">Production optimizations</div>
     <div style="display:grid;grid-template-columns:auto 1fr;gap:.2em .8em;font-size:.85em;line-height:1.6;">
       <span style="font-weight:700;opacity:.7;">🪣 Bucketing</span><span>Round sizes to power-of-two (4, 8, 16 MB…) — fewer distinct sizes means heaps are reusable across resources</span>
-      <span style="font-weight:700;opacity:.7;">♻️ Pooling</span><span>Keep heaps across frames. Next frame's <code>compile()</code> pulls from the pool — allocation cost drops to near zero</span>
+      <span style="font-weight:700;opacity:.7;">♻ Pooling</span><span>Keep heaps across frames. Next frame's <code>compile()</code> pulls from the pool — allocation cost drops to near zero</span>
     </div>
   </div>
 
@@ -550,12 +550,12 @@ Step through a full pipeline — watch each resource's state update as passes ex
 
 ---
 
-## ▶️ The Execute Step
+## ▶ The Execute Step
 
 The plan is ready — now the GPU gets involved. Every decision has already been made during compile: pass order, memory layout, barriers, physical resource bindings. Execute just walks the plan.
 
 <div class="diagram-box">
-  <div class="db-title">▶️ EXECUTE — recording GPU commands</div>
+  <div class="db-title">▶ EXECUTE — recording GPU commands</div>
   <div class="db-body">
     <div class="diagram-pipeline">
       <div class="dp-stage">
@@ -683,7 +683,7 @@ Most engines use **dynamic** or **hybrid**. The compile is so cheap that caching
 
 ---
 
-## 🎛️ Your First Full Pipeline
+## 🎛 Your First Full Pipeline
 
 You've now seen every piece the compiler works with — sorting, culling, barriers, aliasing. In a 5-pass toy example they feel manageable. In a real renderer? You're looking at **15–25 passes, 30+ resource edges, and dozens of implicit dependencies** — all inferred from `read()` and `write()` calls that no human can hold in their head at once.
 

@@ -7,34 +7,34 @@ int main() {
     // [1] Declare — describe resources and register passes
 
     // Import the swapchain backbuffer — externally owned, not aliased.
-    auto backbuffer = fg.importResource({1920, 1080, Format::RGBA8},
+    auto backbuffer = fg.ImportResource({1920, 1080, Format::RGBA8},
                                         ResourceState::Present);
 
     // Transient resources — graph-owned, eligible for aliasing.
-    auto depth = fg.createResource({1920, 1080, Format::D32F});
-    auto gbufA = fg.createResource({1920, 1080, Format::RGBA8});
-    auto gbufN = fg.createResource({1920, 1080, Format::RGBA8});
-    auto hdr   = fg.createResource({1920, 1080, Format::RGBA16F});
+    auto depth = fg.CreateResource({1920, 1080, Format::D32F});
+    auto gbufA = fg.CreateResource({1920, 1080, Format::RGBA8});
+    auto gbufN = fg.CreateResource({1920, 1080, Format::RGBA8});
+    auto hdr   = fg.CreateResource({1920, 1080, Format::RGBA16F});
 
-    fg.addPass("DepthPrepass",
-        [&]() { fg.write(0, depth); },
+    fg.AddPass("DepthPrepass",
+        [&]() { fg.Write(0, depth); },
         [&](/*cmd*/) { /* draw scene depth-only */ });
 
-    fg.addPass("GBuffer",
-        [&]() { fg.read(1, depth); fg.write(1, gbufA); fg.write(1, gbufN); },
+    fg.AddPass("GBuffer",
+        [&]() { fg.Read(1, depth); fg.Write(1, gbufA); fg.Write(1, gbufN); },
         [&](/*cmd*/) { /* draw scene to GBuffer MRTs */ });
 
-    fg.addPass("Lighting",
-        [&]() { fg.read(2, gbufA); fg.read(2, gbufN); fg.write(2, hdr); },
+    fg.AddPass("Lighting",
+        [&]() { fg.Read(2, gbufA); fg.Read(2, gbufN); fg.Write(2, hdr); },
         [&](/*cmd*/) { /* fullscreen lighting pass */ });
 
-    fg.addPass("Present",
-        [&]() { fg.read(3, hdr); fg.write(3, backbuffer); },
+    fg.AddPass("Present",
+        [&]() { fg.Read(3, hdr); fg.Write(3, backbuffer); },
         [&](/*cmd*/) { /* copy to backbuffer, present */ });
 
     // [2] Compile — topo-sort, cull, emit barriers, alias memory
-    auto plan = fg.compile();
+    auto plan = fg.Compile();
 
     // [3] Execute — run each pass in compiled order
-    fg.execute(plan);
+    fg.Execute(plan);
 }

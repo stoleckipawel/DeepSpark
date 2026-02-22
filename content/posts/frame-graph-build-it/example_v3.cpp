@@ -10,47 +10,47 @@ int main() {
 
     // Import the swapchain backbuffer — externally owned.
     // The graph tracks barriers but won't alias it.
-    auto backbuffer = fg.importResource({1920, 1080, Format::RGBA8},
+    auto backbuffer = fg.ImportResource({1920, 1080, Format::RGBA8},
                                         ResourceState::Present);
 
-    auto depth = fg.createResource({1920, 1080, Format::D32F});
-    auto gbufA = fg.createResource({1920, 1080, Format::RGBA8});
-    auto gbufN = fg.createResource({1920, 1080, Format::RGBA8});
-    auto hdr   = fg.createResource({1920, 1080, Format::RGBA16F});
-    auto bloom = fg.createResource({960,  540,  Format::RGBA16F});
-    auto debug = fg.createResource({1920, 1080, Format::RGBA8});
+    auto depth = fg.CreateResource({1920, 1080, Format::D32F});
+    auto gbufA = fg.CreateResource({1920, 1080, Format::RGBA8});
+    auto gbufN = fg.CreateResource({1920, 1080, Format::RGBA8});
+    auto hdr   = fg.CreateResource({1920, 1080, Format::RGBA16F});
+    auto bloom = fg.CreateResource({960,  540,  Format::RGBA16F});
+    auto debug = fg.CreateResource({1920, 1080, Format::RGBA8});
 
-    fg.addPass("DepthPrepass",
-        [&]() { fg.write(0, depth); },
+    fg.AddPass("DepthPrepass",
+        [&]() { fg.Write(0, depth); },
         [&](/*cmd*/) { printf("  >> exec: DepthPrepass\n"); });
 
-    fg.addPass("GBuffer",
-        [&]() { fg.read(1, depth); fg.write(1, gbufA); fg.write(1, gbufN); },
+    fg.AddPass("GBuffer",
+        [&]() { fg.Read(1, depth); fg.Write(1, gbufA); fg.Write(1, gbufN); },
         [&](/*cmd*/) { printf("  >> exec: GBuffer\n"); });
 
-    fg.addPass("Lighting",
-        [&]() { fg.read(2, gbufA); fg.read(2, gbufN); fg.write(2, hdr); },
+    fg.AddPass("Lighting",
+        [&]() { fg.Read(2, gbufA); fg.Read(2, gbufN); fg.Write(2, hdr); },
         [&](/*cmd*/) { printf("  >> exec: Lighting\n"); });
 
-    fg.addPass("Bloom",
-        [&]() { fg.read(3, hdr); fg.write(3, bloom); },
+    fg.AddPass("Bloom",
+        [&]() { fg.Read(3, hdr); fg.Write(3, bloom); },
         [&](/*cmd*/) { printf("  >> exec: Bloom\n"); });
 
-    fg.addPass("Tonemap",
-        [&]() { fg.read(4, bloom); fg.write(4, hdr); },
+    fg.AddPass("Tonemap",
+        [&]() { fg.Read(4, bloom); fg.Write(4, hdr); },
         [&](/*cmd*/) { printf("  >> exec: Tonemap\n"); });
 
     // Present — reads HDR, writes to imported backbuffer.
-    fg.addPass("Present",
-        [&]() { fg.read(5, hdr); fg.write(5, backbuffer); },
+    fg.AddPass("Present",
+        [&]() { fg.Read(5, hdr); fg.Write(5, backbuffer); },
         [&](/*cmd*/) { printf("  >> exec: Present\n"); });
 
     // Dead pass — nothing reads debug, so the graph will cull it.
-    fg.addPass("DebugOverlay",
-        [&]() { fg.write(6, debug); },
+    fg.AddPass("DebugOverlay",
+        [&]() { fg.Write(6, debug); },
         [&](/*cmd*/) { printf("  >> exec: DebugOverlay\n"); });
 
-    auto plan = fg.compile();   // topo-sort, cull, alias
-    fg.execute(plan);             // barriers + run
+    auto plan = fg.Compile();   // topo-sort, cull, alias
+    fg.Execute(plan);             // barriers + run
     return 0;
 }

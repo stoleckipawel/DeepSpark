@@ -8,27 +8,27 @@
 
 // == FrameGraph implementation =================================
 
-ResourceHandle FrameGraph::createResource(const ResourceDesc& desc) {
+ResourceHandle FrameGraph::CreateResource(const ResourceDesc& desc) {
     entries.push_back({ desc, {{}}, ResourceState::Undefined });
     return { static_cast<uint32_t>(entries.size() - 1) };
 }
 
-ResourceHandle FrameGraph::importResource(const ResourceDesc& desc,
+ResourceHandle FrameGraph::ImportResource(const ResourceDesc& desc,
                                           ResourceState initialState) {
     entries.push_back({ desc, {{}}, initialState, true });
     return { static_cast<uint32_t>(entries.size() - 1) };
 }
 
-void FrameGraph::read(uint32_t passIdx, ResourceHandle h) {
+void FrameGraph::Read(uint32_t passIdx, ResourceHandle h) {
     auto& ver = entries[h.index].versions.back();
-    if (ver.writerPass != UINT32_MAX) {
+    if (ver.HasWriter()) {
         passes[passIdx].dependsOn.push_back(ver.writerPass);
     }
     ver.readerPasses.push_back(passIdx);
     passes[passIdx].reads.push_back(h);
 }
 
-void FrameGraph::write(uint32_t passIdx, ResourceHandle h) {
+void FrameGraph::Write(uint32_t passIdx, ResourceHandle h) {
     entries[h.index].versions.push_back({});
     entries[h.index].versions.back().writerPass = passIdx;
     passes[passIdx].writes.push_back(h);
@@ -36,17 +36,17 @@ void FrameGraph::write(uint32_t passIdx, ResourceHandle h) {
 
 // == v3: compile â€” builds the execution plan + allocates memory ==
 
-FrameGraph::CompiledPlan FrameGraph::compile() {
+FrameGraph::CompiledPlan FrameGraph::Compile() {
     printf("\n[1] Building dependency edges...\n");
-    buildEdges();
+    BuildEdges();
     printf("[2] Topological sort...\n");
-    auto sorted   = topoSort();
+    auto sorted   = TopoSort();
     printf("[3] Culling dead passes...\n");
-    cull(sorted);
+    Cull(sorted);
     printf("[4] Scanning resource lifetimes...\n");
-    auto lifetimes = scanLifetimes(sorted);   // NEW v3
+    auto lifetimes = ScanLifetimes(sorted);   // NEW v3
     printf("[5] Aliasing resources (greedy free-list)...\n");
-    auto mapping   = aliasResources(lifetimes); // NEW v3
+    auto mapping   = AliasResources(lifetimes); // NEW v3
 
     // Physical bindings are now decided â€” execute can't change them.
     // This makes the compiled plan cacheable and thread-safe.
@@ -55,26 +55,26 @@ FrameGraph::CompiledPlan FrameGraph::compile() {
 
 // == v3: execute â€” runs the compiled plan =====================
 
-void FrameGraph::execute(const CompiledPlan& plan) {
+void FrameGraph::Execute(const CompiledPlan& plan) {
     printf("[6] Executing (with automatic barriers):\n");
     for (uint32_t idx : plan.sorted) {
         if (!passes[idx].alive) {
             printf("  -- skip: %s (CULLED)\n", passes[idx].name.c_str());
             continue;
         }
-        insertBarriers(idx);
-        passes[idx].execute(/* &cmdList */);
+        InsertBarriers(idx);
+        passes[idx].Execute(/* &cmdList */);
     }
     passes.clear();
     entries.clear();
 }
 
 // convenience: compile + execute in one call
-void FrameGraph::execute() { execute(compile()); }
+void FrameGraph::Execute() { Execute(Compile()); }
 
 // == Build dependency edges ====================================
 
-void FrameGraph::buildEdges() {
+void FrameGraph::BuildEdges() {
     for (uint32_t i = 0; i < passes.size(); i++) {
         std::unordered_set<uint32_t> seen;
         for (uint32_t dep : passes[i].dependsOn) {
@@ -88,7 +88,7 @@ void FrameGraph::buildEdges() {
 
 // == Kahn's topological sort â€” O(V + E) ========================
 
-std::vector<uint32_t> FrameGraph::topoSort() {
+std::vector<uint32_t> FrameGraph::TopoSort() {
     std::queue<uint32_t> q;
     std::vector<uint32_t> inDeg(passes.size());
     for (uint32_t i = 0; i < passes.size(); i++) {
@@ -115,7 +115,7 @@ std::vector<uint32_t> FrameGraph::topoSort() {
 
 // == Cull dead passes ==========================================
 
-void FrameGraph::cull(const std::vector<uint32_t>& sorted) {
+void FrameGraph::Cull(const std::vector<uint32_t>& sorted) {
     if (sorted.empty()) return;
     passes[sorted.back()].alive = true;
     for (int i = static_cast<int>(sorted.size()) - 1; i >= 0; i--) {
@@ -133,8 +133,8 @@ void FrameGraph::cull(const std::vector<uint32_t>& sorted) {
 
 // == Insert barriers ===========================================
 
-void FrameGraph::insertBarriers(uint32_t passIdx) {
-    auto stateForUsage = [](bool isWrite, Format fmt) {
+void FrameGraph::InsertBarriers(uint32_t passIdx) {
+    auto StateForUsage = [](bool isWrite, Format fmt) {
         if (isWrite)
             return (fmt == Format::D32F) ? ResourceState::DepthAttachment
                                          : ResourceState::ColorAttachment;
@@ -146,18 +146,18 @@ void FrameGraph::insertBarriers(uint32_t passIdx) {
         if (entries[h.index].currentState != needed) {
             printf("    barrier: resource[%u] %s -> %s\n",
                    h.index,
-                   stateName(entries[h.index].currentState),
-                   stateName(needed));
+                   StateName(entries[h.index].currentState),
+                   StateName(needed));
             entries[h.index].currentState = needed;
         }
     }
     for (auto& h : passes[passIdx].writes) {
-        ResourceState needed = stateForUsage(true, entries[h.index].desc.format);
+        ResourceState needed = StateForUsage(true, entries[h.index].desc.format);
         if (entries[h.index].currentState != needed) {
             printf("    barrier: resource[%u] %s -> %s\n",
                    h.index,
-                   stateName(entries[h.index].currentState),
-                   stateName(needed));
+                   StateName(entries[h.index].currentState),
+                   StateName(needed));
             entries[h.index].currentState = needed;
         }
     }
@@ -165,7 +165,7 @@ void FrameGraph::insertBarriers(uint32_t passIdx) {
 
 // == Scan lifetimes (NEW v3) ===================================
 
-std::vector<Lifetime> FrameGraph::scanLifetimes(const std::vector<uint32_t>& sorted) {
+std::vector<Lifetime> FrameGraph::ScanLifetimes(const std::vector<uint32_t>& sorted) {
     std::vector<Lifetime> life(entries.size());
 
     // Imported resources are not transient â€” skip them during aliasing.
@@ -200,7 +200,7 @@ std::vector<Lifetime> FrameGraph::scanLifetimes(const std::vector<uint32_t>& sor
 
 // == Greedy free-list aliasing (NEW v3) ========================
 
-std::vector<uint32_t> FrameGraph::aliasResources(const std::vector<Lifetime>& lifetimes) {
+std::vector<uint32_t> FrameGraph::AliasResources(const std::vector<Lifetime>& lifetimes) {
     std::vector<PhysicalBlock> freeList;
     std::vector<uint32_t> mapping(entries.size(), UINT32_MAX);
     uint32_t totalWithout = 0;
@@ -218,7 +218,7 @@ std::vector<uint32_t> FrameGraph::aliasResources(const std::vector<Lifetime>& li
 
         uint32_t needed = entries[resIdx].desc.width
                         * entries[resIdx].desc.height
-                        * bytesPerPixel(entries[resIdx].desc.format);
+                        * BytesPerPixel(entries[resIdx].desc.format);
         totalWithout += needed;
         bool reused = false;
 

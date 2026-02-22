@@ -38,10 +38,10 @@ showTableOfContents: false
       <div style="font-size:.84em;line-height:1.5;opacity:.85;margin-bottom:.5em;">Pass declaration, virtual resources, execute in order. The skeleton everything else plugs into.</div>
       <!-- unlocks -->
       <div style="display:flex;flex-wrap:wrap;gap:.35em;margin-bottom:.6em;">
-        <span style="font-size:.68em;padding:.15em .55em;border-radius:9px;background:rgba(var(--ds-info-rgb),.1);color:var(--ds-info);font-weight:700;">🔓 addPass</span>
-        <span style="font-size:.68em;padding:.15em .55em;border-radius:9px;background:rgba(var(--ds-info-rgb),.1);color:var(--ds-info);font-weight:700;">🔓 createResource</span>
-        <span style="font-size:.68em;padding:.15em .55em;border-radius:9px;background:rgba(var(--ds-info-rgb),.1);color:var(--ds-info);font-weight:700;">🔓 importResource</span>
-        <span style="font-size:.68em;padding:.15em .55em;border-radius:9px;background:rgba(var(--ds-info-rgb),.1);color:var(--ds-info);font-weight:700;">🔓 execute()</span>
+        <span style="font-size:.68em;padding:.15em .55em;border-radius:9px;background:rgba(var(--ds-info-rgb),.1);color:var(--ds-info);font-weight:700;">🔓 AddPass</span>
+        <span style="font-size:.68em;padding:.15em .55em;border-radius:9px;background:rgba(var(--ds-info-rgb),.1);color:var(--ds-info);font-weight:700;">🔓 CreateResource</span>
+        <span style="font-size:.68em;padding:.15em .55em;border-radius:9px;background:rgba(var(--ds-info-rgb),.1);color:var(--ds-info);font-weight:700;">🔓 ImportResource</span>
+        <span style="font-size:.68em;padding:.15em .55em;border-radius:9px;background:rgba(var(--ds-info-rgb),.1);color:var(--ds-info);font-weight:700;">🔓 Execute()</span>
       </div>
       <!-- power bar -->
       <div style="height:8px;border-radius:4px;background:rgba(127,127,127,.08);overflow:hidden;">
@@ -103,7 +103,7 @@ showTableOfContents: false
 
 ---
 
-## 🏗️ Architecture & API Decisions
+## 🏗 Architecture & API Decisions
 
 We start from the API you *want* to write, then build toward it — starting with bare scaffolding and ending with automatic barriers and memory aliasing.
 
@@ -113,15 +113,15 @@ classDiagram
     direction LR
 
     class FrameGraph {
-        -vector passes_
-        -vector entries_
-        +createResource(desc) ResourceHandle
-        +importResource(desc, state) ResourceHandle
-        +addPass(name, setup, execute) void
-        +read(passIdx, handle) void
-        +write(passIdx, handle) void
-        +compile() Plan
-        +execute(plan) void
+        -vector passes
+        -vector entries
+        +CreateResource(desc) ResourceHandle
+        +ImportResource(desc, state) ResourceHandle
+        +AddPass(name, setup, execute) void
+        +Read(passIdx, handle) void
+        +Write(passIdx, handle) void
+        +Compile() CompiledPlan
+        +Execute(plan) void
     }
 
     class RenderPass {
@@ -136,7 +136,7 @@ classDiagram
 
     class ResourceHandle {
         +uint32_t index
-        +isValid() bool
+        +IsValid() bool
     }
 
     class ResourceDesc {
@@ -219,14 +219,14 @@ The three-phase model from [Part I](../frame-graph-theory/) forces nine API deci
   <td style="padding:.5em .6em;">How does setup talk to execute?</td>
   <td style="padding:.5em .6em;white-space:nowrap;"><strong>Lambda captures</strong></td>
   <td style="padding:.5em .6em;opacity:.8;">Zero boilerplate — handles live in scope, both lambdas capture them directly. Won't scale past one TU per pass; migrate to typed pass data when that matters.</td>
-  <td style="padding:.5em .6em;opacity:.55;font-size:.92em;">Type-erased pass data — <code>addPass&lt;PassData&gt;(setup, exec)</code>. Decouples setup/execute across TUs.</td>
+  <td style="padding:.5em .6em;opacity:.55;font-size:.92em;">Type-erased pass data — <code>AddPass&lt;PassData&gt;(setup, exec)</code>. Decouples setup/execute across TUs.</td>
 </tr>
 <tr style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);background:rgba(var(--ds-indigo-rgb),.02);">
   <td style="padding:.5em .6em;font-weight:700;">②</td>
   <td style="padding:.5em .6em;">Where do DAG edges come from?</td>
-  <td style="padding:.5em .6em;white-space:nowrap;"><strong>Explicit <code>fg.read(pass, h)</code></strong></td>
+  <td style="padding:.5em .6em;white-space:nowrap;"><strong>Explicit <code>fg.Read/Write(pass, h)</code></strong></td>
   <td style="padding:.5em .6em;opacity:.8;">Every edge is an explicit call — easy to grep and debug. Scales fine; a scoped builder is syntactic sugar, not a structural change.</td>
-  <td style="padding:.5em .6em;opacity:.55;font-size:.92em;">Scoped builder — <code>builder.read(h)</code> auto-binds to the current pass. Prevents mis-wiring at scale.</td>
+  <td style="padding:.5em .6em;opacity:.55;font-size:.92em;">Scoped builder — <code>builder.Read/Write(h)</code> auto-binds to the current pass. Prevents mis-wiring at scale.</td>
 </tr>
 <tr style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);">
   <td style="padding:.5em .6em;font-weight:700;">③</td>
@@ -239,9 +239,9 @@ The three-phase model from [Part I](../frame-graph-theory/) forces nine API deci
 <tr style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);">
   <td style="padding:.5em .6em;font-weight:700;">④</td>
   <td style="padding:.5em .6em;">Is compile explicit?</td>
-  <td style="padding:.5em .6em;white-space:nowrap;"><strong>Yes — <code>compile()→execute(plan)</code></strong></td>
+  <td style="padding:.5em .6em;white-space:nowrap;"><strong>Yes — <code>Compile()→Execute(plan)</code></strong></td>
   <td style="padding:.5em .6em;opacity:.8;">Returned plan struct lets you log, validate, and visualise the DAG — invaluable while learning. Production-ready as-is.</td>
-  <td style="padding:.5em .6em;opacity:.55;font-size:.92em;">Implicit — <code>execute()</code> compiles internally. Simpler call site, less ceremony.</td>
+  <td style="padding:.5em .6em;opacity:.55;font-size:.92em;">Implicit — <code>Execute()</code> compiles internally. Simpler call site, less ceremony.</td>
 </tr>
 <tr style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);background:rgba(var(--ds-indigo-rgb),.02);">
   <td style="padding:.5em .6em;font-weight:700;">⑤</td>
@@ -274,10 +274,10 @@ The three-phase model from [Part I](../frame-graph-theory/) forces nine API deci
 </tr>
 <tr style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);background:rgba(var(--ds-indigo-rgb),.02);">
   <td style="padding:.5em .6em;font-weight:700;">⑨</td>
-  <td style="padding:.5em .6em;">How do callbacks access GPU resources?</td>
+  <td style="padding:.5em .6em;">How does a pass get the actual GPU resource from a handle?</td>
   <td style="padding:.5em .6em;white-space:nowrap;"><strong>Context lookup</strong></td>
-  <td style="padding:.5em .6em;opacity:.8;"><code>ctx.getTexture(handle)</code> — callbacks are self-contained, no pre-binding step. Lookup cost is negligible; pre-bound descriptor tables are an optimisation, not a prerequisite.</td>
-  <td style="padding:.5em .6em;opacity:.55;font-size:.92em;">Pre-bound descriptor tables — executor populates root descriptors before each pass. Zero lookups in the callback, but tighter coupling.</td>
+  <td style="padding:.5em .6em;opacity:.8;"><code>ctx.GetTexture(handle)</code> — each pass asks for what it needs at runtime. One array lookup per resource, trivially cheap. The callback stays self-contained with no setup from the executor.</td>
+  <td style="padding:.5em .6em;opacity:.55;font-size:.92em;">Bindless indices — handles map directly to descriptor-heap slots. The callback passes an integer to the shader (<code>ResourceDescriptorHeap[idx]</code>) with no CPU-side lookup, but requires a bindless-capable API.</td>
 </tr>
 </tbody>
 </table>
@@ -311,7 +311,7 @@ Three types are all we need to start: a `ResourceDesc` (width, height, format �
 +
 +struct ResourceHandle {
 +    uint32_t index = UINT32_MAX;
-+    bool isValid() const { return index != UINT32_MAX; }
++    bool IsValid() const { return index != UINT32_MAX; }
 +};
 {{< /code-diff >}}
 
@@ -321,24 +321,24 @@ A pass is two lambdas — setup (runs now, wires the DAG) and execute (stored fo
 @@ RenderPass @@
 +struct RenderPass {
 +    std::string                        name;
-+    std::function<void()>              setup;    // build the DAG (v1: unused)
-+    std::function<void(/*cmd list*/)>  execute;  // record GPU commands
++    std::function<void()>              Setup;    // build the DAG (v1: unused)
++    std::function<void(/*cmd list*/)>  Execute;  // record GPU commands
 +};
 
 @@ FrameGraph — owns passes + resources @@
 +class FrameGraph {
 +public:
-+    ResourceHandle createResource(const ResourceDesc& desc);
-+    ResourceHandle importResource(const ResourceDesc& desc);
++    ResourceHandle CreateResource(const ResourceDesc& desc);
++    ResourceHandle ImportResource(const ResourceDesc& desc);
 +
 +    template <typename SetupFn, typename ExecFn>
-+    void addPass(const std::string& name, SetupFn&& setup, ExecFn&& exec) {
++    void AddPass(const std::string& name, SetupFn&& setup, ExecFn&& exec) {
 +        passes.push_back({ name, std::forward<SetupFn>(setup),
 +                                  std::forward<ExecFn>(exec) });
-+        passes.back().setup();  // run setup immediately
++        passes.back().Setup();  // run setup immediately
 +    }
 +
-+    void execute();  // v1: just run in declaration order
++    void Execute();  // v1: just run in declaration order
 +
 +private:
 +    std::vector<RenderPass>    passes;
@@ -346,26 +346,26 @@ A pass is two lambdas — setup (runs now, wires the DAG) and execute (stored fo
 +};
 {{< /code-diff >}}
 
-`execute()` is the simplest possible loop — walk passes in order, call each callback, clear everything for the next frame:
+`Execute()` is the simplest possible loop — walk passes in order, call each callback, clear everything for the next frame:
 
 {{< code-diff title="v1 — Implementation (frame_graph_v1.cpp)" >}}
-@@ createResource / importResource @@
-+ResourceHandle FrameGraph::createResource(const ResourceDesc& desc) {
+@@ CreateResource / ImportResource @@
++ResourceHandle FrameGraph::CreateResource(const ResourceDesc& desc) {
 +    resources.push_back(desc);
 +    return { static_cast<uint32_t>(resources.size() - 1) };
 +}
 +
-+ResourceHandle FrameGraph::importResource(const ResourceDesc& desc) {
++ResourceHandle FrameGraph::ImportResource(const ResourceDesc& desc) {
 +    resources.push_back(desc);  // v1: same as create (no aliasing yet)
 +    return { static_cast<uint32_t>(resources.size() - 1) };
 +}
 
 @@ execute — declaration order, no compile step @@
-+void FrameGraph::execute() {
++void FrameGraph::Execute() {
 +    printf("\n[1] Executing (declaration order -- no compile step):\n");
 +    for (auto& pass : passes) {
 +        printf("  >> exec: %s\n", pass.name.c_str());
-+        pass.execute(/* &cmdList */);
++        pass.Execute(/* &cmdList */);
 +    }
 +    passes.clear();
 +    resources.clear();
@@ -418,7 +418,7 @@ Four steps in strict order — each one's output is the next one's input:
   <div style="display:flex;align-items:center;font-size:1.1em;opacity:.35;padding:0 .1em;">→</div>
   <a href="#v2-culling" style="padding:.7em .5em .5em;background:rgba(var(--ds-warn-rgb),.05);text-decoration:none;text-align:center;transition:background .15s;" onmouseover="this.style.background='rgba(var(--ds-warn-rgb),.12)'" onmouseout="this.style.background='rgba(var(--ds-warn-rgb),.05)'">
     <div style="font-size:.65em;font-weight:800;opacity:.45;margin-bottom:.15em;">STEP 3</div>
-    <div style="font-size:1.2em;margin-bottom:.15em;">✂️</div>
+    <div style="font-size:1.2em;margin-bottom:.15em;">✂</div>
     <div style="font-weight:800;font-size:.85em;color:var(--ds-warn);">Pass Culling</div>
     <div style="font-size:.72em;opacity:.6;margin-top:.15em;line-height:1.3;">walk backward, kill dead passes</div>
   </a>
@@ -437,15 +437,16 @@ Four steps in strict order — each one's output is the next one's input:
 
 Every write bumps a version number; every read attaches to the current version. That’s enough to produce precise dependency edges ([theory refresher](/posts/frame-graph-theory/#how-edges-form--resource-versioning)).
 
-The key data structure: each resource entry tracks its **current version** (incremented on write) and a **writer pass index** per version. When a pass calls `read(h)`, the graph looks up the current version's writer and adds a dependency edge from that writer to the reading pass.
+The key data structure: each resource entry tracks its **current version** (incremented on write) and a **writer pass index** per version. When a pass calls `Read(h)`, the graph looks up the current version's writer and adds a dependency edge from that writer to the reading pass.
 
-Here's what changes from v1. The `ResourceDesc` array becomes `ResourceEntry` — each entry carries a version list. `RenderPass` gains dependency tracking fields. And two new methods, `read()` and `write()`, wire everything together:
+Here's what changes from v1. The `ResourceDesc` array becomes `ResourceEntry` — each entry carries a version list. `RenderPass` gains dependency tracking fields. And two new methods, `Read()` and `Write()`, wire everything together:
 
 {{< code-diff title="v1 → v2 — Resource versioning & dependency tracking" >}}
 @@ New type — version tracking (.h) @@
 +struct ResourceVersion {                 // NEW v2
 +    uint32_t writerPass = UINT32_MAX;    // which pass wrote this version
 +    std::vector<uint32_t> readerPasses;  // which passes read it
++    bool HasWriter() const { return writerPass != UINT32_MAX; }
 +};
 +
 +struct ResourceEntry {
@@ -457,34 +458,54 @@ Here's what changes from v1. The `ResourceDesc` array becomes `ResourceEntry` �
 @@ RenderPass — dependency edges (.h) @@
  struct RenderPass {
      std::string name;
-     std::function<void()>             setup;
-     std::function<void(/*cmd list*/)> execute;
+     std::function<void()>             Setup;
+     std::function<void(/*cmd list*/)> Execute;
 +    std::vector<ResourceHandle> reads;     // NEW v2
 +    std::vector<ResourceHandle> writes;    // NEW v2
 +    std::vector<uint32_t> dependsOn;       // NEW v2
  };
 
-@@ FrameGraph — read/write methods (.h) @@
-+    void read(uint32_t passIdx, ResourceHandle h) {
-+        auto& ver = entries[h.index].versions.back();
-+        if (ver.writerPass != UINT32_MAX)
-+            passes[passIdx].dependsOn.push_back(ver.writerPass);
-+        ver.readerPasses.push_back(passIdx);
-+        passes[passIdx].reads.push_back(h);
-+    }
-+
-+    void write(uint32_t passIdx, ResourceHandle h) {
-+        entries[h.index].versions.push_back({});
-+        entries[h.index].versions.back().writerPass = passIdx;
-+        passes[passIdx].writes.push_back(h);
-+    }
+@@ FrameGraph — new declarations (.h) @@
++    void Read(uint32_t passIdx, ResourceHandle h);    // NEW v2
++    void Write(uint32_t passIdx, ResourceHandle h);   // NEW v2
 
 @@ Storage (.h) @@
 -    std::vector<ResourceDesc>  resources;
 +    std::vector<ResourceEntry> entries;  // now with versioning
+
+@@ CreateResource / ImportResource — use ResourceEntry (.cpp) @@
+ ResourceHandle FrameGraph::CreateResource(const ResourceDesc& desc) {
+-    resources.push_back(desc);
+-    return { static_cast<uint32_t>(resources.size() - 1) };
++    entries.push_back({ desc, {{}} });
++    return { static_cast<uint32_t>(entries.size() - 1) };
+ }
+
+ ResourceHandle FrameGraph::ImportResource(const ResourceDesc& desc) {
+-    resources.push_back(desc);
+-    return { static_cast<uint32_t>(resources.size() - 1) };
++    entries.push_back({ desc, {{}}, /*imported=*/true });
++    return { static_cast<uint32_t>(entries.size() - 1) };
+ }
+
+@@ Read / Write (.cpp) @@
++void FrameGraph::Read(uint32_t passIdx, ResourceHandle h) {
++    auto& ver = entries[h.index].versions.back();
++    if (ver.HasWriter()) {
++        passes[passIdx].dependsOn.push_back(ver.writerPass);
++    }
++    ver.readerPasses.push_back(passIdx);
++    passes[passIdx].reads.push_back(h);
++}
++
++void FrameGraph::Write(uint32_t passIdx, ResourceHandle h) {
++    entries[h.index].versions.push_back({});
++    entries[h.index].versions.back().writerPass = passIdx;
++    passes[passIdx].writes.push_back(h);
++}
 {{< /code-diff >}}
 
-Every `write()` pushes a new version. Every `read()` finds the current version's writer and records a `dependsOn` edge. Those edges feed the next three steps.
+Every `Write()` pushes a new version. Every `Read()` finds the current version's writer and records a `dependsOn` edge. Those edges feed the next three steps.
 
 ---
 
@@ -492,7 +513,7 @@ Every `write()` pushes a new version. Every `read()` finds the current version's
 
 ### 📊 Topological sort (Kahn's algorithm)
 
-With edges in place, we need an execution order that respects every dependency. Kahn’s algorithm ([theory refresher](/posts/frame-graph-theory/#sorting-and-culling)) gives us one in O(V+E). `buildEdges()` deduplicates the raw `dependsOn` entries and builds the adjacency list; `topoSort()` does the zero-in-degree queue drain:
+With edges in place, we need an execution order that respects every dependency. Kahn’s algorithm ([theory refresher](/posts/frame-graph-theory/#sorting-and-culling)) gives us one in O(V+E). `BuildEdges()` deduplicates the raw `dependsOn` entries and builds the adjacency list; `TopoSort()` does the zero-in-degree queue drain:
 
 {{< code-diff title="v2 — Edge building + Kahn's topological sort" >}}
 @@ RenderPass — new fields for the sort (.h) @@
@@ -502,45 +523,46 @@ With edges in place, we need an execution order that respects every dependency. 
 +    uint32_t inDegree = 0;                 // incoming edge count (Kahn's)
  };
 
-@@ buildEdges() — deduplicate and build adjacency list (.cpp) @@
-+    void buildEdges() {
-+        for (uint32_t i = 0; i < passes.size(); i++) {
-+            std::unordered_set<uint32_t> seen;
-+            for (uint32_t dep : passes[i].dependsOn) {
-+                if (seen.insert(dep).second) {
-+                    passes[dep].successors.push_back(i);
-+                    passes[i].inDegree++;
-+                }
+@@ BuildEdges() — deduplicate and build adjacency list (.cpp) @@
++void FrameGraph::BuildEdges() {
++    for (uint32_t i = 0; i < passes.size(); i++) {
++        std::unordered_set<uint32_t> seen;
++        for (uint32_t dep : passes[i].dependsOn) {
++            if (seen.insert(dep).second) {
++                passes[dep].successors.push_back(i);
++                passes[i].inDegree++;
 +            }
 +        }
 +    }
++}
 
-@@ topoSort() — Kahn's algorithm, O(V + E) (.cpp) @@
-+    std::vector<uint32_t> topoSort() {
-+        std::queue<uint32_t> q;
-+        std::vector<uint32_t> inDeg(passes.size());
-+        for (uint32_t i = 0; i < passes.size(); i++) {
-+            inDeg[i] = passes[i].inDegree;
-+            if (inDeg[i] == 0) q.push(i);
-+        }
-+        std::vector<uint32_t> order;
-+        while (!q.empty()) {
-+            uint32_t cur = q.front(); q.pop();
-+            order.push_back(cur);
-+            for (uint32_t succ : passes[cur].successors) {
-+                if (--inDeg[succ] == 0) q.push(succ);
-+            }
-+        }
-+        assert(order.size() == passes.size() && "Cycle detected!");
-+        return order;
+@@ TopoSort() — Kahn's algorithm, O(V + E) (.cpp) @@
++std::vector<uint32_t> FrameGraph::TopoSort() {
++    std::queue<uint32_t> q;
++    std::vector<uint32_t> inDeg(passes.size());
++    for (uint32_t i = 0; i < passes.size(); i++) {
++        inDeg[i] = passes[i].inDegree;
++        if (inDeg[i] == 0) q.push(i);
 +    }
++    std::vector<uint32_t> order;
++    while (!q.empty()) {
++        uint32_t cur = q.front(); q.pop();
++        order.push_back(cur);
++        for (uint32_t succ : passes[cur].successors) {
++            if (--inDeg[succ] == 0)
++                q.push(succ);
++        }
++    }
++    assert(order.size() == passes.size() && "Cycle detected!");
++    return order;
++}
 {{< /code-diff >}}
 
 ---
 
 <span id="v2-culling"></span>
 
-### ✂️ Pass culling
+### ✂ Pass culling
 
 A sorted graph still runs passes nobody reads from. Culling is dead-code elimination for GPU work ([theory refresher](/posts/frame-graph-theory/#sorting-and-culling)) — a single backward walk marks the final pass alive, then propagates through `dependsOn` edges:
 
@@ -551,16 +573,16 @@ A sorted graph still runs passes nobody reads from. Culling is dead-code elimina
 +    bool alive = false;                    // survives the cull?
  };
 
-@@ cull() — backward reachability from output (.cpp) @@
-+    void cull(const std::vector<uint32_t>& sorted) {
-+        if (sorted.empty()) return;
-+        passes[sorted.back()].alive = true;   // last pass = output
-+        for (int i = (int)sorted.size() - 1; i >= 0; i--) {
-+            if (!passes[sorted[i]].alive) continue;
-+            for (uint32_t dep : passes[sorted[i]].dependsOn)
-+                passes[dep].alive = true;
-+        }
+@@ Cull() — backward reachability from output (.cpp) @@
++void FrameGraph::Cull(const std::vector<uint32_t>& sorted) {
++    if (sorted.empty()) return;
++    passes[sorted.back()].alive = true;   // last pass = output
++    for (int i = static_cast<int>(sorted.size()) - 1; i >= 0; i--) {
++        if (!passes[sorted[i]].alive) continue;
++        for (uint32_t dep : passes[sorted[i]].dependsOn)
++            passes[dep].alive = true;
 +    }
++}
 {{< /code-diff >}}
 
 ---
@@ -571,7 +593,7 @@ A sorted graph still runs passes nobody reads from. Culling is dead-code elimina
 
 The GPU needs explicit state transitions between usages — color attachment, shader read, depth, etc. Because the graph already knows every resource’s read/write history ([theory refresher](/posts/frame-graph-theory/#barriers)), the compiler can emit them automatically. Walk each pass’s resources, compare tracked state to what the pass needs, and insert a barrier when they differ:
 
-{{< code-diff title="v2 — Barrier insertion + execute() rewrite" >}}
+{{< code-diff title="v2 — Barrier insertion + Execute() rewrite" >}}
 @@ New type — resource state tracking (.h) @@
 +enum class ResourceState { Undefined, ColorAttachment, DepthAttachment,
 +                           ShaderRead, Present };
@@ -582,57 +604,71 @@ The GPU needs explicit state transitions between usages — color attachment, sh
 +    ResourceState currentState = ResourceState::Undefined;
  };
 
-@@ importResource — now accepts an initial state (.h) @@
-+    ResourceHandle importResource(const ResourceDesc& desc, ResourceState initial) {
-+        entries.push_back({desc, {{}}, initial, /*imported=*/true});
-+        return { static_cast<uint32_t>(entries.size() - 1) };
-+    }
+@@ ImportResource — now accepts an initial state (.h) @@
+-    ResourceHandle ImportResource(const ResourceDesc& desc);
++    ResourceHandle ImportResource(const ResourceDesc& desc,
++                                  ResourceState initialState = ResourceState::Undefined);
 
-@@ insertBarriers() — emit transitions where state changes (.cpp) @@
-+    void insertBarriers(uint32_t passIdx) {
-+        auto stateForUsage = [](bool isWrite, Format fmt) {
-+            if (isWrite)
-+                return (fmt == Format::D32F) ? ResourceState::DepthAttachment
-+                                             : ResourceState::ColorAttachment;
-+            return ResourceState::ShaderRead;
-+        };
-+        for (auto& h : passes[passIdx].reads) {
-+            ResourceState needed = ResourceState::ShaderRead;
-+            if (entries[h.index].currentState != needed) {
-+                // emit barrier: old state → new state
-+                entries[h.index].currentState = needed;
-+            }
-+        }
-+        for (auto& h : passes[passIdx].writes) {
-+            ResourceState needed = stateForUsage(true, entries[h.index].desc.format);
-+            if (entries[h.index].currentState != needed) {
-+                entries[h.index].currentState = needed;
-+            }
+@@ CreateResource / ImportResource — updated for ResourceState (.cpp) @@
+ ResourceHandle FrameGraph::CreateResource(const ResourceDesc& desc) {
+-    entries.push_back({ desc, {{}} });
++    entries.push_back({ desc, {{}}, ResourceState::Undefined, false });
+     return { static_cast<uint32_t>(entries.size() - 1) };
+ }
+
+-ResourceHandle FrameGraph::ImportResource(const ResourceDesc& desc) {
+-    entries.push_back({ desc, {{}}, /*imported=*/true });
++ResourceHandle FrameGraph::ImportResource(const ResourceDesc& desc,
++                                          ResourceState initialState) {
++    entries.push_back({ desc, {{}}, initialState, true });
+     return { static_cast<uint32_t>(entries.size() - 1) };
+ }
+
+@@ InsertBarriers() — emit transitions where state changes (.cpp) @@
++void FrameGraph::InsertBarriers(uint32_t passIdx) {
++    auto StateForUsage = [](bool isWrite, Format fmt) {
++        if (isWrite)
++            return (fmt == Format::D32F) ? ResourceState::DepthAttachment
++                                         : ResourceState::ColorAttachment;
++        return ResourceState::ShaderRead;
++    };
++    for (auto& h : passes[passIdx].reads) {
++        ResourceState needed = ResourceState::ShaderRead;
++        if (entries[h.index].currentState != needed) {
++            entries[h.index].currentState = needed;
 +        }
 +    }
++    for (auto& h : passes[passIdx].writes) {
++        ResourceState needed = StateForUsage(true, entries[h.index].desc.format);
++        if (entries[h.index].currentState != needed) {
++            entries[h.index].currentState = needed;
++        }
++    }
++}
 
-@@ execute() — the full v2 pipeline (.cpp) @@
--    // v1: just run every pass in declaration order.
--    for (auto& pass : passes)
--        pass.execute();
-+    // v2: build edges, topo-sort, cull, then run in sorted order.
-+    buildEdges();
-+    auto sorted = topoSort();   // Kahn's algorithm — O(V+E)
-+    cull(sorted);               // backward walk from output
+@@ Execute() — the full v2 pipeline (.cpp) @@
++void FrameGraph::Execute() {
++    BuildEdges();
++    auto sorted = TopoSort();
++    Cull(sorted);
 +    for (uint32_t idx : sorted) {
-+        if (!passes[idx].alive) continue;  // skip dead
-+        insertBarriers(idx);                // auto barriers
-+        passes[idx].execute();
++        if (!passes[idx].alive) continue;
++        InsertBarriers(idx);
++        passes[idx].Execute(/* &cmdList */);
 +    }
++    passes.clear();
++    entries.clear();
++}
 {{< /code-diff >}}
 
-All four pieces — versioning, sorting, culling, barriers — compose into that `execute()` body. Each step feeds the next: versioning creates edges, edges feed the sort, the sort enables culling, and the surviving sorted passes get automatic barriers.
+All four pieces — versioning, sorting, culling, barriers — compose into that `Execute()` body. Each step feeds the next: versioning creates edges, edges feed the sort, the sort enables culling, and the surviving sorted passes get automatic barriers.
 
 ---
 
 ### 🧩 Full v2 source
 
 {{< include-code file="frame_graph_v2.h" lang="cpp" compact="true" >}}
+{{< include-code file="frame_graph_v2.cpp" lang="cpp" compact="true" >}}
 {{< include-code file="example_v2.cpp" lang="cpp" compile="true" deps="frame_graph_v2.h,frame_graph_v2.cpp" compact="true" >}}
 
 That's three of the four intro promises delivered — automatic ordering, barrier insertion, and dead-pass culling. The only piece missing: resources still live for the entire frame. Version 3 fixes that with lifetime analysis and memory aliasing.
@@ -664,72 +700,106 @@ Two new structs — a `Lifetime` per resource and a `PhysicalBlock` per heap slo
 +    bool     isTransient = true;
 +};
 
-@@ scanLifetimes() — walk sorted passes, record first/last use (.cpp) @@
-+    std::vector<Lifetime> scanLifetimes(const std::vector<uint32_t>& sorted) {
-+        std::vector<Lifetime> life(entries.size());
-+        for (uint32_t order = 0; order < sorted.size(); order++) {
-+            if (!passes[sorted[order]].alive) continue;
-+            for (auto& h : passes[sorted[order]].reads) {
-+                life[h.index].firstUse = std::min(life[h.index].firstUse, order);
-+                life[h.index].lastUse  = std::max(life[h.index].lastUse,  order);
-+            }
-+            for (auto& h : passes[sorted[order]].writes) {
-+                life[h.index].firstUse = std::min(life[h.index].firstUse, order);
-+                life[h.index].lastUse  = std::max(life[h.index].lastUse,  order);
-+            }
-+        }
-+        // imported resources are externally owned — exclude from aliasing
-+        for (size_t i = 0; i < entries.size(); i++) {
-+            if (entries[i].imported) life[i].isTransient = false;
-+        }
-+        return life;
+@@ BytesPerPixel helper (.h) @@
++inline uint32_t BytesPerPixel(Format fmt) {
++    switch (fmt) {
++        case Format::R8:      return 1;
++        case Format::RGBA8:   return 4;
++        case Format::D32F:    return 4;
++        case Format::RGBA16F: return 8;
++        default:              return 4;
 +    }
++}
+
+@@ ScanLifetimes() — walk sorted passes, record first/last use (.cpp) @@
++std::vector<Lifetime> FrameGraph::ScanLifetimes(const std::vector<uint32_t>& sorted) {
++    std::vector<Lifetime> life(entries.size());
++
++    // Imported resources are externally owned — exclude from aliasing.
++    for (uint32_t i = 0; i < entries.size(); i++) {
++        if (entries[i].imported) life[i].isTransient = false;
++    }
++
++    for (uint32_t order = 0; order < sorted.size(); order++) {
++        uint32_t passIdx = sorted[order];
++        if (!passes[passIdx].alive) continue;
++
++        for (auto& h : passes[passIdx].reads) {
++            life[h.index].firstUse = std::min(life[h.index].firstUse, order);
++            life[h.index].lastUse  = std::max(life[h.index].lastUse,  order);
++        }
++        for (auto& h : passes[passIdx].writes) {
++            life[h.index].firstUse = std::min(life[h.index].firstUse, order);
++            life[h.index].lastUse  = std::max(life[h.index].lastUse,  order);
++        }
++    }
++    return life;
++}
 {{< /code-diff >}}
 
 This requires **placed resources** at the API level — GPU memory allocated from a heap, with resources bound to offsets within it. In D3D12, that means `ID3D12Heap` + `CreatePlacedResource`. In Vulkan, `VkDeviceMemory` + `vkBindImageMemory` at different offsets. Without placed resources (i.e., `CreateCommittedResource` or Vulkan dedicated allocations), each resource gets its own memory and aliasing is impossible — which is why the graph's allocator works with heaps.
 
 The second half of the algorithm — the greedy free-list allocator. Sort resources by `firstUse`, then try to fit each one into an existing block whose previous user has finished:
 
-{{< code-diff title="v3 — Greedy free-list aliasing + compile() integration" >}}
-@@ aliasResources() — greedy free-list scan (.cpp) @@
-+    std::vector<uint32_t> aliasResources(const std::vector<Lifetime>& lifetimes) {
-+        std::vector<PhysicalBlock> freeList;
-+        std::vector<uint32_t> mapping(entries.size(), UINT32_MAX);
+{{< code-diff title="v3 — Greedy free-list aliasing + Compile() integration" >}}
+@@ FrameGraph — v3 additions (.h) @@
++    struct CompiledPlan {
++        std::vector<uint32_t> sorted;
++        std::vector<uint32_t> mapping;   // mapping[virtualIdx] → physicalBlock
++    };
 +
-+        // sort resources by firstUse
-+        std::vector<uint32_t> indices(entries.size());
-+        std::iota(indices.begin(), indices.end(), 0);
-+        std::sort(indices.begin(), indices.end(), [&](uint32_t a, uint32_t b) {
-+            return lifetimes[a].firstUse < lifetimes[b].firstUse;
-+        });
++    CompiledPlan Compile();
++    void Execute(const CompiledPlan& plan);
++    void Execute();  // convenience: compile + execute in one call
+
+@@ AliasResources() — greedy free-list scan (.cpp) @@
++std::vector<uint32_t> FrameGraph::AliasResources(const std::vector<Lifetime>& lifetimes) {
++    std::vector<PhysicalBlock> freeList;
++    std::vector<uint32_t> mapping(entries.size(), UINT32_MAX);
 +
-+        for (uint32_t resIdx : indices) {
-+            if (!lifetimes[resIdx].isTransient) continue;
-+            if (lifetimes[resIdx].firstUse == UINT32_MAX) continue;
-+            uint32_t needed = /* width * height * bpp */;
-+            bool reused = false;
-+            for (uint32_t b = 0; b < freeList.size(); b++) {
-+                if (freeList[b].availAfter < lifetimes[resIdx].firstUse
-+                    && freeList[b].sizeBytes >= needed) {
-+                    mapping[resIdx] = b;         // reuse this block
-+                    freeList[b].availAfter = lifetimes[resIdx].lastUse;
-+                    reused = true; break;
-+                }
-+            }
-+            if (!reused) {
-+                mapping[resIdx] = freeList.size();
-+                freeList.push_back({ needed, lifetimes[resIdx].lastUse });
++    // Sort resources by firstUse.
++    std::vector<uint32_t> indices(entries.size());
++    std::iota(indices.begin(), indices.end(), 0);
++    std::sort(indices.begin(), indices.end(), [&](uint32_t a, uint32_t b) {
++        return lifetimes[a].firstUse < lifetimes[b].firstUse;
++    });
++
++    for (uint32_t resIdx : indices) {
++        if (!lifetimes[resIdx].isTransient) continue;
++        if (lifetimes[resIdx].firstUse == UINT32_MAX) continue;
++
++        uint32_t needed = entries[resIdx].desc.width
++                        * entries[resIdx].desc.height
++                        * BytesPerPixel(entries[resIdx].desc.format);
++        bool reused = false;
++
++        for (uint32_t b = 0; b < freeList.size(); b++) {
++            if (freeList[b].availAfter < lifetimes[resIdx].firstUse
++                && freeList[b].sizeBytes >= needed) {
++                mapping[resIdx] = b;         // reuse this block
++                freeList[b].availAfter = lifetimes[resIdx].lastUse;
++                reused = true;
++                break;
 +            }
 +        }
-+        return mapping;
++
++        if (!reused) {
++            mapping[resIdx] = static_cast<uint32_t>(freeList.size());
++            freeList.push_back({ needed, lifetimes[resIdx].lastUse });
++        }
 +    }
++    return mapping;
++}
 
-@@ compile() — v3 adds lifetime scan + aliasing (.cpp) @@
-     auto sorted = topoSort();
-     cull(sorted);
-+    auto lifetimes = scanLifetimes(sorted);     // NEW v3
-+    auto mapping   = aliasResources(lifetimes); // NEW v3
-+    // mapping[virtualIdx] → physicalBlock — execute just runs passes
+@@ Compile() — v3 separates compile from execute (.cpp) @@
++FrameGraph::CompiledPlan FrameGraph::Compile() {
++    BuildEdges();
++    auto sorted   = TopoSort();
++    Cull(sorted);
++    auto lifetimes = ScanLifetimes(sorted);      // NEW v3
++    auto mapping   = AliasResources(lifetimes);  // NEW v3
++    return { std::move(sorted), std::move(mapping) };
++}
 {{< /code-diff >}}
 
 ~70 new lines on top of v2. Aliasing runs once per frame in O(R log R) — sort, then linear scan of the free list. Sub-microsecond for 15 transient resources.
@@ -741,6 +811,7 @@ That's the full value prop — automatic memory aliasing *and* automatic barrier
 ### 🧩 Full v3 source
 
 {{< include-code file="frame_graph_v3.h" lang="cpp" compact="true" >}}
+{{< include-code file="frame_graph_v3.cpp" lang="cpp" compact="true" >}}
 {{< include-code file="example_v3.cpp" lang="cpp" compile="true" deps="frame_graph_v3.h,frame_graph_v3.cpp" compact="true" >}}
 
 ---
@@ -753,7 +824,7 @@ The finished `FrameGraph` class. Here's what it does every frame, broken down by
   <div style="padding:.8em 1em;border-radius:10px;border-top:3px solid var(--ds-info);background:rgba(var(--ds-info-rgb),.04);">
     <div style="font-weight:800;font-size:.88em;margin-bottom:.5em;color:var(--ds-info);">① Declare</div>
     <div style="font-size:.84em;line-height:1.6;opacity:.85;">
-      Each <code>addPass</code> runs its setup lambda:<br>
+      Each <code>AddPass</code> runs its setup lambda:<br>
       • declare reads &amp; writes<br>
       • request virtual resources<br>
       • version tracking builds edges

@@ -105,7 +105,7 @@ Cross-queue work needs **GPU fences** — one queue signals, the other waits. Ea
   </div>
 </div>
 
-### ⚖️ What makes overlap good or bad
+### ⚖ What makes overlap good or bad
 
 Solving fences is the easy part — the compiler handles that. The harder question is whether overlapping two specific passes actually helps:
 
@@ -159,7 +159,7 @@ Try it yourself — move compute-eligible passes between queues and see how fenc
 
 ---
 
-## ✂️ Split Barriers
+## ✂ Split Barriers
 
 Async compute hides latency by overlapping work across *queues*. Split barriers achieve the same effect on a *single queue* — by spreading one resource transition across multiple passes instead of stalling on it.
 
@@ -244,7 +244,7 @@ Try it — drag the BEGIN marker left to widen the overlap gap and watch the sta
 
 ---
 
-## 🎛️ Putting It All Together
+## 🎛 Putting It All Together
 
 You've now seen every piece the compiler works with — topological sorting, pass culling, barrier insertion, async compute scheduling, memory aliasing, split barriers. In a simple 5-pass pipeline these feel manageable. In a production renderer? You're looking at **15–25 passes, 30+ resource edges, and dozens of implicit dependencies** — all inferred from `read()` and `write()` calls that no human can hold in their head at once.
 
