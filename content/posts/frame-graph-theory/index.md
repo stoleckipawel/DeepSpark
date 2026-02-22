@@ -77,7 +77,7 @@ Behind every smooth frame is a brutal scheduling problem — which passes can ru
     <div style="padding:1em;text-align:center;border-right:1px solid rgba(var(--ds-indigo-rgb),.12);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.12);">
       <div style="font-size:1.6em;margin-bottom:.15em;">🔨</div>
       <div style="font-weight:800;font-size:.95em;">Build MVP</div>
-      <div style="font-size:.82em;opacity:.7;line-height:1.4;margin-top:.2em;">Working C++ frame graph, from scratch to prototype in ~300 lines</div>
+      <div style="font-size:.82em;opacity:.7;line-height:1.4;margin-top:.2em;">Working C++ frame graph, from scratch to prototype in ~400 lines</div>
     </div>
     <div style="padding:1em;text-align:center;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.12);">
       <div style="font-size:1.6em;margin-bottom:.15em;">🗺</div>

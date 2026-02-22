@@ -34,23 +34,28 @@ int main() {
         [&]() { fg.Read(2, gbufA); fg.Read(2, gbufN); fg.Write(2, hdr); },
         [&](/*cmd*/) { printf("  >> exec: Lighting\n"); });
 
+    // Compute pass — explicit UAV access on hdr.
+    fg.AddPass("SSR",
+        [&]() { fg.ReadWrite(3, hdr); },
+        [&](/*cmd*/) { printf("  >> exec: SSR (compute, UAV)\n"); });
+
     fg.AddPass("Bloom",
-        [&]() { fg.Read(3, hdr); fg.Write(3, bloom); },
+        [&]() { fg.Read(4, hdr); fg.Write(4, bloom); },
         [&](/*cmd*/) { printf("  >> exec: Bloom\n"); });
 
     // Tonemap writes a NEW resource (ldr), so hdr + bloom die here.
     // Their physical blocks become available for reuse.
     fg.AddPass("Tonemap",
-        [&]() { fg.Read(4, hdr); fg.Read(4, bloom); fg.Write(4, ldr); },
+        [&]() { fg.Read(5, hdr); fg.Read(5, bloom); fg.Write(5, ldr); },
         [&](/*cmd*/) { printf("  >> exec: Tonemap\n"); });
 
     fg.AddPass("Present",
-        [&]() { fg.Read(5, ldr); fg.Write(5, backbuffer); },
+        [&]() { fg.Read(6, ldr); fg.Write(6, backbuffer); },
         [&](/*cmd*/) { printf("  >> exec: Present\n"); });
 
     // Dead pass — nothing reads debug, so the graph will cull it.
     fg.AddPass("DebugOverlay",
-        [&]() { fg.Write(6, debug); },
+        [&]() { fg.Write(7, debug); },
         [&](/*cmd*/) { printf("  >> exec: DebugOverlay\n"); });
 
     auto plan = fg.Compile();   // topo-sort, cull, alias, compute barriers

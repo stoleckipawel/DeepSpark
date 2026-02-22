@@ -20,10 +20,12 @@ struct ResourceDesc {
     Format   format = Format::RGBA8;
 };
 
+using ResourceIndex = uint32_t;
+
 // Handle = typed index into the graph's resource array.
 // No GPU memory behind it yet -- just a number.
 struct ResourceHandle {
-    uint32_t index = UINT32_MAX;
+    ResourceIndex index = UINT32_MAX;
     bool IsValid() const { return index != UINT32_MAX; }
 };
 

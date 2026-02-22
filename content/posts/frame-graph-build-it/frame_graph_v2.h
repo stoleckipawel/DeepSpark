@@ -20,14 +20,17 @@ struct ResourceDesc {
     Format   format = Format::RGBA8;
 };
 
+using ResourceIndex = uint32_t;
+using PassIndex     = uint32_t;
+
 struct ResourceHandle {
-    uint32_t index = UINT32_MAX;
+    ResourceIndex index = UINT32_MAX;
     bool IsValid() const { return index != UINT32_MAX; }
 };
 
 // == Resource state tracking (NEW v2) ==========================
 enum class ResourceState { Undefined, ColorAttachment, DepthAttachment,
-                           ShaderRead, Present };
+                           ShaderRead, UnorderedAccess, Present };
 
 inline const char* StateName(ResourceState s) {
     switch (s) {
@@ -35,14 +38,15 @@ inline const char* StateName(ResourceState s) {
         case ResourceState::ColorAttachment: return "ColorAttachment";
         case ResourceState::DepthAttachment: return "DepthAttachment";
         case ResourceState::ShaderRead:      return "ShaderRead";
+        case ResourceState::UnorderedAccess: return "UnorderedAccess";
         case ResourceState::Present:         return "Present";
         default:                             return "?";
     }
 }
 
 struct ResourceVersion {                 // NEW v2
-    uint32_t writerPass = UINT32_MAX;    // which pass wrote this version
-    std::vector<uint32_t> readerPasses;  // which passes read it
+    PassIndex writerPass = UINT32_MAX;   // which pass wrote this version
+    std::vector<PassIndex> readerPasses; // which passes read it
     bool HasWriter() const { return writerPass != UINT32_MAX; }
 };
 
@@ -60,10 +64,11 @@ struct RenderPass {
     std::function<void()>             Setup;
     std::function<void(/*cmd list*/)> Execute;
 
-    std::vector<ResourceHandle> reads;    // NEW v2
-    std::vector<ResourceHandle> writes;   // NEW v2
-    std::vector<uint32_t> dependsOn;      // NEW v2 -- passes this pass depends on
-    std::vector<uint32_t> successors;     // NEW v2 -- passes that depend on this pass
+    std::vector<ResourceHandle> reads;      // NEW v2
+    std::vector<ResourceHandle> writes;     // NEW v2
+    std::vector<ResourceHandle> readWrites; // NEW v2 -- UAV (explicit)
+    std::vector<PassIndex> dependsOn;     // NEW v2 -- passes this pass depends on
+    std::vector<PassIndex> successors;    // NEW v2 -- passes that depend on this pass
     uint32_t inDegree = 0;                // NEW v2 -- for Kahn's
     bool     alive    = false;            // NEW v2 -- for culling
 };
@@ -79,10 +84,13 @@ public:
                                   ResourceState initialState = ResourceState::Undefined);
 
     // Declare a read -- links this pass to the resource's current version.
-    void Read(uint32_t passIdx, ResourceHandle h);    // NEW v2
+    void Read(PassIndex passIdx, ResourceHandle h);    // NEW v2
 
     // Declare a write -- creates a new version of the resource.
-    void Write(uint32_t passIdx, ResourceHandle h);   // NEW v2
+    void Write(PassIndex passIdx, ResourceHandle h);   // NEW v2
+
+    // Declare a UAV access -- read + write on the same version.
+    void ReadWrite(PassIndex passIdx, ResourceHandle h); // NEW v2
 
     template <typename SetupFn, typename ExecFn>
     void AddPass(const std::string& name, SetupFn&& setup, ExecFn&& exec) {
@@ -98,7 +106,7 @@ private:
     std::vector<ResourceEntry> entries;
 
     void BuildEdges();                                // NEW v2
-    std::vector<uint32_t> TopoSort();                 // NEW v2
-    void Cull(const std::vector<uint32_t>& sorted);   // NEW v2
-    void EmitBarriers(uint32_t passIdx);                // NEW v2
+    std::vector<PassIndex> TopoSort();                 // NEW v2
+    void Cull(const std::vector<PassIndex>& sorted);   // NEW v2
+    void EmitBarriers(PassIndex passIdx);               // NEW v2
 };

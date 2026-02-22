@@ -20,14 +20,17 @@ struct ResourceDesc {
     Format   format = Format::RGBA8;
 };
 
+using ResourceIndex = uint32_t;
+using PassIndex     = uint32_t;
+
 struct ResourceHandle {
-    uint32_t index = UINT32_MAX;
+    ResourceIndex index = UINT32_MAX;
     bool IsValid() const { return index != UINT32_MAX; }
 };
 
 // == Resource state tracking ===================================
 enum class ResourceState { Undefined, ColorAttachment, DepthAttachment,
-                           ShaderRead, Present };
+                           ShaderRead, UnorderedAccess, Present };
 
 inline const char* StateName(ResourceState s) {
     switch (s) {
@@ -35,21 +38,24 @@ inline const char* StateName(ResourceState s) {
         case ResourceState::ColorAttachment: return "ColorAttachment";
         case ResourceState::DepthAttachment: return "DepthAttachment";
         case ResourceState::ShaderRead:      return "ShaderRead";
+        case ResourceState::UnorderedAccess: return "UnorderedAccess";
         case ResourceState::Present:         return "Present";
         default:                             return "?";
     }
 }
 
-// == Precomputed barrier (NEW v3) ==============================
+// Precomputed barrier — stored during Compile(), replayed during Execute().
 struct Barrier {
-    uint32_t      resourceIndex;
+    ResourceIndex resourceIndex;
     ResourceState oldState;
     ResourceState newState;
+    bool          isAliasing   = false;     // true = aliasing barrier (block changes occupant)
+    ResourceIndex aliasBefore  = UINT32_MAX; // resource being evicted (only when isAliasing)
 };
 
 struct ResourceVersion {
-    uint32_t writerPass = UINT32_MAX;
-    std::vector<uint32_t> readerPasses;
+    PassIndex writerPass = UINT32_MAX;
+    std::vector<PassIndex> readerPasses;
     bool HasWriter() const { return writerPass != UINT32_MAX; }
 };
 
@@ -63,7 +69,7 @@ struct ResourceEntry {
 // == Physical memory block (NEW v3) ============================
 struct PhysicalBlock {
     uint32_t sizeBytes   = 0;
-    uint32_t availAfter  = 0;  // pass index after which this block is free
+    PassIndex availAfter = 0;  // sorted pass after which this block is free
 };
 
 // == Allocation helpers (NEW v3) ================================
@@ -96,9 +102,9 @@ inline uint32_t AllocSize(const ResourceDesc& desc) {
 
 // == Lifetime info per resource (NEW v3) =======================
 struct Lifetime {
-    uint32_t firstUse = UINT32_MAX;
-    uint32_t lastUse  = 0;
-    bool     isTransient = true;
+    PassIndex firstUse = UINT32_MAX;
+    PassIndex lastUse  = 0;
+    bool      isTransient = true;
 };
 
 // == Render pass ===============================================
@@ -109,8 +115,9 @@ struct RenderPass {
 
     std::vector<ResourceHandle> reads;
     std::vector<ResourceHandle> writes;
-    std::vector<uint32_t> dependsOn;
-    std::vector<uint32_t> successors;
+    std::vector<ResourceHandle> readWrites;  // UAV (explicit)
+    std::vector<PassIndex> dependsOn;
+    std::vector<PassIndex> successors;
     uint32_t inDegree = 0;
     bool     alive    = false;
 };
@@ -122,8 +129,9 @@ public:
     ResourceHandle ImportResource(const ResourceDesc& desc,
                                   ResourceState initialState = ResourceState::Undefined);
 
-    void Read(uint32_t passIdx, ResourceHandle h);
-    void Write(uint32_t passIdx, ResourceHandle h);
+    void Read(PassIndex passIdx, ResourceHandle h);
+    void Write(PassIndex passIdx, ResourceHandle h);
+    void ReadWrite(PassIndex passIdx, ResourceHandle h);  // UAV access
 
     template <typename SetupFn, typename ExecFn>
     void AddPass(const std::string& name, SetupFn&& setup, ExecFn&& exec) {
@@ -134,7 +142,7 @@ public:
 
     // == v3: compile -- builds the execution plan + allocates memory ==
     struct CompiledPlan {
-        std::vector<uint32_t> sorted;
+        std::vector<PassIndex> sorted;
         std::vector<uint32_t> mapping;                  // mapping[virtualIdx] → physicalBlock
         std::vector<std::vector<Barrier>> barriers;     // barriers[orderIdx] → pre-pass transitions
     };
@@ -152,10 +160,11 @@ private:
     std::vector<ResourceEntry> entries;
 
     void BuildEdges();
-    std::vector<uint32_t> TopoSort();
-    void Cull(const std::vector<uint32_t>& sorted);
-    std::vector<Lifetime> ScanLifetimes(const std::vector<uint32_t>& sorted);  // NEW v3
+    std::vector<PassIndex> TopoSort();
+    void Cull(const std::vector<PassIndex>& sorted);
+    std::vector<Lifetime> ScanLifetimes(const std::vector<PassIndex>& sorted);  // NEW v3
     std::vector<uint32_t> AliasResources(const std::vector<Lifetime>& lifetimes); // NEW v3
-    std::vector<std::vector<Barrier>> ComputeBarriers(const std::vector<uint32_t>& sorted); // NEW v3
+    std::vector<std::vector<Barrier>> ComputeBarriers(const std::vector<PassIndex>& sorted,
+                                                       const std::vector<uint32_t>& mapping); // NEW v3
     void EmitBarriers(const std::vector<Barrier>& barriers);  // NEW v3
 };

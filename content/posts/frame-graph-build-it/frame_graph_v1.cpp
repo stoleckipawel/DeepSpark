@@ -5,12 +5,12 @@
 
 ResourceHandle FrameGraph::CreateResource(const ResourceDesc& desc) {
     resources.push_back(desc);
-    return { static_cast<uint32_t>(resources.size() - 1) };
+    return { static_cast<ResourceIndex>(resources.size() - 1) };
 }
 
 ResourceHandle FrameGraph::ImportResource(const ResourceDesc& desc) {
     resources.push_back(desc);  // v1: same as create (no aliasing yet)
-    return { static_cast<uint32_t>(resources.size() - 1) };
+    return { static_cast<ResourceIndex>(resources.size() - 1) };
 }
 
 void FrameGraph::Execute() {

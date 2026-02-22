@@ -30,14 +30,19 @@ int main() {
         [&]() { fg.Read(2, gbufA); fg.Write(2, hdr); },
         [&](/*cmd*/) { printf("  >> exec: Lighting\n"); });
 
+    // Compute pass — explicit UAV access on hdr.
+    fg.AddPass("SSR",
+        [&]() { fg.ReadWrite(3, hdr); },
+        [&](/*cmd*/) { printf("  >> exec: SSR (compute, UAV)\n"); });
+
     // Present — writes to the imported backbuffer.
     fg.AddPass("Present",
-        [&]() { fg.Read(3, hdr); fg.Write(3, backbuffer); },
+        [&]() { fg.Read(4, hdr); fg.Write(4, backbuffer); },
         [&](/*cmd*/) { printf("  >> exec: Present\n"); });
 
     // Dead pass — nothing reads debug, so the graph will cull it.
     fg.AddPass("DebugOverlay",
-        [&]() { fg.Write(4, debug); },
+        [&]() { fg.Write(5, debug); },
         [&](/*cmd*/) { printf("  >> exec: DebugOverlay\n"); });
 
     fg.Execute();
