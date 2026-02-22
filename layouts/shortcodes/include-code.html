@@ -15,10 +15,23 @@
 {{/* Build compilable source: inline dependency headers so Godbolt gets a single TU */}}
 {{ $fullSource := $resource.Content }}
 {{ if $deps }}
-  {{ $depResource := $.Page.Resources.GetMatch $deps }}
-  {{ if $depResource }}
-    {{ $includeDirective := printf "#include \"%s\"" $deps }}
-    {{ $fullSource = replace $fullSource $includeDirective $depResource.Content }}
+  {{ $depList := split $deps "," }}
+  {{ range $depList }}
+    {{ $depName := strings.TrimSpace . }}
+    {{ $depResource := $.Page.Resources.GetMatch $depName }}
+    {{ if $depResource }}
+      {{ $includeDirective := printf "#include \"%s\"" $depName }}
+      {{ $depContent := $depResource.Content }}
+      {{/* Strip includes of other deps to prevent double-inclusion */}}
+      {{ range $depList }}
+        {{ $otherName := strings.TrimSpace . }}
+        {{ if ne $otherName $depName }}
+          {{ $otherInclude := printf "#include \"%s\"" $otherName }}
+          {{ $depContent = replace $depContent $otherInclude "" }}
+        {{ end }}
+      {{ end }}
+      {{ $fullSource = replace $fullSource $includeDirective $depContent }}
+    {{ end }}
   {{ end }}
 {{ end }}
 {{ if eq $compact "true" }}

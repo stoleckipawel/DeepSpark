@@ -1,5 +1,5 @@
 ---
-title: "Frame Graph — Advanced Features"
+title: "Frame Graph — Beyond MVP"
 date: 2026-02-10T12:00:00
 draft: false
 description: "Pass merging, async compute, and split barriers — how the frame graph compiler squeezes more performance from the same DAG."
@@ -12,7 +12,7 @@ showTableOfContents: false
 {{< article-nav >}}
 
 <div style="margin:0 0 1.5em;padding:.7em 1em;border-radius:8px;background:rgba(var(--ds-indigo-rgb),.04);border:1px solid rgba(var(--ds-indigo-rgb),.12);font-size:.88em;line-height:1.6;opacity:.85;">
-📖 <strong>Part III of IV.</strong>&ensp; <a href="../frame-graph-theory/">Theory</a> → <a href="../frame-graph-build-it/">Build It</a> → <em>Advanced Features</em> → <a href="../frame-graph-production/">Production Engines</a>
+📖 <strong>Part III of IV.</strong>&ensp; <a href="../frame-graph-theory/">Theory</a> → <a href="../frame-graph-build-it/">Build It</a> → <em>Beyond MVP</em> → <a href="../frame-graph-production/">Production Engines</a>
 </div>
 
 [Part I](/posts/frame-graph-theory/) covered the core — sorting, culling, barriers, aliasing — and [Part II](/posts/frame-graph-build-it/) built it in C++. The same DAG enables the compiler to go further. It can merge adjacent render passes to eliminate redundant state changes, schedule independent work across GPU queues, and split barrier transitions to hide cache-flush latency.

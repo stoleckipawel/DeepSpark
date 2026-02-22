@@ -81,7 +81,7 @@ description: "Longer-form rendering articles and write-ups."
 <span style="font-size:1.3em;">🏗️</span>
 <div>
 <div style="font-weight:800;font-size:1.05em;">Frame Graph</div>
-<div style="font-size:.82em;opacity:.55;">4 parts · theory → implementation → advanced features → production engines</div>
+<div style="font-size:.82em;opacity:.55;">4 parts · theory → implementation → beyond MVP → production engines</div>
 </div>
 <div style="margin-left:auto;display:flex;gap:.4em;">
 <span style="font-size:.72em;padding:.2em .5em;border-radius:5px;border:1px solid rgba(var(--ds-accent-rgb),.15);background:rgba(var(--ds-accent-rgb),.05);font-weight:600;">rendering</span>
@@ -109,7 +109,7 @@ description: "Longer-form rendering articles and write-ups."
 <div class="part-link" onclick="window.location.href='frame-graph-advanced/'" style="cursor:pointer;padding:.9em 1.3em;border-bottom:1px solid rgba(var(--ds-accent-rgb),.07);display:flex;align-items:center;gap:1em;">
 <div class="part-num" style="width:2em;height:2em;border-radius:50%;background:var(--ds-info);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:.85em;flex-shrink:0;">III</div>
 <div style="flex:1;min-width:0;">
-<div class="part-title" style="font-weight:700;font-size:.95em;transition:color .18s ease;">Advanced Features</div>
+<div class="part-title" style="font-weight:700;font-size:.95em;transition:color .18s ease;">Beyond MVP</div>
 <div style="font-size:.82em;opacity:.6;line-height:1.5;margin-top:.1em;">Pass merging, async compute, and split barriers — how the compiler squeezes more performance from the same DAG.</div>
 </div>
 <div style="font-size:.78em;opacity:.4;flex-shrink:0;">10 min read</div>

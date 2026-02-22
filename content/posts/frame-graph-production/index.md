@@ -12,7 +12,7 @@ showTableOfContents: false
 {{< article-nav >}}
 
 <div style="margin:0 0 1.5em;padding:.7em 1em;border-radius:8px;background:rgba(var(--ds-indigo-rgb),.04);border:1px solid rgba(var(--ds-indigo-rgb),.12);font-size:.88em;line-height:1.6;opacity:.85;">
-📖 <strong>Part IV of IV.</strong>&ensp; <a href="../frame-graph-theory/">Theory</a> → <a href="../frame-graph-build-it/">Build It</a> → <a href="../frame-graph-advanced/">Advanced Features</a> → <em>Production Engines</em>
+📖 <strong>Part IV of IV.</strong>&ensp; <a href="../frame-graph-theory/">Theory</a> → <a href="../frame-graph-build-it/">Build It</a> → <a href="../frame-graph-advanced/">Beyond MVP</a> → <em>Production Engines</em>
 </div>
 
 [Part III](/posts/frame-graph-advanced/) showed how the compiler can go further — pass merging, async compute, and split barriers. Production engines face additional challenges we didn't cover: parallel command recording, managing thousands of passes across legacy codebases, and scaling all of these techniques simultaneously. This article examines how UE5 and Frostbite solved those problems, then maps out the path from MVP to production.
@@ -257,6 +257,6 @@ The point isn't that every project needs a render graph. The point is that if yo
 
 <div style="margin:2em 0 0;padding:1em 1.2em;border-radius:10px;border:1px solid rgba(var(--ds-indigo-rgb),.2);background:rgba(var(--ds-indigo-rgb),.03);display:flex;justify-content:flex-start;">
   <a href="../frame-graph-advanced/" style="text-decoration:none;font-weight:700;font-size:.95em;">
-    ← Previous: Part III — Advanced Features
+    ← Previous: Part III — Beyond MVP
   </a>
 </div>

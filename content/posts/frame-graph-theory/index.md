@@ -12,7 +12,7 @@ showTableOfContents: false
 {{< article-nav >}}
 
 <div style="margin:0 0 1.5em;padding:.7em 1em;border-radius:8px;background:rgba(var(--ds-indigo-rgb),.04);border:1px solid rgba(var(--ds-indigo-rgb),.12);font-size:.88em;line-height:1.6;opacity:.85;">
-📖 <strong>Part I of IV.</strong>&ensp; <em>Theory</em> → <a href="../frame-graph-build-it/">Build It</a> → <a href="../frame-graph-advanced/">Advanced Features</a> → <a href="../frame-graph-production/">Production Engines</a>
+📖 <strong>Part I of IV.</strong>&ensp; <em>Theory</em> → <a href="../frame-graph-build-it/">Build It</a> → <a href="../frame-graph-advanced/">Beyond MVP</a> → <a href="../frame-graph-production/">Production Engines</a>
 </div>
 
 ---
@@ -437,6 +437,10 @@ The standard approach is **Kahn's algorithm**:
 
 The whole walk is **O(V + E)** — linear in passes and edges. It runs once per frame and finishes in microseconds.
 
+<div class="fg-reveal" style="margin:1em 0;padding:.85em 1.1em;border-radius:10px;border:1.5px solid rgba(var(--ds-code-rgb),.18);background:linear-gradient(135deg,rgba(var(--ds-code-rgb),.04),transparent);font-size:.9em;line-height:1.65;">
+<strong>Sorting bonus — fewer context rolls.</strong> A <em>context roll</em> happens every time the GPU switches render targets: caches flush, attachments rebind, and the pipeline drains. In a naïve hand-ordered renderer those switches are whatever order you hard-coded. With Kahn's algorithm the compiler often has <strong>multiple passes at zero in-degree simultaneously</strong> — it can pick the one that targets the <em>same</em> render target as the previous pass. That one tie-breaking heuristic groups passes by attachment and can cut render-target switches by 30–50%, turning a <em>correctness</em> tool (topological sort) into a <em>performance</em> tool (state-change minimiser).
+</div>
+
 Step through the algorithm interactively — watch nodes with zero in-degree get emitted one by one:
 
 {{< interactive-toposort >}}
@@ -663,6 +667,13 @@ Most engines use **dynamic** or **hybrid**. The compile is so cheap that caching
   </div>
   <div style="padding:.55em .8em;font-size:.88em;background:rgba(var(--ds-success-rgb),.02);">
     <strong>Async compute</strong><br>Compiler schedules across queues
+  </div>
+
+  <div style="padding:.55em .8em;font-size:.88em;border-top:1px solid rgba(var(--ds-indigo-rgb),.1);border-right:1.5px solid rgba(var(--ds-indigo-rgb),.15);background:rgba(var(--ds-danger-rgb),.02);">
+    <strong>Context rolls</strong><br><span style="opacity:.65">Hard-coded pass order — frequent render-target switches</span>
+  </div>
+  <div style="padding:.55em .8em;font-size:.88em;border-top:1px solid rgba(var(--ds-indigo-rgb),.1);background:rgba(var(--ds-success-rgb),.02);">
+    <strong>Context rolls</strong><br>Compiler groups passes by attachment — <strong style="color:var(--ds-success);">30–50% fewer RT switches</strong>
   </div>
 </div>
 

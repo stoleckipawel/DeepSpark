@@ -12,57 +12,91 @@ showTableOfContents: false
 {{< article-nav >}}
 
 <div style="margin:0 0 1.5em;padding:.7em 1em;border-radius:8px;background:rgba(var(--ds-indigo-rgb),.04);border:1px solid rgba(var(--ds-indigo-rgb),.12);font-size:.88em;line-height:1.6;opacity:.85;">
-📖 <strong>Part II of IV.</strong>&ensp; <a href="../frame-graph-theory/">Theory</a> → <em>Build It</em> → <a href="../frame-graph-advanced/">Advanced Features</a> → <a href="../frame-graph-production/">Production Engines</a>
+📖 <strong>Part II of IV.</strong>&ensp; <a href="../frame-graph-theory/">Theory</a> → <em>Build It</em> → <a href="../frame-graph-advanced/">Beyond MVP</a> → <a href="../frame-graph-production/">Production Engines</a>
 </div>
 
 *Part I laid out the theory — declare, compile, execute. Now we turn that blueprint into code. Three iterations, each one unlocking a capability that wasn't there before: first a topological sort gives us dependency-driven execution order, then the compiler injects barriers automatically, and finally memory aliasing lets resources share the same heap. Each version builds on the last — time to get our hands dirty.*
 
-<!-- MVP progression — stacked power-up bars -->
-<div style="margin:1.6em 0 1.2em;position:relative;padding-left:2.6em;">
-  <!-- header -->
-  <div style="margin-left:-2.6em;margin-bottom:1.2em;font-size:1.1em;font-weight:800;text-align:center;letter-spacing:.02em;">🧬 MVP Progression</div>
-  <!-- vertical connector line -->
-  <div style="position:absolute;left:1.05em;top:.4em;bottom:.4em;width:2px;background:linear-gradient(to bottom, var(--ds-info), var(--ds-code), var(--ds-success));border-radius:1px;opacity:.5;"></div>
+<!-- MVP progression — animated power-up timeline -->
+<style>
+@keyframes mvp-glow { 0%,100%{box-shadow:0 0 8px rgba(var(--ds-success-rgb),.25),0 0 0 3px rgba(var(--ds-success-rgb),.15);} 50%{box-shadow:0 0 20px rgba(var(--ds-success-rgb),.45),0 0 0 5px rgba(var(--ds-success-rgb),.2);} }
+@keyframes mvp-bar-shine { 0%{background-position:200% 0;} 100%{background-position:-200% 0;} }
+</style>
+<div style="margin:1.6em 0 1.2em;position:relative;padding-left:3em;">
+  <div style="margin-left:-3em;margin-bottom:1.4em;font-size:1.15em;font-weight:900;text-align:center;letter-spacing:.03em;">🧬 MVP Progression</div>
+  <!-- vertical connector -->
+  <div style="position:absolute;left:1.15em;top:3.2em;bottom:.8em;width:3px;background:linear-gradient(to bottom, var(--ds-info), var(--ds-code), var(--ds-success));border-radius:2px;opacity:.45;"></div>
 
-  <!-- v1 -->
-  <a href="#-v1--the-scaffold" style="text-decoration:none;color:inherit;display:block;position:relative;margin-bottom:1.2em;cursor:pointer;" onmouseover="this.querySelector('.mvp-card').style.borderColor='rgba(var(--ds-info-rgb),.5)'" onmouseout="this.querySelector('.mvp-card').style.borderColor='rgba(var(--ds-info-rgb),.25)'">
-    <div style="position:absolute;left:-2.6em;top:.15em;width:2.1em;height:2.1em;border-radius:50%;background:var(--ds-info);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.7em;color:#fff;box-shadow:0 0 0 3px rgba(var(--ds-info-rgb),.2);z-index:1;">v1</div>
-    <div class="mvp-card" style="padding:.7em .9em;border-radius:8px;border:1.5px solid rgba(var(--ds-info-rgb),.25);background:linear-gradient(90deg,rgba(var(--ds-info-rgb),.06) 0%,transparent 100%);transition:border-color .15s;">
-      <div style="font-weight:800;font-size:.95em;color:var(--ds-info);margin-bottom:.25em;">The Scaffold</div>
-      <div style="font-size:.84em;line-height:1.5;opacity:.85;">Pass declaration, virtual resources, execute in order. The skeleton everything else plugs into.</div>
-      <!-- power bar -->
-      <div style="margin-top:.5em;height:6px;border-radius:3px;background:rgba(127,127,127,.1);overflow:hidden;">
-        <div style="width:20%;height:100%;border-radius:3px;background:var(--ds-info);"></div>
+  <!-- ── v1 ── -->
+  <a href="#-v1--the-scaffold" style="text-decoration:none;color:inherit;display:block;position:relative;margin-bottom:1.6em;cursor:pointer;" onmouseover="this.querySelector('.mvp-card').style.transform='translateX(4px)';this.querySelector('.mvp-card').style.borderColor='rgba(var(--ds-info-rgb),.5)'" onmouseout="this.querySelector('.mvp-card').style.transform='';this.querySelector('.mvp-card').style.borderColor='rgba(var(--ds-info-rgb),.2)'">
+    <div style="position:absolute;left:-3em;top:.3em;width:2.3em;height:2.3em;border-radius:50%;background:var(--ds-info);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.72em;color:#fff;box-shadow:0 0 0 3px rgba(var(--ds-info-rgb),.15);z-index:1;">v1</div>
+    <div class="mvp-card" style="padding:.8em 1em;border-radius:10px;border:1.5px solid rgba(var(--ds-info-rgb),.2);background:linear-gradient(135deg,rgba(var(--ds-info-rgb),.07) 0%,transparent 60%);transition:all .2s ease;">
+      <div style="display:flex;align-items:baseline;gap:.5em;margin-bottom:.3em;">
+        <span style="font-weight:900;font-size:1em;color:var(--ds-info);">The Scaffold</span>
+        <span style="font-size:.65em;font-weight:700;padding:.15em .5em;border-radius:9px;background:rgba(var(--ds-info-rgb),.12);color:var(--ds-info);white-space:nowrap;">~120 LOC</span>
       </div>
-      <div style="display:flex;justify-content:space-between;margin-top:.2em;font-size:.65em;opacity:.5;"><span>declare</span><span>compile</span><span>execute</span></div>
+      <div style="font-size:.84em;line-height:1.5;opacity:.85;margin-bottom:.5em;">Pass declaration, virtual resources, execute in order. The skeleton everything else plugs into.</div>
+      <!-- unlocks -->
+      <div style="display:flex;flex-wrap:wrap;gap:.35em;margin-bottom:.6em;">
+        <span style="font-size:.68em;padding:.15em .55em;border-radius:9px;background:rgba(var(--ds-info-rgb),.1);color:var(--ds-info);font-weight:700;">🔓 addPass</span>
+        <span style="font-size:.68em;padding:.15em .55em;border-radius:9px;background:rgba(var(--ds-info-rgb),.1);color:var(--ds-info);font-weight:700;">🔓 createResource</span>
+        <span style="font-size:.68em;padding:.15em .55em;border-radius:9px;background:rgba(var(--ds-info-rgb),.1);color:var(--ds-info);font-weight:700;">🔓 importResource</span>
+        <span style="font-size:.68em;padding:.15em .55em;border-radius:9px;background:rgba(var(--ds-info-rgb),.1);color:var(--ds-info);font-weight:700;">🔓 execute()</span>
+      </div>
+      <!-- power bar -->
+      <div style="height:8px;border-radius:4px;background:rgba(127,127,127,.08);overflow:hidden;">
+        <div style="width:20%;height:100%;border-radius:4px;background:var(--ds-info);"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:.25em;font-size:.6em;opacity:.4;font-weight:600;"><span>DECLARE</span><span>COMPILE</span><span>EXECUTE</span></div>
     </div>
   </a>
 
-  <!-- v2 -->
-  <a href="#-mvp-v2--dependencies--barriers" style="text-decoration:none;color:inherit;display:block;position:relative;margin-bottom:1.2em;cursor:pointer;" onmouseover="this.querySelector('.mvp-card').style.borderColor='rgba(var(--ds-code-rgb),.5)'" onmouseout="this.querySelector('.mvp-card').style.borderColor='rgba(var(--ds-code-rgb),.25)'">
-    <div style="position:absolute;left:-2.6em;top:.15em;width:2.1em;height:2.1em;border-radius:50%;background:var(--ds-code);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.7em;color:#fff;box-shadow:0 0 0 3px rgba(var(--ds-code-rgb),.2);z-index:1;">v2</div>
-    <div class="mvp-card" style="padding:.7em .9em;border-radius:8px;border:1.5px solid rgba(var(--ds-code-rgb),.25);background:linear-gradient(90deg,rgba(var(--ds-code-rgb),.06) 0%,transparent 100%);transition:border-color .15s;">
-      <div style="font-weight:800;font-size:.95em;color:var(--ds-code);margin-bottom:.25em;">Dependencies & Barriers</div>
-      <div style="font-size:.84em;line-height:1.5;opacity:.85;">Resource versioning → edges → topo-sort → dead-pass culling → automatic barrier insertion. The core value of a render graph.</div>
-      <!-- power bar -->
-      <div style="margin-top:.5em;height:6px;border-radius:3px;background:rgba(127,127,127,.1);overflow:hidden;">
-        <div style="width:65%;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--ds-info),var(--ds-code));"></div>
+  <!-- ── v2 ── -->
+  <a href="#-mvp-v2--dependencies--barriers" style="text-decoration:none;color:inherit;display:block;position:relative;margin-bottom:1.6em;cursor:pointer;" onmouseover="this.querySelector('.mvp-card').style.transform='translateX(4px)';this.querySelector('.mvp-card').style.borderColor='rgba(var(--ds-code-rgb),.5)'" onmouseout="this.querySelector('.mvp-card').style.transform='';this.querySelector('.mvp-card').style.borderColor='rgba(var(--ds-code-rgb),.2)'">
+    <div style="position:absolute;left:-3em;top:.3em;width:2.3em;height:2.3em;border-radius:50%;background:var(--ds-code);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.72em;color:#fff;box-shadow:0 0 0 3px rgba(var(--ds-code-rgb),.18);z-index:1;">v2</div>
+    <div class="mvp-card" style="padding:.8em 1em;border-radius:10px;border:1.5px solid rgba(var(--ds-code-rgb),.2);background:linear-gradient(135deg,rgba(var(--ds-code-rgb),.07) 0%,transparent 60%);transition:all .2s ease;">
+      <div style="display:flex;align-items:baseline;gap:.5em;margin-bottom:.3em;">
+        <span style="font-weight:900;font-size:1em;color:var(--ds-code);">Dependencies & Barriers</span>
+        <span style="font-size:.65em;font-weight:700;padding:.15em .5em;border-radius:9px;background:rgba(var(--ds-code-rgb),.12);color:var(--ds-code);white-space:nowrap;">~300 LOC</span>
       </div>
-      <div style="display:flex;justify-content:space-between;margin-top:.2em;font-size:.65em;opacity:.5;"><span>declare</span><span>compile</span><span>execute</span></div>
+      <div style="font-size:.84em;line-height:1.5;opacity:.85;margin-bottom:.5em;">Resource versioning → edges → topo-sort → dead-pass culling → automatic barrier insertion. <strong>Everything the GPU needs, derived from the DAG you already built.</strong></div>
+      <!-- unlocks -->
+      <div style="display:flex;flex-wrap:wrap;gap:.35em;margin-bottom:.6em;">
+        <span style="font-size:.68em;padding:.15em .55em;border-radius:9px;background:rgba(var(--ds-code-rgb),.1);color:var(--ds-code);font-weight:700;">🔓 read / write</span>
+        <span style="font-size:.68em;padding:.15em .55em;border-radius:9px;background:rgba(var(--ds-code-rgb),.1);color:var(--ds-code);font-weight:700;">🔓 topo-sort</span>
+        <span style="font-size:.68em;padding:.15em .55em;border-radius:9px;background:rgba(var(--ds-code-rgb),.1);color:var(--ds-code);font-weight:700;">🔓 pass culling</span>
+        <span style="font-size:.68em;padding:.15em .55em;border-radius:9px;background:rgba(var(--ds-code-rgb),.1);color:var(--ds-code);font-weight:700;">🔓 auto barriers</span>
+      </div>
+      <!-- power bar -->
+      <div style="height:8px;border-radius:4px;background:rgba(127,127,127,.08);overflow:hidden;">
+        <div style="width:65%;height:100%;border-radius:4px;background:linear-gradient(90deg,var(--ds-info),var(--ds-code));"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:.25em;font-size:.6em;opacity:.4;font-weight:600;"><span>DECLARE</span><span>COMPILE</span><span>EXECUTE</span></div>
     </div>
   </a>
 
-  <!-- v3 -->
-  <a href="#-mvp-v3--lifetimes--aliasing" style="text-decoration:none;color:inherit;display:block;position:relative;cursor:pointer;" onmouseover="this.querySelector('.mvp-card').style.borderColor='rgba(var(--ds-success-rgb),.5)'" onmouseout="this.querySelector('.mvp-card').style.borderColor='rgba(var(--ds-success-rgb),.25)'">
-    <div style="position:absolute;left:-2.6em;top:.15em;width:2.1em;height:2.1em;border-radius:50%;background:var(--ds-success);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.7em;color:#fff;box-shadow:0 0 0 3px rgba(var(--ds-success-rgb),.2), 0 0 12px rgba(var(--ds-success-rgb),.3);z-index:1;">v3</div>
-    <div class="mvp-card" style="padding:.7em .9em;border-radius:8px;border:1.5px solid rgba(var(--ds-success-rgb),.25);background:linear-gradient(90deg,rgba(var(--ds-success-rgb),.06) 0%,transparent 100%);transition:border-color .15s;">
-      <div style="font-weight:800;font-size:.95em;color:var(--ds-success);margin-bottom:.25em;">Lifetimes & Aliasing <span style="font-size:.75em;font-weight:600;opacity:.7;margin-left:.4em;">★ production-ready</span></div>
-      <div style="font-size:.84em;line-height:1.5;opacity:.85;">Lifetime scan + greedy free-list allocator. Non-overlapping resources share physical memory — <strong>~50% VRAM saved</strong>.</div>
-      <!-- power bar -->
-      <div style="margin-top:.5em;height:6px;border-radius:3px;background:rgba(127,127,127,.1);overflow:hidden;">
-        <div style="width:100%;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--ds-info),var(--ds-code),var(--ds-success));"></div>
+  <!-- ── v3 ── -->
+  <a href="#-mvp-v3--lifetimes--aliasing" style="text-decoration:none;color:inherit;display:block;position:relative;cursor:pointer;" onmouseover="this.querySelector('.mvp-card').style.transform='translateX(4px)';this.querySelector('.mvp-card').style.borderColor='rgba(var(--ds-success-rgb),.6)'" onmouseout="this.querySelector('.mvp-card').style.transform='';this.querySelector('.mvp-card').style.borderColor='rgba(var(--ds-success-rgb),.3)'">
+    <div style="position:absolute;left:-3em;top:.3em;width:2.3em;height:2.3em;border-radius:50%;background:var(--ds-success);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.72em;color:#fff;animation:mvp-glow 2.5s ease-in-out infinite;z-index:1;">v3</div>
+    <div class="mvp-card" style="padding:.8em 1em;border-radius:10px;border:2px solid rgba(var(--ds-success-rgb),.3);background:linear-gradient(135deg,rgba(var(--ds-success-rgb),.09) 0%,rgba(var(--ds-success-rgb),.02) 40%,transparent 70%);transition:all .2s ease;box-shadow:0 2px 16px rgba(var(--ds-success-rgb),.08);">
+      <div style="display:flex;align-items:baseline;gap:.5em;margin-bottom:.3em;">
+        <span style="font-weight:900;font-size:1.05em;color:var(--ds-success);">Lifetimes & Aliasing</span>
+        <span style="font-size:.65em;font-weight:700;padding:.15em .5em;border-radius:9px;background:rgba(var(--ds-success-rgb),.12);color:var(--ds-success);white-space:nowrap;">~400 LOC</span>
+        <span style="font-size:.62em;font-weight:800;padding:.15em .5em;border-radius:9px;background:var(--ds-success);color:#fff;white-space:nowrap;">★ PRODUCTION-READY</span>
       </div>
-      <div style="display:flex;justify-content:space-between;margin-top:.2em;font-size:.65em;opacity:.5;"><span>declare</span><span>compile</span><span>execute</span></div>
+      <div style="font-size:.84em;line-height:1.5;opacity:.85;margin-bottom:.5em;">Lifetime scan + greedy free-list allocator. Non-overlapping resources share physical memory — <strong>~50% VRAM saved</strong>.</div>
+      <!-- unlocks -->
+      <div style="display:flex;flex-wrap:wrap;gap:.35em;margin-bottom:.6em;">
+        <span style="font-size:.68em;padding:.15em .55em;border-radius:9px;background:rgba(var(--ds-success-rgb),.1);color:var(--ds-success);font-weight:700;">🔓 lifetime scan</span>
+        <span style="font-size:.68em;padding:.15em .55em;border-radius:9px;background:rgba(var(--ds-success-rgb),.1);color:var(--ds-success);font-weight:700;">🔓 memory aliasing</span>
+        <span style="font-size:.68em;padding:.15em .55em;border-radius:9px;background:rgba(var(--ds-success-rgb),.1);color:var(--ds-success);font-weight:700;">🔓 heap compaction</span>
+        <span style="font-size:.68em;padding:.15em .55em;border-radius:9px;background:rgba(var(--ds-success-rgb),.12);color:var(--ds-success);font-weight:700;">⚡ 50% VRAM savings</span>
+      </div>
+      <!-- power bar — full, with animated shine -->
+      <div style="height:8px;border-radius:4px;background:rgba(127,127,127,.08);overflow:hidden;">
+        <div style="width:100%;height:100%;border-radius:4px;background:linear-gradient(90deg,var(--ds-info),var(--ds-code),var(--ds-success));background-size:200% 100%;animation:mvp-bar-shine 3s linear infinite;"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:.25em;font-size:.6em;opacity:.4;font-weight:600;"><span>DECLARE</span><span>COMPILE</span><span>EXECUTE</span></div>
     </div>
   </a>
 </div>
@@ -166,7 +200,7 @@ classDiagram
 
 ### 🔀 Design choices
 
-The three-phase model from [Part I](../frame-graph-theory/) forces eight API decisions. Every choice is driven by the same question: *what does the graph compiler need, and what's the cheapest way to give it?*
+The three-phase model from [Part I](../frame-graph-theory/) forces nine API decisions. Every choice is driven by the same question: *what does the graph compiler need, and what's the cheapest way to give it?*
 
 <div style="margin:1.2em 0;font-size:.88em;">
 <table style="width:100%;border-collapse:collapse;line-height:1.5;">
@@ -176,90 +210,80 @@ The three-phase model from [Part I](../frame-graph-theory/) forces eight API dec
   <th style="padding:.5em .6em;">Question</th>
   <th style="padding:.5em .6em;">Our pick</th>
   <th style="padding:.5em .6em;">Why</th>
+  <th style="padding:.5em .6em;opacity:.6;">Alternative</th>
 </tr>
 </thead>
 <tbody>
+<tr><td colspan="5" style="padding:.6em .6em .3em;font-weight:800;font-size:.85em;letter-spacing:.04em;color:var(--ds-info);border-bottom:1px solid rgba(var(--ds-info-rgb),.12);">DECLARE — how passes and resources enter the graph</td></tr>
 <tr style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);">
   <td style="padding:.5em .6em;font-weight:700;">①</td>
   <td style="padding:.5em .6em;">How does setup talk to execute?</td>
   <td style="padding:.5em .6em;white-space:nowrap;"><strong>Lambda captures</strong></td>
-  <td style="padding:.5em .6em;opacity:.8;">Handles live in scope — both lambdas capture them. No per-pass struct, no type-erasure. Frostbite/UE5 use typed pass data (<code>addPass&lt;Data&gt;</code>) for cross-TU decoupling; we skip that boilerplate.</td>
+  <td style="padding:.5em .6em;opacity:.8;">Zero boilerplate — handles live in scope, both lambdas capture them directly. Won't scale past one TU per pass; migrate to typed pass data when that matters.</td>
+  <td style="padding:.5em .6em;opacity:.55;font-size:.92em;">Type-erased pass data — <code>addPass&lt;GBufferData&gt;(setup, exec)</code>. Decouples setup/execute across TUs (Frostbite, UE5).</td>
 </tr>
 <tr style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);background:rgba(var(--ds-indigo-rgb),.02);">
   <td style="padding:.5em .6em;font-weight:700;">②</td>
   <td style="padding:.5em .6em;">Where do DAG edges come from?</td>
   <td style="padding:.5em .6em;white-space:nowrap;"><strong>Direct <code>read/write</code></strong></td>
-  <td style="padding:.5em .6em;opacity:.8;"><code>fg.read(passIdx, h)</code> — flat API, every edge is a visible call. Production engines use a scoped builder that auto-binds edges to the current pass; we trade that safety for transparency.</td>
+  <td style="padding:.5em .6em;opacity:.8;">Every edge is an explicit call — easy to grep and debug. Scales fine; a scoped builder is syntactic sugar, not a structural change.</td>
+  <td style="padding:.5em .6em;opacity:.55;font-size:.92em;">Scoped builder — <code>builder.read(h)</code> auto-binds to the current pass. Prevents mis-wiring at scale.</td>
 </tr>
 <tr style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);">
   <td style="padding:.5em .6em;font-weight:700;">③</td>
   <td style="padding:.5em .6em;">What is a resource handle?</td>
   <td style="padding:.5em .6em;white-space:nowrap;"><strong>Plain <code>uint32_t</code> index</strong></td>
-  <td style="padding:.5em .6em;opacity:.8;">Trivially copyable, O(1) lookup during lifetime scanning. UE5 uses typed wrappers (<code>FRDGTextureRef</code>) for compile-time safety at scale; a single <code>using</code> alias is enough for us.</td>
+  <td style="padding:.5em .6em;opacity:.8;">One integer, trivially copyable — keeps the MVP header-only with no templates. A <code>using</code> alias away from typed wrappers when pass count grows.</td>
+  <td style="padding:.5em .6em;opacity:.55;font-size:.92em;">Typed wrappers — <code>FRDGTextureRef</code> / <code>FRDGBufferRef</code>. Compile-time safety for 700+ passes (UE5).</td>
 </tr>
-<tr style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);background:rgba(var(--ds-indigo-rgb),.02);">
+<tr><td colspan="5" style="padding:.6em .6em .3em;font-weight:800;font-size:.85em;letter-spacing:.04em;color:var(--ds-code);border-bottom:1px solid rgba(var(--ds-code-rgb),.12);">COMPILE — what the graph analyser decides</td></tr>
+<tr style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);">
   <td style="padding:.5em .6em;font-weight:700;">④</td>
   <td style="padding:.5em .6em;">Is compile explicit?</td>
   <td style="padding:.5em .6em;white-space:nowrap;"><strong>Yes — <code>compile()→execute(plan)</code></strong></td>
-  <td style="padding:.5em .6em;opacity:.8;">The plan (sorted order, barriers, aliasing map) is a returned struct you can inspect. Frostbite showed <code>setup → compile → execute</code> as three distinct phases; we mirror that directly.</td>
-</tr>
-<tr style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);">
-  <td style="padding:.5em .6em;font-weight:700;">⑤</td>
-  <td style="padding:.5em .6em;">Resource ownership?</td>
-  <td style="padding:.5em .6em;white-space:nowrap;"><strong>Transient + imported</strong></td>
-  <td style="padding:.5em .6em;opacity:.8;"><code>createResource()</code> → transient (aliasable). <code>importResource()</code> → externally owned (barriers only, not aliased). The swapchain backbuffer is imported; everything else is transient. Matches UE5's <code>CreateTexture</code> / <code>RegisterExternalTexture</code> split.</td>
+  <td style="padding:.5em .6em;opacity:.8;">Returned plan struct lets you log, validate, and visualise the DAG — invaluable while learning. Production-ready as-is.</td>
+  <td style="padding:.5em .6em;opacity:.55;font-size:.92em;">Implicit — <code>execute()</code> compiles internally. Simpler call site, less ceremony.</td>
 </tr>
 <tr style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);background:rgba(var(--ds-indigo-rgb),.02);">
-  <td style="padding:.5em .6em;font-weight:700;">⑥</td>
+  <td style="padding:.5em .6em;font-weight:700;">⑤</td>
   <td style="padding:.5em .6em;">How does culling find the root?</td>
   <td style="padding:.5em .6em;white-space:nowrap;"><strong>Last sorted pass</strong></td>
-  <td style="padding:.5em .6em;opacity:.8;">The final pass in topological order is the output root. The Present pass naturally lands there. UE5/Frostbite use write-to-imported heuristics + <code>NeverCull</code> flags for multiple roots; straightforward upgrade path.</td>
+  <td style="padding:.5em .6em;opacity:.8;">Zero config — Present is naturally last in topo order. Breaks with multiple output roots; add a <code>NeverCull</code> flag when you need them.</td>
+  <td style="padding:.5em .6em;opacity:.55;font-size:.92em;">Write-to-imported heuristic + <code>NeverCull</code> flags. Supports multiple roots (UE5/Frostbite).</td>
 </tr>
 <tr style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);">
-  <td style="padding:.5em .6em;font-weight:700;">⑦</td>
+  <td style="padding:.5em .6em;font-weight:700;">⑥</td>
   <td style="padding:.5em .6em;">Queue model?</td>
   <td style="padding:.5em .6em;white-space:nowrap;"><strong>Single graphics queue</strong></td>
-  <td style="padding:.5em .6em;opacity:.8;">Barriers are simple state transitions — no fences or ownership transfers. Multi-queue is a compiler feature on <em>top</em> of the DAG; <a href="../frame-graph-advanced/">Part III</a> covers async compute.</td>
+  <td style="padding:.5em .6em;opacity:.8;">Keeps barrier logic to plain resource state transitions — no fences, no cross-queue barriers. Multi-queue is a compiler feature layered on top; clean upgrade path.</td>
+  <td style="padding:.5em .6em;opacity:.55;font-size:.92em;">Multi-queue + async compute. 10–30% GPU uplift but needs fences & cross-queue barriers. <a href="../frame-graph-advanced/" style="opacity:.7;">Part III</a>.</td>
 </tr>
 <tr style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);background:rgba(var(--ds-indigo-rgb),.02);">
-  <td style="padding:.5em .6em;font-weight:700;">⑧</td>
+  <td style="padding:.5em .6em;font-weight:700;">⑦</td>
   <td style="padding:.5em .6em;">Rebuild frequency?</td>
   <td style="padding:.5em .6em;white-space:nowrap;"><strong>Full rebuild every frame</strong></td>
-  <td style="padding:.5em .6em;opacity:.8;">At ~25 passes the compile is under 100 µs. Full rebuild means the graph adapts to resolution changes, debug toggles, and feature flags automatically — no invalidation logic.</td>
+  <td style="padding:.5em .6em;opacity:.8;">Under 100 µs at ~25 passes — free perf budget to just rebuild. Adapts to res changes & toggles with zero invalidation logic. Cache later if profiling says so.</td>
+  <td style="padding:.5em .6em;opacity:.55;font-size:.92em;">Cached topology — re-compile only on structural change. Near-zero steady-state cost but complex invalidation logic.</td>
+</tr>
+<tr><td colspan="5" style="padding:.6em .6em .3em;font-weight:800;font-size:.85em;letter-spacing:.04em;color:var(--ds-success);border-bottom:1px solid rgba(var(--ds-success-rgb),.12);">EXECUTE — how the compiled plan becomes GPU commands</td></tr>
+<tr style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);">
+  <td style="padding:.5em .6em;font-weight:700;">⑧</td>
+  <td style="padding:.5em .6em;">Recording strategy?</td>
+  <td style="padding:.5em .6em;white-space:nowrap;"><strong>Single command list</strong></td>
+  <td style="padding:.5em .6em;opacity:.8;">Sequential walk — trivial to implement and debug. CPU cost is noise at ~25 passes. Swap to parallel deferred command lists when pass count exceeds ~60.</td>
+  <td style="padding:.5em .6em;opacity:.55;font-size:.92em;">Parallel command lists — one per pass group, recorded across threads. Scales to 100+ passes (UE5).</td>
+</tr>
+<tr style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);background:rgba(var(--ds-indigo-rgb),.02);">
+  <td style="padding:.5em .6em;font-weight:700;">⑨</td>
+  <td style="padding:.5em .6em;">How do callbacks access GPU resources?</td>
+  <td style="padding:.5em .6em;white-space:nowrap;"><strong>Context lookup</strong></td>
+  <td style="padding:.5em .6em;opacity:.8;"><code>ctx.getTexture(handle)</code> — callbacks are self-contained, no pre-binding step. Lookup cost is negligible; pre-bound descriptor tables are an optimisation, not a prerequisite.</td>
+  <td style="padding:.5em .6em;opacity:.55;font-size:.92em;">Pre-bound descriptor tables — executor populates root descriptors before each pass. Zero lookups in the callback, but tighter coupling.</td>
 </tr>
 </tbody>
 </table>
 </div>
 
-<div style="margin:1.4em 0;display:grid;grid-template-columns:1fr 1fr;gap:.8em;font-size:.85em;">
-  <div style="padding:.8em 1em;border-radius:10px;border:1.5px solid rgba(var(--ds-info-rgb),.2);background:rgba(var(--ds-info-rgb),.04);">
-    <div style="font-weight:700;color:var(--ds-info);margin-bottom:.4em;font-size:.95em;">API surface — ①②③④</div>
-    <div style="line-height:1.65;opacity:.8;">
-      ① Lambda captures<br>
-      ② Direct <code>read/write</code><br>
-      ③ Plain-index handles<br>
-      ④ Explicit <code>compile()→execute()</code>
-    </div>
-    <div style="margin-top:.5em;font-size:.88em;opacity:.55;border-top:1px solid rgba(var(--ds-info-rgb),.12);padding-top:.4em;">
-      What the user writes — shapes how passes declare resources and wire dependencies.
-    </div>
-  </div>
-  <div style="padding:.8em 1em;border-radius:10px;border:1.5px solid rgba(var(--ds-code-rgb),.2);background:rgba(var(--ds-code-rgb),.04);">
-    <div style="font-weight:700;color:var(--ds-code);margin-bottom:.4em;font-size:.95em;">Compiler scope — ⑤⑥⑦⑧</div>
-    <div style="line-height:1.65;opacity:.8;">
-      ⑤ Transient + imported<br>
-      ⑥ Last-pass root<br>
-      ⑦ Single graphics queue<br>
-      ⑧ Full rebuild every frame
-    </div>
-    <div style="margin-top:.5em;font-size:.88em;opacity:.55;border-top:1px solid rgba(var(--ds-code-rgb),.12);padding-top:.4em;">
-      What the compiler does — scopes sorting, culling, aliasing, and barrier insertion.
-    </div>
-  </div>
-</div>
-<div style="text-align:center;font-size:.82em;opacity:.55;margin-bottom:1em;">
-  Every decision has a clear upgrade path → <a href="../frame-graph-production/">Part IV</a>
-</div>
 
 
 ### 🚀 The Target API
@@ -270,10 +294,90 @@ With those choices made, here's where we're headed — the final API in under 30
 
 ### 🧱 v1 — The Scaffold
 
-Three types are all we need to start: a `RenderPass` with setup + execute lambdas, a `ResourceDesc` (width, height, format — no GPU handle yet), and a `ResourceHandle` that's just an index. The `FrameGraph` class owns arrays of both and runs passes in declaration order. No dependency tracking, no barriers — just the foundation that v2 and v3 build on.
+<div style="margin:1em 0;padding:.7em 1em;border-radius:8px;border-left:4px solid var(--ds-info);background:rgba(var(--ds-info-rgb),.04);font-size:.92em;line-height:1.6;">
+🎯 <strong>Goal:</strong> Declare passes and virtual resources, execute in registration order — the skeleton that v2 and v3 build on.
+</div>
+
+Three types are all we need to start: a `ResourceDesc` (width, height, format — no GPU handle yet), a `ResourceHandle` that's just an index, and a `RenderPass` with setup + execute lambdas. The `FrameGraph` class owns arrays of both and runs passes in declaration order. No dependency tracking, no barriers — just the foundation that v2 and v3 build on.
+
+{{< code-diff title="v1 — Resource types" >}}
+@@ New types — resource description + handle @@
++enum class Format { RGBA8, RGBA16F, R8, D32F };
++
++struct ResourceDesc {
++    uint32_t width  = 0;
++    uint32_t height = 0;
++    Format   format = Format::RGBA8;
++};
++
++struct ResourceHandle {
++    uint32_t index = UINT32_MAX;
++    bool isValid() const { return index != UINT32_MAX; }
++};
+{{< /code-diff >}}
+
+A pass is two lambdas — setup (runs now, wires the DAG) and execute (stored for later, records GPU commands). v1 doesn't use setup yet, but the slot is there for v2:
+
+{{< code-diff title="v1 — RenderPass + FrameGraph class" >}}
+@@ RenderPass @@
++struct RenderPass {
++    std::string                        name;
++    std::function<void()>              setup;    // build the DAG (v1: unused)
++    std::function<void(/*cmd list*/)>  execute;  // record GPU commands
++};
+
+@@ FrameGraph — owns passes + resources @@
++class FrameGraph {
++public:
++    ResourceHandle createResource(const ResourceDesc& desc);
++    ResourceHandle importResource(const ResourceDesc& desc);
++
++    template <typename SetupFn, typename ExecFn>
++    void addPass(const std::string& name, SetupFn&& setup, ExecFn&& exec) {
++        passes_.push_back({ name, std::forward<SetupFn>(setup),
++                                   std::forward<ExecFn>(exec) });
++        passes_.back().setup();  // run setup immediately
++    }
++
++    void execute();  // v1: just run in declaration order
++
++private:
++    std::vector<RenderPass>    passes_;
++    std::vector<ResourceDesc>  resources_;
++};
+{{< /code-diff >}}
+
+`execute()` is the simplest possible loop — walk passes in order, call each callback, clear everything for the next frame:
+
+{{< code-diff title="v1 — Implementation (frame_graph_v1.cpp)" >}}
+@@ createResource / importResource @@
++ResourceHandle FrameGraph::createResource(const ResourceDesc& desc) {
++    resources_.push_back(desc);
++    return { static_cast<uint32_t>(resources_.size() - 1) };
++}
++
++ResourceHandle FrameGraph::importResource(const ResourceDesc& desc) {
++    resources_.push_back(desc);  // v1: same as create (no aliasing yet)
++    return { static_cast<uint32_t>(resources_.size() - 1) };
++}
+
+@@ execute — declaration order, no compile step @@
++void FrameGraph::execute() {
++    printf("\n[1] Executing (declaration order — no compile step):\n");
++    for (auto& pass : passes_) {
++        printf("  >> exec: %s\n", pass.name.c_str());
++        pass.execute(/* &cmdList */);
++    }
++    passes_.clear();
++    resources_.clear();
++}
+{{< /code-diff >}}
+
+Full source and runnable example:
 
 {{< include-code file="frame_graph_v1.h" lang="cpp" compact="true" >}}
-{{< include-code file="example_v1.cpp" lang="cpp" compile="true" deps="frame_graph_v1.h" compact="true" >}}
+{{< include-code file="frame_graph_v1.cpp" lang="cpp" compact="true" >}}
+{{< include-code file="example_v1.cpp" lang="cpp" compile="true" deps="frame_graph_v1.h,frame_graph_v1.cpp" compact="true" >}}
 
 Compiles and runs — the execute lambdas are stubs, but the scaffolding is real. Every piece we add in v2 and v3 goes into this same `FrameGraph` class.
 
@@ -293,7 +397,7 @@ Compiles and runs — the execute lambdas are stubs, but the scaffolding is real
 ## 🔗 MVP v2 — Dependencies & Barriers
 
 <div style="margin:1em 0;padding:.7em 1em;border-radius:8px;border-left:4px solid var(--ds-info);background:rgba(var(--ds-info-rgb),.04);font-size:.92em;line-height:1.6;">
-🎯 <strong>Goal:</strong> Automatic pass ordering, dead-pass culling, and barrier insertion — the core value of a render graph.
+🎯 <strong>Goal:</strong> Automatic pass ordering, dead-pass culling, and barrier insertion — the graph now drives the GPU instead of you.
 </div>
 
 Four pieces, each feeding the next:
@@ -507,7 +611,7 @@ All four pieces — versioning, sorting, culling, barriers — compose into that
 ### 🧩 Full v2 source
 
 {{< include-code file="frame_graph_v2.h" lang="cpp" compact="true" >}}
-{{< include-code file="example_v2.cpp" lang="cpp" compile="true" deps="frame_graph_v2.h" compact="true" >}}
+{{< include-code file="example_v2.cpp" lang="cpp" compile="true" deps="frame_graph_v2.h,frame_graph_v2.cpp" compact="true" >}}
 
 That's three of the four intro promises delivered — automatic ordering, barrier insertion, and dead-pass culling. The only piece missing: resources still live for the entire frame. Version 3 fixes that with lifetime analysis and memory aliasing.
 
@@ -516,6 +620,10 @@ UE5's RDG does the same thing. When you call `FRDGBuilder::AddPass`, RDG builds 
 ---
 
 ## 💾 MVP v3 — Lifetimes & Aliasing
+
+<div style="margin:1em 0;padding:.7em 1em;border-radius:8px;border-left:4px solid var(--ds-info);background:rgba(var(--ds-info-rgb),.04);font-size:.92em;line-height:1.6;">
+🎯 <strong>Goal:</strong> Non-overlapping transient resources share physical memory — automatic VRAM aliasing with ~50% savings.
+</div>
 
 V2 gives us ordering, culling, and barriers — but every transient resource still gets its own VRAM for the entire frame. [Part I](/posts/frame-graph-theory/#allocation-and-aliasing) showed how non-overlapping lifetimes let the allocator share physical memory (aliasing). Now we implement it.
 
@@ -612,7 +720,7 @@ That's the full value prop — automatic memory aliasing *and* automatic barrier
 ### 🧩 Full v3 source
 
 {{< include-code file="frame_graph_v3.h" lang="cpp" compact="true" >}}
-{{< include-code file="example_v3.cpp" lang="cpp" compile="true" deps="frame_graph_v3.h" compact="true" >}}
+{{< include-code file="example_v3.cpp" lang="cpp" compile="true" deps="frame_graph_v3.h,frame_graph_v3.cpp" compact="true" >}}
 
 ---
 
@@ -692,6 +800,6 @@ That's the full MVP — a single `FrameGraph` class that handles dependency-driv
     ← Previous: Part I — Theory
   </a>
   <a href="../frame-graph-advanced/" style="text-decoration:none;font-weight:700;font-size:.95em;">
-    Next: Part III — Advanced Features →
+    Next: Part III — Beyond MVP →
   </a>
 </div>

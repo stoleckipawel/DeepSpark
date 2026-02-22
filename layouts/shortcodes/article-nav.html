@@ -13,12 +13,34 @@
     <span class="anav-bc-section" id="anav-bc-section">—</span>
     <span class="anav-bc-pct" id="anav-bc-pct">0%</span>
   </div>
+  <!-- Series tab bar -->
+  <div class="anav-series" id="anav-series">
+    <a href="../frame-graph-theory/" class="anav-series-tab" data-slug="frame-graph-theory">
+      <span class="anav-st-num">I</span><span class="anav-st-label">Theory</span>
+    </a>
+    <a href="../frame-graph-build-it/" class="anav-series-tab" data-slug="frame-graph-build-it">
+      <span class="anav-st-num">II</span><span class="anav-st-label">Build It</span>
+    </a>
+    <a href="../frame-graph-advanced/" class="anav-series-tab" data-slug="frame-graph-advanced">
+      <span class="anav-st-num">III</span><span class="anav-st-label">Beyond MVP</span>
+    </a>
+    <a href="../frame-graph-production/" class="anav-series-tab" data-slug="frame-graph-production">
+      <span class="anav-st-num">IV</span><span class="anav-st-label">Production</span>
+    </a>
+  </div>
 </div>
 
 <!-- Side rail (right) -->
 <div class="anav-rail" id="anav-rail">
   <div class="anav-rail-inner" id="anav-rail-inner">
-    <div class="anav-rail-title">Navigation</div>
+    <div class="anav-rail-title">Series</div>
+    <div class="anav-rail-series" id="anav-rail-series">
+      <a href="../frame-graph-theory/" class="anav-rs-link" data-slug="frame-graph-theory"><span class="anav-rs-num">I</span> Theory</a>
+      <a href="../frame-graph-build-it/" class="anav-rs-link" data-slug="frame-graph-build-it"><span class="anav-rs-num">II</span> Build It</a>
+      <a href="../frame-graph-advanced/" class="anav-rs-link" data-slug="frame-graph-advanced"><span class="anav-rs-num">III</span> Beyond MVP</a>
+      <a href="../frame-graph-production/" class="anav-rs-link" data-slug="frame-graph-production"><span class="anav-rs-num">IV</span> Production</a>
+    </div>
+    <div class="anav-rail-title" style="margin-top:.6em;">Sections</div>
     <div class="anav-rail-items" id="anav-rail-items"></div>
     <div class="anav-rail-pct-bottom" id="anav-rail-pct">0% read</div>
   </div>
@@ -110,6 +132,110 @@
   white-space: nowrap;
   min-width: 3em;
   text-align: right;
+}
+
+/* ── Series tab bar (top, inside sticky header) ── */
+.anav-series {
+  display: flex;
+  gap: 0;
+  background: rgba(255,255,255,.88);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--color-neutral-200, #e5e5e5);
+  padding: 0 .6em;
+}
+:is(.dark,.scheme-congo) .anav-series {
+  background: rgba(23,23,23,.88);
+  border-color: var(--color-neutral-700);
+}
+.anav-series-tab {
+  display: flex;
+  align-items: center;
+  gap: .35em;
+  padding: .4em .7em;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: .78em;
+  font-weight: 600;
+  color: inherit;
+  opacity: .45;
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  transition: opacity .15s, border-color .15s;
+  white-space: nowrap;
+}
+.anav-series-tab:hover {
+  opacity: .8;
+  text-decoration: none;
+}
+.anav-series-tab.active {
+  opacity: 1;
+  font-weight: 800;
+  border-bottom-color: var(--ds-accent);
+  color: var(--ds-accent);
+}
+.anav-st-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5em;
+  height: 1.5em;
+  border-radius: 50%;
+  background: rgba(var(--ds-accent-rgb),.08);
+  font-size: .85em;
+  font-weight: 800;
+}
+.anav-series-tab.active .anav-st-num {
+  background: var(--ds-accent);
+  color: #fff;
+}
+.anav-st-label { }
+
+/* ── Series links in side rail ── */
+.anav-rail-series {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: .4em;
+}
+.anav-rs-link {
+  display: flex;
+  align-items: center;
+  gap: .5em;
+  padding: .35em .7em;
+  font-size: .82em;
+  font-weight: 600;
+  color: inherit;
+  opacity: .5;
+  text-decoration: none;
+  border-radius: 6px;
+  transition: background .12s, opacity .12s;
+}
+.anav-rs-link:hover {
+  background: rgba(var(--ds-accent-rgb),.08);
+  opacity: .8;
+  text-decoration: none;
+}
+.anav-rs-link.active {
+  opacity: 1;
+  font-weight: 800;
+  color: var(--ds-accent);
+  background: rgba(var(--ds-accent-rgb),.1);
+}
+.anav-rs-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4em;
+  height: 1.4em;
+  border-radius: 50%;
+  background: rgba(var(--ds-accent-rgb),.08);
+  font-size: .8em;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+.anav-rs-link.active .anav-rs-num {
+  background: var(--ds-accent);
+  color: #fff;
 }
 
 /* ── Side rail ────────────────────────────────── */
@@ -362,6 +488,17 @@
   }
 
   function initNav() {
+    // ── Series tab bar: highlight current page ──
+    (function() {
+      var path = window.location.pathname.replace(/\/+$/, '');
+      var slug = path.split('/').pop();
+      document.querySelectorAll('.anav-series-tab[data-slug], .anav-rs-link[data-slug]').forEach(function(el) {
+        if (el.getAttribute('data-slug') === slug) {
+          el.classList.add('active');
+        }
+      });
+    })();
+
     var topBar = document.getElementById('anav-top');
     var rail = document.getElementById('anav-rail');
     var progressBar = document.getElementById('anav-progress-bar');
