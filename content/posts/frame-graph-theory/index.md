@@ -373,7 +373,7 @@ The declared DAG goes in; an optimized execution plan comes out — all on the C
   </div>
 </div>
 
-### How edges form — resource versioning
+### 🔗 How edges form — resource versioning
 
 Before the compiler can sort anything, it needs edges. Edges come from **resource versioning**: every time a pass writes a resource, the version number increments. Readers attach to whatever version existed when they were declared. Multiple passes can read the same version without conflict — only a write creates a new one.
 
@@ -420,7 +420,7 @@ This is how the graph knows *exactly* which pass depends on which, even when the
 
 These versioned edges are the raw material the compiler works with. Every step that follows — sorting, culling, barrier insertion — operates on this edge set.
 
-### Sorting
+### 📊 Sorting
 
 With edges in place, the compiler flattens the DAG into a linear execution order. Every edge says *"pass B depends on something pass A produced,"* so the compiler needs a **topological sort** — an ordering where every pass comes after the passes it depends on.
 
@@ -445,7 +445,7 @@ Step through the algorithm interactively — watch nodes with zero in-degree get
 
 {{< interactive-toposort >}}
 
-### Culling
+### ✂ Culling
 
 With the sorted order established, the compiler walks backward from the final outputs and removes any pass whose results are never read. Dead-code elimination for GPU work — entire passes vanish without a feature flag.
 
@@ -453,7 +453,7 @@ Toggle edges in the DAG below — disconnect a pass and the compiler removes it 
 
 {{< interactive-dag >}}
 
-### Allocation and aliasing
+### 💾 Allocation and aliasing
 
 The sorted order tells the compiler exactly when each resource is first written and last read — its **lifetime**. Two resources that are never alive at the same time can share the same physical memory. Without aliasing, every transient resource holds its own allocation for the full frame — even if it's only used for 2–3 passes. The actual savings depend on pass topology, resolution, and how many transient resources have non-overlapping lifetimes — Frostbite's GDC 2017 talk reported roughly 50% transient VRAM reduction on Battlefield 1's deferred pipeline at full resolution. Your mileage will vary with different pass structures.
 
@@ -537,13 +537,13 @@ Drag the timeline below to see how resources share physical blocks as their life
 
 {{< interactive-aliasing >}}
 
-### Barriers
+### 🚧 Barriers
 
 A GPU resource can't be a render target and a shader input at the same time — the hardware needs to flush caches, change memory layout, and switch access modes between those uses. That transition is a **barrier**. Miss one and you get rendering corruption or a GPU crash; add an unnecessary one and the GPU stalls waiting for nothing.
 
 Barriers follow the same rule as everything else in a frame graph: **compile analyzes and decides, execute submits and runs.** Think of it like a compiler — the compile stage is static analysis, the execute stage is command playback. Barriers are no different.
 
-#### What happens during compile (barrier computation)
+#### ⚙ What happens during compile (barrier computation)
 
 The compiler analyzes the graph and builds the full transition plan. No GPU work — purely data analysis.
 
@@ -604,7 +604,7 @@ The compiler analyzes the graph and builds the full transition plan. No GPU work
   </div>
 </div>
 
-#### What happens during execute (barrier submission)
+#### ▶ What happens during execute (barrier submission)
 
 Execution is intentionally simple. It replays the compiled plan — no analysis, no graph walking, no state comparison, no decisions:
 
@@ -616,7 +616,7 @@ Execution is intentionally simple. It replays the compiled plan — no analysis,
 
 Just issuing commands. The GPU receives exactly what was precomputed.
 
-#### Concrete example
+#### 📌 Concrete example
 
 <div style="margin:1em 0;display:grid;grid-template-columns:1fr 1fr;gap:0;border-radius:10px;overflow:hidden;border:1.5px solid rgba(var(--ds-indigo-rgb),.2);">
   <div style="padding:.8em 1em;background:rgba(var(--ds-code-rgb),.04);border-right:1px solid rgba(var(--ds-indigo-rgb),.15);">
@@ -647,7 +647,7 @@ Just issuing commands. The GPU receives exactly what was precomputed.
   </div>
 </div>
 
-#### Why this separation matters
+#### 💡 Why this separation matters
 
 <div style="margin:1em 0;display:grid;grid-template-columns:1fr 1fr;gap:0;border-radius:10px;overflow:hidden;border:1.5px solid rgba(var(--ds-indigo-rgb),.2);">
   <div style="padding:.7em 1em;background:rgba(var(--ds-danger-rgb),.04);border-right:1px solid rgba(var(--ds-indigo-rgb),.15);">
