@@ -9,7 +9,7 @@
 // == FrameGraph implementation =================================
 
 ResourceHandle FrameGraph::CreateResource(const ResourceDesc& desc) {
-    entries.push_back({ desc, {{}}, ResourceState::Undefined });
+    entries.push_back({ desc, {{}}, ResourceState::Undefined, false });
     return { static_cast<uint32_t>(entries.size() - 1) };
 }
 
@@ -34,7 +34,7 @@ void FrameGraph::Write(uint32_t passIdx, ResourceHandle h) {
     passes[passIdx].writes.push_back(h);
 }
 
-// == v3: compile â€” builds the execution plan + allocates memory ==
+// == v3: compile -- builds the execution plan + allocates memory ==
 
 FrameGraph::CompiledPlan FrameGraph::Compile() {
     printf("\n[1] Building dependency edges...\n");
@@ -47,23 +47,31 @@ FrameGraph::CompiledPlan FrameGraph::Compile() {
     auto lifetimes = ScanLifetimes(sorted);   // NEW v3
     printf("[5] Aliasing resources (greedy free-list)...\n");
     auto mapping   = AliasResources(lifetimes); // NEW v3
+    printf("[6] Computing barriers...\n");
+    auto barriers  = ComputeBarriers(sorted);   // NEW v3
 
-    // Physical bindings are now decided â€” execute can't change them.
-    // This makes the compiled plan cacheable and thread-safe.
-    return { std::move(sorted), std::move(mapping) };
+    // The compiled plan is fully determined — execution order, memory
+    // mapping, and every barrier transition.  Execute is pure playback.
+    return { std::move(sorted), std::move(mapping), std::move(barriers) };
 }
 
-// == v3: execute â€” runs the compiled plan =====================
+// == v3: execute -- runs the compiled plan =====================
 
 void FrameGraph::Execute(const CompiledPlan& plan) {
-    printf("[6] Executing (with automatic barriers):\n");
-    for (uint32_t idx : plan.sorted) {
-        if (!passes[idx].alive) {
-            printf("  -- skip: %s (CULLED)\n", passes[idx].name.c_str());
+    printf("[7] Executing (replaying precomputed barriers):\n");
+    for (uint32_t orderIdx = 0; orderIdx < plan.sorted.size(); orderIdx++) {
+        uint32_t passIdx = plan.sorted[orderIdx];
+        if (!passes[passIdx].alive) {
+            printf("  -- skip: %s (CULLED)\n", passes[passIdx].name.c_str());
             continue;
         }
-        InsertBarriers(idx);
-        passes[idx].Execute(/* &cmdList */);
+        for (auto& b : plan.barriers[orderIdx]) {
+            printf("    barrier: resource[%u] %s -> %s\n",
+                   b.resourceIndex,
+                   StateName(b.oldState),
+                   StateName(b.newState));
+        }
+        passes[passIdx].Execute(/* &cmdList */);
     }
     passes.clear();
     entries.clear();
@@ -86,7 +94,7 @@ void FrameGraph::BuildEdges() {
     }
 }
 
-// == Kahn's topological sort â€” O(V + E) ========================
+// == Kahn's topological sort -- O(V + E) ========================
 
 std::vector<uint32_t> FrameGraph::TopoSort() {
     std::queue<uint32_t> q;
@@ -131,9 +139,12 @@ void FrameGraph::Cull(const std::vector<uint32_t>& sorted) {
     }
 }
 
-// == Insert barriers ===========================================
+// == Compute barriers (NEW v3 — runs during Compile) ==========
 
-void FrameGraph::InsertBarriers(uint32_t passIdx) {
+std::vector<std::vector<Barrier>> FrameGraph::ComputeBarriers(
+        const std::vector<uint32_t>& sorted) {
+    std::vector<std::vector<Barrier>> result(sorted.size());
+
     auto StateForUsage = [](bool isWrite, Format fmt) {
         if (isWrite)
             return (fmt == Format::D32F) ? ResourceState::DepthAttachment
@@ -141,26 +152,33 @@ void FrameGraph::InsertBarriers(uint32_t passIdx) {
         return ResourceState::ShaderRead;
     };
 
-    for (auto& h : passes[passIdx].reads) {
-        ResourceState needed = ResourceState::ShaderRead;
-        if (entries[h.index].currentState != needed) {
-            printf("    barrier: resource[%u] %s -> %s\n",
-                   h.index,
-                   StateName(entries[h.index].currentState),
-                   StateName(needed));
-            entries[h.index].currentState = needed;
+    for (uint32_t orderIdx = 0; orderIdx < sorted.size(); orderIdx++) {
+        uint32_t passIdx = sorted[orderIdx];
+        if (!passes[passIdx].alive) continue;
+
+        for (auto& h : passes[passIdx].reads) {
+            ResourceState needed = ResourceState::ShaderRead;
+            if (entries[h.index].currentState != needed) {
+                result[orderIdx].push_back(
+                    { h.index, entries[h.index].currentState, needed });
+                entries[h.index].currentState = needed;
+            }
+        }
+        for (auto& h : passes[passIdx].writes) {
+            ResourceState needed = StateForUsage(true, entries[h.index].desc.format);
+            if (entries[h.index].currentState != needed) {
+                result[orderIdx].push_back(
+                    { h.index, entries[h.index].currentState, needed });
+                entries[h.index].currentState = needed;
+            }
         }
     }
-    for (auto& h : passes[passIdx].writes) {
-        ResourceState needed = StateForUsage(true, entries[h.index].desc.format);
-        if (entries[h.index].currentState != needed) {
-            printf("    barrier: resource[%u] %s -> %s\n",
-                   h.index,
-                   StateName(entries[h.index].currentState),
-                   StateName(needed));
-            entries[h.index].currentState = needed;
-        }
-    }
+
+    uint32_t total = 0;
+    for (auto& v : result) total += static_cast<uint32_t>(v.size());
+    printf("  Barriers computed: %u transition(s) across %u passes\n",
+           total, static_cast<uint32_t>(sorted.size()));
+    return result;
 }
 
 // == Scan lifetimes (NEW v3) ===================================
@@ -168,7 +186,7 @@ void FrameGraph::InsertBarriers(uint32_t passIdx) {
 std::vector<Lifetime> FrameGraph::ScanLifetimes(const std::vector<uint32_t>& sorted) {
     std::vector<Lifetime> life(entries.size());
 
-    // Imported resources are not transient â€” skip them during aliasing.
+    // Imported resources are not transient -- skip them during aliasing.
     for (uint32_t i = 0; i < entries.size(); i++) {
         if (entries[i].imported) life[i].isTransient = false;
     }

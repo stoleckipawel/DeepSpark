@@ -40,13 +40,13 @@ showTableOfContents: false
     </div>
     <!-- Row 2 -->
     <div style="padding:.65em 1em;font-size:.88em;opacity:.5;text-decoration:line-through;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.06);text-align:right;">
-      Every resource transition placed by hand.
+      Every resource state tracked and every transition placed by hand.
     </div>
     <div style="padding:.65em .3em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.06);display:flex;align-items:center;justify-content:center;">
       <svg viewBox="0 0 24 16" width="20" height="13" fill="none"><path d="M4 8h12m-4-4l5 4-5 4" stroke="var(--ds-success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity=".5"/></svg>
     </div>
     <div style="padding:.65em 1em;font-size:.88em;font-weight:700;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);">
-      Auto-inserted — no stalls or corruption.
+      States tracked and transitions inserted automatically.
     </div>
     <!-- Row 3 -->
     <div style="padding:.65em 1em;font-size:.88em;opacity:.5;text-decoration:line-through;border-right:1px solid rgba(var(--ds-indigo-rgb),.06);text-align:right;">
@@ -538,13 +538,148 @@ Drag the timeline below to see how resources share physical blocks as their life
 
 A GPU resource can't be a render target and a shader input at the same time — the hardware needs to flush caches, change memory layout, and switch access modes between those uses. That transition is a **barrier**. Miss one and you get rendering corruption or a GPU crash; add an unnecessary one and the GPU stalls waiting for nothing.
 
-Because the graph already knows every resource's state at every point in the sorted pass order, it can insert the exact set of barriers automatically — no manual tracking required.
+Barriers follow the same rule as everything else in a frame graph: **compile analyzes and decides, execute submits and runs.** Think of it like a compiler — the compile stage is static analysis, the execute stage is command playback. Barriers are no different.
 
-<div style="margin:.6em 0;padding:.5em .9em;border-radius:8px;border-left:3px solid rgba(var(--ds-code-rgb),.4);background:rgba(var(--ds-code-rgb),.04);font-size:.85em;line-height:1.5;">
-🔨 <a href="../frame-graph-build-it/#v2-barriers" style="font-weight:600;">Part II</a> walks through the insertion algorithm step by step — how the compiler tracks state, where it places each barrier, and every transition type a real frame needs.
+#### What happens during compile (barrier computation)
+
+The compiler analyzes the graph and builds the full transition plan. No GPU work — purely data analysis.
+
+<div style="margin:1.2em 0;border-radius:10px;overflow:hidden;border:1.5px solid rgba(var(--ds-code-rgb),.2);">
+  <!-- Step 1 -->
+  <div style="padding:.7em 1.1em;border-bottom:1px solid rgba(var(--ds-code-rgb),.1);background:rgba(var(--ds-code-rgb),.04);">
+    <div style="font-weight:800;font-size:.82em;color:var(--ds-code);margin-bottom:.3em;">① Build resource usage timeline</div>
+    <div style="font-size:.86em;line-height:1.6;opacity:.85;">
+      Every pass declared its reads and writes. The compiler walks those declarations and builds a per-resource usage history:
+    </div>
+    <pre style="margin:.5em 0 0;padding:.5em .8em;border-radius:6px;background:rgba(0,0,0,.04);font-size:.82em;line-height:1.5;overflow-x:auto;"><code>Resource: Albedo
+  Pass 0 (GBuffer):   Write → ColorAttachment
+  Pass 1 (Lighting):  Read  → ShaderRead
+  Pass 2 (PostFX):    Read  → ShaderRead</code></pre>
+  </div>
+  <!-- Step 2 -->
+  <div style="padding:.7em 1.1em;border-bottom:1px solid rgba(var(--ds-code-rgb),.1);">
+    <div style="font-weight:800;font-size:.82em;color:var(--ds-code);margin-bottom:.3em;">② Track previous state</div>
+    <div style="font-size:.86em;line-height:1.6;opacity:.85;">
+      For each resource, start with <code>currentState = Undefined</code>, then walk passes in topological order.
+    </div>
+  </div>
+  <!-- Step 3 -->
+  <div style="padding:.7em 1.1em;border-bottom:1px solid rgba(var(--ds-code-rgb),.1);background:rgba(var(--ds-code-rgb),.04);">
+    <div style="font-weight:800;font-size:.82em;color:var(--ds-code);margin-bottom:.3em;">③ Detect state transitions</div>
+    <div style="font-size:.86em;line-height:1.6;opacity:.85;">
+      At each pass, check what the pass needs vs. what the resource currently is:
+    </div>
+    <pre style="margin:.5em 0 0;padding:.5em .8em;border-radius:6px;background:rgba(0,0,0,.04);font-size:.82em;line-height:1.5;overflow-x:auto;"><code>if (requiredState != currentState):
+    store barrier { resource, currentState → requiredState }
+    currentState = requiredState</code></pre>
+    <div style="font-size:.84em;line-height:1.6;opacity:.75;margin-top:.5em;">
+      Example — GBuffer writes Albedo as <code>ColorAttachment</code>, then Lighting reads it as <code>ShaderRead</code>. The compiler stores:<br>
+      <strong style="color:var(--ds-code)">Barrier: ColorAttachment → ShaderRead</strong><br>
+      This is purely analysis. Nothing is sent to the GPU yet.
+    </div>
+  </div>
+  <!-- Step 4 -->
+  <div style="padding:.7em 1.1em;border-bottom:1px solid rgba(var(--ds-code-rgb),.1);">
+    <div style="font-weight:800;font-size:.82em;color:var(--ds-code);margin-bottom:.3em;">④ Optimize (production)</div>
+    <div style="font-size:.86em;line-height:1.6;opacity:.85;">
+      A production compiler will merge multiple transitions into one barrier call, batch transitions per pass, remove redundant transitions, and eliminate transitions for resources that are about to be aliased. Still compile-time — still no GPU work.
+    </div>
+  </div>
+  <!-- Step 5 -->
+  <div style="padding:.7em 1.1em;background:rgba(var(--ds-success-rgb),.04);">
+    <div style="font-weight:800;font-size:.82em;color:var(--ds-code);margin-bottom:.3em;">⑤ Store in CompiledPlan</div>
+    <div style="font-size:.86em;line-height:1.6;opacity:.85;">
+      The output is a list of precomputed barriers per pass — stored alongside the execution callbacks:
+    </div>
+    <pre style="margin:.5em 0 0;padding:.5em .8em;border-radius:6px;background:rgba(0,0,0,.04);font-size:.82em;line-height:1.5;overflow-x:auto;"><code>CompiledPass {
+    preBarriers[]       // transitions before this pass runs
+    executeCallback     // the lambda — draw calls, dispatches
+}</code></pre>
+    <div style="font-size:.84em;line-height:1.6;opacity:.75;margin-top:.4em;">
+      The frame graph is now fully "lowered" into a GPU execution plan. Every barrier is decided. Execute just replays it.
+    </div>
+  </div>
 </div>
 
-Step through a full pipeline — watch each resource's state update as passes execute, and see exactly where the compiler fires each barrier:
+#### What happens during execute (barrier submission)
+
+Execution is intentionally simple. It replays the compiled plan — no analysis, no graph walking, no state comparison, no decisions:
+
+<pre style="margin:.6em 0;padding:.7em 1em;border-radius:8px;background:rgba(var(--ds-success-rgb),.04);border:1px solid rgba(var(--ds-success-rgb),.15);font-size:.84em;line-height:1.6;overflow-x:auto;"><code>for pass in compiledPlan:
+    submit(pass.preBarriers)       // vkCmdPipelineBarrier / ResourceBarrier
+    beginRenderPass()
+    pass.executeCallback()         // draw calls, dispatches
+    endRenderPass()</code></pre>
+
+Just issuing commands. The GPU receives exactly what was precomputed.
+
+#### Concrete example
+
+<div style="margin:1em 0;display:grid;grid-template-columns:1fr 1fr;gap:0;border-radius:10px;overflow:hidden;border:1.5px solid rgba(var(--ds-indigo-rgb),.2);">
+  <div style="padding:.8em 1em;background:rgba(var(--ds-code-rgb),.04);border-right:1px solid rgba(var(--ds-indigo-rgb),.15);">
+    <div style="font-weight:800;font-size:.82em;color:var(--ds-code);margin-bottom:.5em;">COMPILE generates:</div>
+    <div style="font-size:.82em;line-height:1.65;font-family:ui-monospace,monospace;">
+      <strong>GBuffer</strong><br>
+      &ensp;pre: Undefined → ColorAttachment<br><br>
+      <strong>Lighting</strong><br>
+      &ensp;pre: ColorAttachment → ShaderRead<br><br>
+      <strong>PostProcess</strong><br>
+      &ensp;pre: ColorAttachment → ShaderRead
+    </div>
+    <div style="font-size:.78em;opacity:.5;margin-top:.5em;">All stored in CompiledPlan.</div>
+  </div>
+  <div style="padding:.8em 1em;background:rgba(var(--ds-success-rgb),.04);">
+    <div style="font-weight:800;font-size:.82em;color:var(--ds-success);margin-bottom:.5em;">EXECUTE submits:</div>
+    <div style="font-size:.82em;line-height:1.65;font-family:ui-monospace,monospace;">
+      vkCmdPipelineBarrier(…)<br>
+      vkCmdBeginRenderPass(…)<br>
+      &ensp;draw…<br>
+      vkCmdEndRenderPass()<br><br>
+      vkCmdPipelineBarrier(…)<br>
+      vkCmdBeginRenderPass(…)<br>
+      &ensp;draw…<br>
+      vkCmdEndRenderPass()
+    </div>
+    <div style="font-size:.78em;opacity:.5;margin-top:.5em;">Exactly as precomputed.</div>
+  </div>
+</div>
+
+#### Why this separation matters
+
+<div style="margin:1em 0;display:grid;grid-template-columns:1fr 1fr;gap:0;border-radius:10px;overflow:hidden;border:1.5px solid rgba(var(--ds-indigo-rgb),.2);">
+  <div style="padding:.7em 1em;background:rgba(var(--ds-danger-rgb),.04);border-right:1px solid rgba(var(--ds-indigo-rgb),.15);">
+    <div style="font-weight:800;font-size:.82em;color:var(--ds-danger);margin-bottom:.4em;">❌ Barriers computed during execute</div>
+    <div style="font-size:.84em;line-height:1.7;opacity:.85;">
+      • mixing analysis with submission<br>
+      • re-evaluating state every frame<br>
+      • harder to cache compiled graphs<br>
+      • harder to multithread execute
+    </div>
+  </div>
+  <div style="padding:.7em 1em;background:rgba(var(--ds-success-rgb),.04);">
+    <div style="font-weight:800;font-size:.82em;color:var(--ds-success);margin-bottom:.4em;">✅ Barriers computed during compile</div>
+    <div style="font-size:.84em;line-height:1.7;opacity:.85;">
+      • execution is lightweight playback<br>
+      • compiled plans are cacheable<br>
+      • compile is safe to multithread<br>
+      • CPU graph logic separated from GPU submission
+    </div>
+  </div>
+</div>
+
+<div style="font-size:.86em;line-height:1.5;opacity:.65;margin:.4em 0 .8em;">
+That's why engines like Epic's Render Dependency Graph and Unity's SRP frame graph systems compute transitions during compile and submit during execute.
+</div>
+
+<div style="margin:.8em 0 1em;padding:.65em 1em;border-radius:8px;border:1.5px solid rgba(var(--ds-code-rgb),.15);background:rgba(var(--ds-code-rgb),.03);font-size:.88em;line-height:1.6;">
+<strong style="color:var(--ds-code);">The clean rule:</strong>&ensp; Compile = analyze + decide. &ensp;Execute = submit + run. &ensp;Barriers follow that exact separation.
+</div>
+
+<div style="margin:.6em 0;padding:.5em .9em;border-radius:8px;border-left:3px solid rgba(var(--ds-code-rgb),.4);background:rgba(var(--ds-code-rgb),.04);font-size:.85em;line-height:1.5;">
+🔨 <a href="../frame-graph-build-it/#v2-barriers" style="font-weight:600;">Part II</a> turns this into running code — <code>ComputeBarriers()</code> runs during compile, stores every transition in <code>CompiledPlan</code>, and <code>Execute()</code> replays them with zero state tracking.
+</div>
+
+Step through a full pipeline — watch each resource's state update as passes execute, and see exactly where the compiler places each barrier:
 
 {{< interactive-barriers >}}
 
@@ -560,7 +695,7 @@ The plan is ready — now the GPU gets involved. Every decision has already been
     <div class="diagram-pipeline">
       <div class="dp-stage">
         <div class="dp-title">RUN PASSES</div>
-        <ul><li>for each pass in compiled order:</li><li>insert barriers → call <code>execute()</code></li></ul>
+        <ul><li>for each pass in compiled order:</li><li>submit precomputed barriers → call <code>execute()</code></li></ul>
       </div>
       <div class="dp-stage">
         <div class="dp-title">CLEANUP</div>
@@ -572,7 +707,7 @@ The plan is ready — now the GPU gets involved. Every decision has already been
 </div>
 
 <div class="fg-reveal" style="margin:1.2em 0;padding:1em 1.2em;border-radius:10px;border:1.5px solid rgba(var(--ds-success-rgb),.2);background:rgba(var(--ds-success-rgb),.04);font-size:.92em;line-height:1.6;">
-  Each execute lambda sees a <strong>fully resolved environment</strong> — barriers already placed, memory already allocated, resources ready to bind. The lambda just records draw calls, dispatches, and copies. All the intelligence lives in the compile step.
+  Each execute lambda sees a <strong>fully resolved environment</strong> — barriers already computed and stored in the plan, memory already allocated, resources ready to bind. The lambda just records draw calls, dispatches, and copies. All the intelligence lives in the compile step.
 </div>
 
 ---
@@ -645,7 +780,7 @@ Most engines use **dynamic** or **hybrid**. The compile is so cheap that caching
     <strong>Barriers</strong><br><span style="opacity:.65">Manual, per-pass</span>
   </div>
   <div style="padding:.55em .8em;font-size:.88em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.1);background:rgba(var(--ds-success-rgb),.02);">
-    <strong>Barriers</strong><br>Automatic from declared read/write
+    <strong>Barriers</strong><br>Precomputed at compile from declared read/write
   </div>
 
   <div style="padding:.55em .8em;font-size:.88em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.1);border-right:1.5px solid rgba(var(--ds-indigo-rgb),.15);background:rgba(var(--ds-danger-rgb),.02);">
@@ -696,6 +831,10 @@ Since the frame graph is a DAG, every dependency is explicitly encoded in the st
 The explorer below is a production-scale graph. Toggle each compiler feature on and off to see exactly what it contributes. Click any pass to inspect its dependencies — every edge was inferred from `read()` and `write()` calls, not hand-written.
 
 {{< interactive-full-pipeline >}}
+
+### 🔮 What's next
+
+That's the full theory — sorting, culling, barriers, aliasing — everything a frame graph compiler does. [Part II — Build It](../frame-graph-build-it/) turns every concept from this article into running C++, three iterations from blank file to a working `FrameGraph` class with automatic barriers and memory aliasing.
 
 ---
 

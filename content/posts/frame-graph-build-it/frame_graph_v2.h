@@ -1,5 +1,5 @@
 #pragma once
-// Frame Graph MVP v2 â€” Dependencies & Barriers
+// Frame Graph MVP v2 -- Dependencies & Barriers
 // Adds: resource versioning, DAG with adjacency list, Kahn's topo-sort,
 //       pass culling, and automatic barrier insertion.
 //
@@ -61,10 +61,10 @@ struct RenderPass {
 
     std::vector<ResourceHandle> reads;    // NEW v2
     std::vector<ResourceHandle> writes;   // NEW v2
-    std::vector<uint32_t> dependsOn;      // NEW v2 â€” passes this pass depends on
-    std::vector<uint32_t> successors;     // NEW v2 â€” passes that depend on this pass
-    uint32_t inDegree = 0;                // NEW v2 â€” for Kahn's
-    bool     alive    = false;            // NEW v2 â€” for culling
+    std::vector<uint32_t> dependsOn;      // NEW v2 -- passes this pass depends on
+    std::vector<uint32_t> successors;     // NEW v2 -- passes that depend on this pass
+    uint32_t inDegree = 0;                // NEW v2 -- for Kahn's
+    bool     alive    = false;            // NEW v2 -- for culling
 };
 
 // == Updated FrameGraph ========================================
@@ -77,10 +77,10 @@ public:
     ResourceHandle ImportResource(const ResourceDesc& desc,
                                   ResourceState initialState = ResourceState::Undefined);
 
-    // Declare a read â€” links this pass to the resource's current version.
+    // Declare a read -- links this pass to the resource's current version.
     void Read(uint32_t passIdx, ResourceHandle h);    // NEW v2
 
-    // Declare a write â€” creates a new version of the resource.
+    // Declare a write -- creates a new version of the resource.
     void Write(uint32_t passIdx, ResourceHandle h);   // NEW v2
 
     template <typename SetupFn, typename ExecFn>

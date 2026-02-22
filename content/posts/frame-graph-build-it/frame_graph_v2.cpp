@@ -69,7 +69,7 @@ void FrameGraph::BuildEdges() {
     }
 }
 
-// == Kahn's topological sort â€” O(V + E) ========================
+// == Kahn's topological sort -- O(V + E) ========================
 
 std::vector<uint32_t> FrameGraph::TopoSort() {
     std::queue<uint32_t> q;
@@ -82,7 +82,7 @@ std::vector<uint32_t> FrameGraph::TopoSort() {
     while (!q.empty()) {
         uint32_t cur = q.front(); q.pop();
         order.push_back(cur);
-        // Walk the adjacency list â€” O(E) total across all nodes.
+        // Walk the adjacency list -- O(E) total across all nodes.
         for (uint32_t succ : passes[cur].successors) {
             if (--inDeg[succ] == 0)
                 q.push(succ);

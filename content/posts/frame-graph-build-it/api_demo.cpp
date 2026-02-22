@@ -32,9 +32,9 @@ int main() {
         [&]() { fg.Read(3, hdr); fg.Write(3, backbuffer); },
         [&](/*cmd*/) { /* copy to backbuffer, present */ });
 
-    // [2] Compile — topo-sort, cull, emit barriers, alias memory
+    // [2] Compile — topo-sort, cull, alias memory, compute barriers
     auto plan = fg.Compile();
 
-    // [3] Execute — run each pass in compiled order
+    // [3] Execute — replay precomputed barriers + run each pass
     fg.Execute(plan);
 }

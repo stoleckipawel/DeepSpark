@@ -1,5 +1,5 @@
 #pragma once
-// Frame Graph MVP v3 â€” Lifetimes & Aliasing
+// Frame Graph MVP v3 -- Lifetimes & Aliasing
 // Adds: lifetime analysis, greedy free-list memory aliasing.
 // Builds on v2 (dependencies, topo-sort, culling, barriers).
 //
@@ -38,6 +38,13 @@ inline const char* StateName(ResourceState s) {
         default:                             return "?";
     }
 }
+
+// == Precomputed barrier (NEW v3) ==============================
+struct Barrier {
+    uint32_t      resourceIndex;
+    ResourceState oldState;
+    ResourceState newState;
+};
 
 struct ResourceVersion {
     uint32_t writerPass = UINT32_MAX;
@@ -107,15 +114,16 @@ public:
         passes.back().Setup();
     }
 
-    // == v3: compile â€” builds the execution plan + allocates memory ==
+    // == v3: compile -- builds the execution plan + allocates memory ==
     struct CompiledPlan {
         std::vector<uint32_t> sorted;
-        std::vector<uint32_t> mapping;   // mapping[virtualIdx] → physicalBlock
+        std::vector<uint32_t> mapping;                  // mapping[virtualIdx] → physicalBlock
+        std::vector<std::vector<Barrier>> barriers;     // barriers[orderIdx] → pre-pass transitions
     };
 
     CompiledPlan Compile();
 
-    // == v3: execute â€” runs the compiled plan =================
+    // == v3: execute -- runs the compiled plan =================
     void Execute(const CompiledPlan& plan);
 
     // convenience: compile + execute in one call
@@ -128,7 +136,7 @@ private:
     void BuildEdges();
     std::vector<uint32_t> TopoSort();
     void Cull(const std::vector<uint32_t>& sorted);
-    void InsertBarriers(uint32_t passIdx);
     std::vector<Lifetime> ScanLifetimes(const std::vector<uint32_t>& sorted);  // NEW v3
     std::vector<uint32_t> AliasResources(const std::vector<Lifetime>& lifetimes); // NEW v3
+    std::vector<std::vector<Barrier>> ComputeBarriers(const std::vector<uint32_t>& sorted); // NEW v3
 };

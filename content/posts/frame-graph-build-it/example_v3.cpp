@@ -19,6 +19,7 @@ int main() {
     auto gbufN = fg.CreateResource({1920, 1080, Format::RGBA8});
     auto hdr   = fg.CreateResource({1920, 1080, Format::RGBA16F});
     auto bloom = fg.CreateResource({960,  540,  Format::RGBA16F});
+    auto ldr   = fg.CreateResource({1920, 1080, Format::RGBA8});
     auto debug = fg.CreateResource({1920, 1080, Format::RGBA8});
 
     fg.AddPass("DepthPrepass",
@@ -37,13 +38,14 @@ int main() {
         [&]() { fg.Read(3, hdr); fg.Write(3, bloom); },
         [&](/*cmd*/) { printf("  >> exec: Bloom\n"); });
 
+    // Tonemap writes a NEW resource (ldr), so hdr + bloom die here.
+    // Their physical blocks become available for reuse.
     fg.AddPass("Tonemap",
-        [&]() { fg.Read(4, bloom); fg.Write(4, hdr); },
+        [&]() { fg.Read(4, hdr); fg.Read(4, bloom); fg.Write(4, ldr); },
         [&](/*cmd*/) { printf("  >> exec: Tonemap\n"); });
 
-    // Present — reads HDR, writes to imported backbuffer.
     fg.AddPass("Present",
-        [&]() { fg.Read(5, hdr); fg.Write(5, backbuffer); },
+        [&]() { fg.Read(5, ldr); fg.Write(5, backbuffer); },
         [&](/*cmd*/) { printf("  >> exec: Present\n"); });
 
     // Dead pass — nothing reads debug, so the graph will cull it.
@@ -51,7 +53,7 @@ int main() {
         [&]() { fg.Write(6, debug); },
         [&](/*cmd*/) { printf("  >> exec: DebugOverlay\n"); });
 
-    auto plan = fg.Compile();   // topo-sort, cull, alias
-    fg.Execute(plan);             // barriers + run
+    auto plan = fg.Compile();   // topo-sort, cull, alias, compute barriers
+    fg.Execute(plan);             // replay barriers + run
     return 0;
 }

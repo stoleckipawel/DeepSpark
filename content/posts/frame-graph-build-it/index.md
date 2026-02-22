@@ -15,7 +15,7 @@ showTableOfContents: false
 📖 <strong>Part II of IV.</strong>&ensp; <a href="../frame-graph-theory/">Theory</a> → <em>Build It</em> → <a href="../frame-graph-advanced/">Beyond MVP</a> → <a href="../frame-graph-production/">Production Engines</a>
 </div>
 
-*Part I laid out the theory — declare, compile, execute. Now we turn that blueprint into code. Three iterations, each one unlocking a capability that wasn't there before: first a topological sort gives us dependency-driven execution order, then the compiler injects barriers automatically, and finally memory aliasing lets resources share the same heap. Each version builds on the last — time to get our hands dirty.*
+*Part I laid out the theory — declare, compile, execute. Now we turn that blueprint into code. Three iterations, each one building on the last: v1 lays the scaffold, v2 adds dependency-driven execution order (topological sort, pass culling, and automatic barriers), and v3 introduces lifetime analysis so non-overlapping resources can share the same heap. Time to get our hands dirty.*
 
 <!-- MVP progression — animated power-up timeline -->
 <style>
@@ -33,7 +33,7 @@ showTableOfContents: false
     <div class="mvp-card" style="padding:.8em 1em;border-radius:10px;border:1.5px solid rgba(var(--ds-info-rgb),.2);background:linear-gradient(135deg,rgba(var(--ds-info-rgb),.07) 0%,transparent 60%);transition:all .2s ease;">
       <div style="display:flex;align-items:baseline;gap:.5em;margin-bottom:.3em;">
         <span style="font-weight:900;font-size:1em;color:var(--ds-info);">The Scaffold</span>
-        <span style="font-size:.65em;font-weight:700;padding:.15em .5em;border-radius:9px;background:rgba(var(--ds-info-rgb),.12);color:var(--ds-info);white-space:nowrap;">~120 LOC</span>
+        <span style="font-size:.65em;font-weight:700;padding:.15em .5em;border-radius:9px;background:rgba(var(--ds-info-rgb),.12);color:var(--ds-info);white-space:nowrap;">~90 LOC</span>
       </div>
       <div style="font-size:.84em;line-height:1.5;opacity:.85;margin-bottom:.5em;">Pass declaration, virtual resources, execute in order. The skeleton everything else plugs into.</div>
       <!-- unlocks -->
@@ -57,7 +57,7 @@ showTableOfContents: false
     <div class="mvp-card" style="padding:.8em 1em;border-radius:10px;border:1.5px solid rgba(var(--ds-code-rgb),.2);background:linear-gradient(135deg,rgba(var(--ds-code-rgb),.07) 0%,transparent 60%);transition:all .2s ease;">
       <div style="display:flex;align-items:baseline;gap:.5em;margin-bottom:.3em;">
         <span style="font-weight:900;font-size:1em;color:var(--ds-code);">Dependencies & Barriers</span>
-        <span style="font-size:.65em;font-weight:700;padding:.15em .5em;border-radius:9px;background:rgba(var(--ds-code-rgb),.12);color:var(--ds-code);white-space:nowrap;">~300 LOC</span>
+        <span style="font-size:.65em;font-weight:700;padding:.15em .5em;border-radius:9px;background:rgba(var(--ds-code-rgb),.12);color:var(--ds-code);white-space:nowrap;">~260 LOC</span>
       </div>
       <div style="font-size:.84em;line-height:1.5;opacity:.85;margin-bottom:.5em;">Resource versioning → edges → topo-sort → dead-pass culling → automatic barrier insertion. <strong>Everything the GPU needs, derived from the DAG you already built.</strong></div>
       <!-- unlocks -->
@@ -82,15 +82,14 @@ showTableOfContents: false
       <div style="display:flex;align-items:baseline;gap:.5em;margin-bottom:.3em;">
         <span style="font-weight:900;font-size:1.05em;color:var(--ds-success);">Lifetimes & Aliasing</span>
         <span style="font-size:.65em;font-weight:700;padding:.15em .5em;border-radius:9px;background:rgba(var(--ds-success-rgb),.12);color:var(--ds-success);white-space:nowrap;">~400 LOC</span>
-        <span style="font-size:.62em;font-weight:800;padding:.15em .5em;border-radius:9px;background:var(--ds-success);color:#fff;white-space:nowrap;">★ PRODUCTION-READY</span>
+        <span style="font-size:.62em;font-weight:800;padding:.15em .5em;border-radius:9px;background:var(--ds-success);color:#fff;white-space:nowrap;">★ FULL MVP</span>
       </div>
-      <div style="font-size:.84em;line-height:1.5;opacity:.85;margin-bottom:.5em;">Lifetime scan + greedy free-list allocator. Non-overlapping resources share physical memory — <strong>~50% VRAM saved</strong>.</div>
+      <div style="font-size:.84em;line-height:1.5;opacity:.85;margin-bottom:.5em;">Lifetime scan + greedy free-list allocator. Non-overlapping resources share physical memory — <strong>up to ~50% VRAM saved</strong>.</div>
       <!-- unlocks -->
       <div style="display:flex;flex-wrap:wrap;gap:.35em;margin-bottom:.6em;">
         <span style="font-size:.68em;padding:.15em .55em;border-radius:9px;background:rgba(var(--ds-success-rgb),.1);color:var(--ds-success);font-weight:700;">🔓 lifetime scan</span>
         <span style="font-size:.68em;padding:.15em .55em;border-radius:9px;background:rgba(var(--ds-success-rgb),.1);color:var(--ds-success);font-weight:700;">🔓 memory aliasing</span>
-        <span style="font-size:.68em;padding:.15em .55em;border-radius:9px;background:rgba(var(--ds-success-rgb),.1);color:var(--ds-success);font-weight:700;">🔓 heap compaction</span>
-        <span style="font-size:.68em;padding:.15em .55em;border-radius:9px;background:rgba(var(--ds-success-rgb),.12);color:var(--ds-success);font-weight:700;">⚡ 50% VRAM savings</span>
+        <span style="font-size:.68em;padding:.15em .55em;border-radius:9px;background:rgba(var(--ds-success-rgb),.12);color:var(--ds-success);font-weight:700;">⚡ up to ~50% VRAM savings</span>
       </div>
       <!-- power bar — full, with animated shine -->
       <div style="height:8px;border-radius:4px;background:rgba(127,127,127,.08);overflow:hidden;">
@@ -663,31 +662,51 @@ The GPU needs explicit state transitions between usages — color attachment, sh
 
 All four pieces — versioning, sorting, culling, barriers — compose into that `Execute()` body. Each step feeds the next: versioning creates edges, edges feed the sort, the sort enables culling, and the surviving sorted passes get automatic barriers.
 
+<div style="margin:1.2em 0;padding:.7em 1em;border-radius:8px;border-left:4px solid var(--ds-info);background:rgba(var(--ds-info-rgb),.04);font-size:.88em;line-height:1.6;">
+📝 <strong>V2 simplification — barriers interleaved with execution.</strong>&ensp;
+In v2, <code>InsertBarriers()</code> runs inside the execute loop — it computes <em>and</em> submits barriers per pass. This is the simplest correct approach for a version with no compile/execute split. V3 fixes the architecture: <code>ComputeBarriers()</code> runs during <code>Compile()</code>, stores every transition in <code>CompiledPlan</code>, and <code>Execute()</code> becomes a pure playback loop with no state tracking.
+</div>
+
+<div style="margin:1.2em 0;padding:.7em 1em;border-radius:8px;border-left:4px solid var(--ds-warn);background:rgba(var(--ds-warn-rgb),.04);font-size:.88em;line-height:1.6;">
+⚠ <strong>MVP simplification — format-driven barriers.</strong>&ensp;
+Our <code>InsertBarriers()</code> infers resource state from <em>format</em> (e.g. D32F → DepthAttachment, everything else written → ColorAttachment). A production frame graph like UE5's RDG instead has each pass declare <em>explicit usage flags</em> (<code>ERDGPassFlags::Raster</code>, <code>ERDGPassFlags::Compute</code>, etc.) so the compiler knows whether a texture is being used as a UAV, an SRV, a render target, or a copy destination — independent of its pixel format.
+This is a clean upgrade path: add a <code>ResourceState</code> parameter to <code>Read()</code>/<code>Write()</code> and remove the format heuristic.
+</div>
+
+<div style="margin:1.2em 0;padding:.7em 1em;border-radius:8px;border-left:4px solid var(--ds-info);background:rgba(var(--ds-info-rgb),.04);font-size:.88em;line-height:1.6;">
+📝 <strong>Hazard types in real APIs.</strong>&ensp;
+GPU barriers guard against three hazard types: <strong>RAW</strong> (read-after-write — the classic data dependency), <strong>WAR</strong> (write-after-read — new write must wait until prior reads finish), and <strong>WAW</strong> (write-after-write — ordering between consecutive writers). Our MVP only handles the state-change case — it transitions a resource from one <code>ResourceState</code> to another. D3D12 and Vulkan expose finer-grained synchronisation: <code>D3D12_RESOURCE_BARRIER</code> with <code>Transition</code>/<code>UAV</code>/<code>Aliasing</code> types, and Vulkan's <code>VkImageMemoryBarrier</code> with <code>srcAccessMask</code>/<code>dstAccessMask</code>. Handling all three hazard types is covered in <a href="../frame-graph-advanced/">Part III</a>.
+</div>
+
 ---
 
 ### 🧩 Full v2 source
+
+<div style="margin:.6em 0;font-size:.84em;opacity:.65;line-height:1.5;">
+ℹ The full source files below include <code>printf</code> diagnostics (topo-sort order, culling results, barrier transitions) that are omitted from the diffs above to keep the focus on structure. These diagnostics are invaluable for debugging — read through them in the source.
+</div>
 
 {{< include-code file="frame_graph_v2.h" lang="cpp" compact="true" >}}
 {{< include-code file="frame_graph_v2.cpp" lang="cpp" compact="true" >}}
 {{< include-code file="example_v2.cpp" lang="cpp" compile="true" deps="frame_graph_v2.h,frame_graph_v2.cpp" compact="true" >}}
 
-That's three of the four intro promises delivered — automatic ordering, barrier insertion, and dead-pass culling. The only piece missing: resources still live for the entire frame. Version 3 fixes that with lifetime analysis and memory aliasing.
+That's three of the four intro promises delivered — automatic ordering, barrier insertion, and dead-pass culling. The only piece missing: resources still live for the entire frame. Version 3 fixes that with lifetime analysis, memory aliasing, and the proper compile/execute barrier separation.
 
-UE5's RDG does the same thing. When you call `FRDGBuilder::AddPass`, RDG builds the dependency graph from your declared reads/writes, topologically sorts it, culls dead passes, and inserts barriers — all before recording a single GPU command.
+UE5's RDG follows the same pattern. When you call `FRDGBuilder::AddPass`, RDG builds the dependency graph from your declared reads/writes, topologically sorts it, culls dead passes, computes barriers, and stores them in the compiled plan — all before recording a single GPU command.
 
 ---
 
 ## 💾 MVP v3 — Lifetimes & Aliasing
 
 <div style="margin:1em 0;padding:.7em 1em;border-radius:8px;border-left:4px solid var(--ds-info);background:rgba(var(--ds-info-rgb),.04);font-size:.92em;line-height:1.6;">
-🎯 <strong>Goal:</strong> Non-overlapping transient resources share physical memory — automatic VRAM aliasing with ~50% savings.
+🎯 <strong>Goal:</strong> Non-overlapping transient resources share physical memory — automatic VRAM aliasing with up to ~50% savings.
 </div>
 
 V2 gives us ordering, culling, and barriers — but every transient resource still gets its own VRAM for the entire frame. Resources whose lifetimes don’t overlap can share the same physical memory ([theory refresher](/posts/frame-graph-theory/#allocation-and-aliasing)). Time to implement that.
 
-Two new structs — a `Lifetime` per resource and a `PhysicalBlock` per heap slot. The lifetime scan walks the sorted pass list, recording each transient resource's `firstUse` / `lastUse` indices:
+Two new structs — a `Lifetime` per resource, a `PhysicalBlock` per heap slot, and a `Barrier` to store precomputed transitions. The lifetime scan walks the sorted pass list, recording each transient resource's `firstUse` / `lastUse` indices:
 
-{{< code-diff title="v2 → v3 — Lifetime structs & scan" >}}
+{{< code-diff title="v2 → v3 — Lifetime structs, barrier struct & scan" >}}
 @@ New structs (.h) @@
 +struct PhysicalBlock {              // physical memory slot
 +    uint32_t sizeBytes  = 0;
@@ -698,6 +717,12 @@ Two new structs — a `Lifetime` per resource and a `PhysicalBlock` per heap slo
 +    uint32_t firstUse = UINT32_MAX;
 +    uint32_t lastUse  = 0;
 +    bool     isTransient = true;
++};
++
++struct Barrier {                    // precomputed state transition
++    uint32_t      resourceIndex;
++    ResourceState oldState;
++    ResourceState newState;
 +};
 
 @@ BytesPerPixel helper (.h) @@
@@ -745,7 +770,8 @@ The second half of the algorithm — the greedy free-list allocator. Sort resour
 @@ FrameGraph — v3 public additions (.h) @@
 +    struct CompiledPlan {
 +        std::vector<uint32_t> sorted;
-+        std::vector<uint32_t> mapping;   // mapping[virtualIdx] → physicalBlock
++        std::vector<uint32_t> mapping;                  // mapping[virtualIdx] → physicalBlock
++        std::vector<std::vector<Barrier>> barriers;     // barriers[orderIdx] → pre-pass transitions
 +    };
 +
 +    CompiledPlan Compile();
@@ -755,6 +781,7 @@ The second half of the algorithm — the greedy free-list allocator. Sort resour
 @@ FrameGraph — v3 private additions (.h) @@
 +    std::vector<Lifetime> ScanLifetimes(const std::vector<uint32_t>& sorted);
 +    std::vector<uint32_t> AliasResources(const std::vector<Lifetime>& lifetimes);
++    std::vector<std::vector<Barrier>> ComputeBarriers(const std::vector<uint32_t>& sorted);
 
 @@ AliasResources() — greedy free-list scan (.cpp) @@
 +std::vector<uint32_t> FrameGraph::AliasResources(const std::vector<Lifetime>& lifetimes) {
@@ -802,10 +829,44 @@ The second half of the algorithm — the greedy free-list allocator. Sort resour
 +    Cull(sorted);
 +    auto lifetimes = ScanLifetimes(sorted);      // NEW v3
 +    auto mapping   = AliasResources(lifetimes);  // NEW v3
-+    return { std::move(sorted), std::move(mapping) };
++    auto barriers  = ComputeBarriers(sorted);    // NEW v3
++    return { std::move(sorted), std::move(mapping), std::move(barriers) };
 +}
 
-@@ Execute() — v3 replaces monolithic Execute with Compile + Execute split (.cpp) @@
+@@ ComputeBarriers() — detect transitions, store in plan (.cpp) @@
++std::vector<std::vector<Barrier>> FrameGraph::ComputeBarriers(
++        const std::vector<uint32_t>& sorted) {
++    std::vector<std::vector<Barrier>> result(sorted.size());
++    auto StateForUsage = [](bool isWrite, Format fmt) {
++        if (isWrite)
++            return (fmt == Format::D32F) ? ResourceState::DepthAttachment
++                                         : ResourceState::ColorAttachment;
++        return ResourceState::ShaderRead;
++    };
++    for (uint32_t orderIdx = 0; orderIdx < sorted.size(); orderIdx++) {
++        uint32_t passIdx = sorted[orderIdx];
++        if (!passes[passIdx].alive) continue;
++        for (auto& h : passes[passIdx].reads) {
++            ResourceState needed = ResourceState::ShaderRead;
++            if (entries[h.index].currentState != needed) {
++                result[orderIdx].push_back(
++                    { h.index, entries[h.index].currentState, needed });
++                entries[h.index].currentState = needed;
++            }
++        }
++        for (auto& h : passes[passIdx].writes) {
++            ResourceState needed = StateForUsage(true, entries[h.index].desc.format);
++            if (entries[h.index].currentState != needed) {
++                result[orderIdx].push_back(
++                    { h.index, entries[h.index].currentState, needed });
++                entries[h.index].currentState = needed;
++            }
++        }
++    }
++    return result;
++}
+
+@@ Execute() — v3 replays precomputed barriers, no analysis (.cpp) @@
 -void FrameGraph::Execute() {
 -    BuildEdges();
 -    auto sorted = TopoSort();
@@ -819,10 +880,13 @@ The second half of the algorithm — the greedy free-list allocator. Sort resour
 -    entries.clear();
 -}
 +void FrameGraph::Execute(const CompiledPlan& plan) {
-+    for (uint32_t idx : plan.sorted) {
-+        if (!passes[idx].alive) continue;
-+        InsertBarriers(idx);
-+        passes[idx].Execute(/* &cmdList */);
++    for (uint32_t orderIdx = 0; orderIdx < plan.sorted.size(); orderIdx++) {
++        uint32_t passIdx = plan.sorted[orderIdx];
++        if (!passes[passIdx].alive) continue;
++        // Submit precomputed barriers — no state tracking here.
++        for (auto& b : plan.barriers[orderIdx])
++            SubmitBarrier(b);   // e.g. vkCmdPipelineBarrier
++        passes[passIdx].Execute(/* &cmdList */);
 +    }
 +    passes.clear();
 +    entries.clear();
@@ -831,13 +895,29 @@ The second half of the algorithm — the greedy free-list allocator. Sort resour
 +void FrameGraph::Execute() { Execute(Compile()); }
 {{< /code-diff >}}
 
-~70 new lines on top of v2. Aliasing runs once per frame in O(R log R) — sort, then linear scan of the free list. Sub-microsecond for 15 transient resources.
+~100 new lines on top of v2. **The key architectural change**: v3 separates barrier computation from submission. `ComputeBarriers()` walks the sorted passes during compile, detects every state transition, and stores them in the `CompiledPlan`. Execute is now a pure playback loop — it submits precomputed barriers and calls execute lambdas. No state tracking, no decisions.
 
-That's the full value prop — automatic memory aliasing *and* automatic barriers from a single `FrameGraph` class. UE5's transient resource allocator does the same thing: any `FRDGTexture` created through `FRDGBuilder::CreateTexture` (vs `RegisterExternalTexture`) is transient and eligible for aliasing, using the same lifetime analysis and free-list scan we just built.
+Aliasing runs once per frame in O(R log R + R·B) — sort by first-use, then for each resource scan the free list for a fit. B is the number of physical blocks (bounded by R), so worst-case is O(R²) — but in practice B stays small (~3–5 blocks for ~15 resources), making the scan effectively linear. Sub-microsecond for 15 transient resources.
+
+<div style="margin:1.2em 0;padding:.7em 1em;border-radius:8px;border-left:4px solid var(--ds-warn);background:rgba(var(--ds-warn-rgb),.04);font-size:.88em;line-height:1.6;">
+⚠ <strong>MVP simplification — aliasing barriers.</strong>&ensp;
+When two resources share the same physical memory via placed allocation, the GPU needs an <strong>aliasing barrier</strong> at the transition point — D3D12's <code>D3D12_RESOURCE_BARRIER_TYPE_ALIASING</code> or Vulkan's equivalent memory barrier. Without it, caches may serve stale data from the previous occupant. Our MVP tracks which virtual resource maps to which physical block, but doesn't emit these aliasing barriers. A production implementation would detect them in <code>ComputeBarriers()</code> whenever a physical block's active binding changes and store them alongside the state-transition barriers in <code>CompiledPlan</code>. See <a href="../frame-graph-advanced/">Part III</a> for the full treatment.
+</div>
+
+<div style="margin:1.2em 0;padding:.7em 1em;border-radius:8px;border-left:4px solid var(--ds-info);background:rgba(var(--ds-info-rgb),.04);font-size:.88em;line-height:1.6;">
+📝 <strong>Real GPU size queries.</strong>&ensp;
+<code>BytesPerPixel()</code> is a learning shortcut — real GPU textures have row padding, alignment, and driver-specific tiling. Production allocators query the driver for actual sizes: <code>ID3D12Device::GetResourceAllocationInfo</code> (D3D12) or <code>vkGetImageMemoryRequirements</code> (Vulkan). The aliasing algorithm itself is unchanged — you just swap the size input.
+</div>
+
+That's the full value prop — automatic memory aliasing, precomputed barriers, and the clean compile/execute separation, all from a single `FrameGraph` class. UE5's transient resource allocator does the same thing: any `FRDGTexture` created through `FRDGBuilder::CreateTexture` (vs `RegisterExternalTexture`) is transient and eligible for aliasing, using the same lifetime analysis and free-list scan we just built.
 
 ---
 
 ### 🧩 Full v3 source
+
+<div style="margin:.6em 0;font-size:.84em;opacity:.65;line-height:1.5;">
+ℹ As with v2, the full source includes <code>printf</code> diagnostics (lifetime ranges, aliasing decisions, memory savings) not shown in the diffs above. Also includes a <code>StateName()</code> helper for readable barrier output.
+</div>
 
 {{< include-code file="frame_graph_v3.h" lang="cpp" compact="true" >}}
 {{< include-code file="frame_graph_v3.cpp" lang="cpp" compact="true" >}}
@@ -870,49 +950,62 @@ The finished `FrameGraph` class. Here's what it does every frame, broken down by
       • <strong>cull</strong> — kill dead passes<br>
       • <strong>scan lifetimes</strong> — first/last use<br>
       • <strong>alias</strong> — free-list reuse<br>
-      • <strong>compute barriers</strong>
+      • <strong>compute barriers</strong> — detect state transitions
     </div>
     <div style="margin-top:.5em;padding:.3em .5em;border-radius:5px;background:rgba(var(--ds-code-rgb),.08);font-size:.76em;line-height:1.4;border:1px solid rgba(var(--ds-code-rgb),.12);">
-      Everything linear or near-linear — all data fits in L1 cache.
+      Produces a <code>CompiledPlan</code> — execution order, memory mapping, <em>and</em> every barrier. No GPU work yet.
     </div>
   </div>
   <div style="padding:.8em 1em;border-radius:10px;border-top:3px solid var(--ds-success);background:rgba(var(--ds-success-rgb),.04);">
     <div style="font-weight:800;font-size:.88em;margin-bottom:.5em;color:var(--ds-success);">③ Execute</div>
     <div style="font-size:.84em;line-height:1.6;opacity:.85;">
-      Walk sorted, living passes:<br>
-      • insert automatic barriers<br>
+      Pure playback — no analysis:<br>
+      • <strong>submit precomputed barriers</strong><br>
       • call execute lambda<br>
       • resources already aliased &amp; bound
     </div>
     <div style="margin-top:.5em;padding:.3em .5em;border-radius:5px;background:rgba(var(--ds-success-rgb),.08);font-size:.76em;line-height:1.4;border:1px solid rgba(var(--ds-success-rgb),.12);">
-      <strong>Lambdas see a fully resolved environment.</strong> No manual barriers, no manual memory.
+      <strong>No decisions.</strong> Compile analyzed + decided. Execute just submits.
     </div>
   </div>
 </div>
 
-**Compile cost by step:**
+**Compile + execute cost by step:**
 
 <div style="overflow-x:auto;margin:.6em 0 1em">
 <table style="width:100%;border-collapse:collapse;font-size:.88em">
   <thead>
     <tr>
-      <th style="padding:.5em .8em;text-align:left;border-bottom:2px solid rgba(var(--ds-code-rgb),.3);color:var(--ds-code);width:30%">Compile step</th>
+      <th style="padding:.5em .8em;text-align:left;border-bottom:2px solid rgba(var(--ds-code-rgb),.3);color:var(--ds-code);width:30%">Step</th>
+      <th style="padding:.5em .8em;text-align:center;border-bottom:2px solid rgba(var(--ds-code-rgb),.3);width:14%">Phase</th>
       <th style="padding:.5em .8em;text-align:center;border-bottom:2px solid rgba(var(--ds-code-rgb),.3);width:18%">Complexity</th>
       <th style="padding:.5em .8em;text-align:left;border-bottom:2px solid rgba(var(--ds-code-rgb),.3)">Algorithm</th>
     </tr>
   </thead>
   <tbody>
-    <tr><td style="padding:.4em .8em;font-weight:600;">Topological sort</td><td style="padding:.4em .8em;text-align:center;font-family:ui-monospace,monospace;color:var(--ds-code)">O(V + E)</td><td style="padding:.4em .8em;font-size:.9em;opacity:.8">Kahn's — passes + edges</td></tr>
-    <tr style="background:rgba(127,127,127,.04)"><td style="padding:.4em .8em;font-weight:600;">Pass culling</td><td style="padding:.4em .8em;text-align:center;font-family:ui-monospace,monospace;color:var(--ds-code)">O(V + E)</td><td style="padding:.4em .8em;font-size:.9em;opacity:.8">Backward reachability from output</td></tr>
-    <tr><td style="padding:.4em .8em;font-weight:600;">Lifetime scan</td><td style="padding:.4em .8em;text-align:center;font-family:ui-monospace,monospace;color:var(--ds-code)">O(V + E)</td><td style="padding:.4em .8em;font-size:.9em;opacity:.8">Walk sorted passes and their read/write edges</td></tr>
-    <tr style="background:rgba(127,127,127,.04)"><td style="padding:.4em .8em;font-weight:600;">Aliasing</td><td style="padding:.4em .8em;text-align:center;font-family:ui-monospace,monospace;color:var(--ds-code)">O(R log R)</td><td style="padding:.4em .8em;font-size:.9em;opacity:.8">Sort by first-use, greedy free-list scan</td></tr>
-    <tr><td style="padding:.4em .8em;font-weight:600;">Barrier computation</td><td style="padding:.4em .8em;text-align:center;font-family:ui-monospace,monospace;color:var(--ds-code)">O(V + E)</td><td style="padding:.4em .8em;font-size:.9em;opacity:.8">Walk passes and their read/write edges with state lookup</td></tr>
+    <tr><td style="padding:.4em .8em;font-weight:600;">Topological sort</td><td style="padding:.4em .8em;text-align:center;font-size:.8em;font-weight:700;color:var(--ds-code);">Compile</td><td style="padding:.4em .8em;text-align:center;font-family:ui-monospace,monospace;color:var(--ds-code)">O(V + E)</td><td style="padding:.4em .8em;font-size:.9em;opacity:.8">Kahn's — passes + edges</td></tr>
+    <tr style="background:rgba(127,127,127,.04)"><td style="padding:.4em .8em;font-weight:600;">Pass culling</td><td style="padding:.4em .8em;text-align:center;font-size:.8em;font-weight:700;color:var(--ds-code);">Compile</td><td style="padding:.4em .8em;text-align:center;font-family:ui-monospace,monospace;color:var(--ds-code)">O(V + E)</td><td style="padding:.4em .8em;font-size:.9em;opacity:.8">Backward reachability from output</td></tr>
+    <tr><td style="padding:.4em .8em;font-weight:600;">Lifetime scan</td><td style="padding:.4em .8em;text-align:center;font-size:.8em;font-weight:700;color:var(--ds-code);">Compile</td><td style="padding:.4em .8em;text-align:center;font-family:ui-monospace,monospace;color:var(--ds-code)">O(V + E)</td><td style="padding:.4em .8em;font-size:.9em;opacity:.8">Walk sorted passes and their read/write edges</td></tr>
+    <tr style="background:rgba(127,127,127,.04)"><td style="padding:.4em .8em;font-weight:600;">Aliasing</td><td style="padding:.4em .8em;text-align:center;font-size:.8em;font-weight:700;color:var(--ds-code);">Compile</td><td style="padding:.4em .8em;text-align:center;font-family:ui-monospace,monospace;color:var(--ds-code)">O(R log R + R·B)</td><td style="padding:.4em .8em;font-size:.9em;opacity:.8">Sort by first-use, greedy free-list scan (B = physical blocks, ≪ R in practice)</td></tr>
+    <tr><td style="padding:.4em .8em;font-weight:600;">Barrier computation</td><td style="padding:.4em .8em;text-align:center;font-size:.8em;font-weight:700;color:var(--ds-code);">Compile</td><td style="padding:.4em .8em;text-align:center;font-family:ui-monospace,monospace;color:var(--ds-code)">O(V + E)</td><td style="padding:.4em .8em;font-size:.9em;opacity:.8">Walk passes, detect state transitions, store in <code>CompiledPlan</code></td></tr>
+    <tr style="background:rgba(127,127,127,.04)"><td style="padding:.4em .8em;font-weight:600;">Barrier submission</td><td style="padding:.4em .8em;text-align:center;font-size:.8em;font-weight:700;color:var(--ds-success);">Execute</td><td style="padding:.4em .8em;text-align:center;font-family:ui-monospace,monospace;color:var(--ds-code)">O(B)</td><td style="padding:.4em .8em;font-size:.9em;opacity:.8">Replay precomputed barriers — no state tracking, no decisions</td></tr>
   </tbody>
 </table>
 </div>
-<div style="font-size:.84em;line-height:1.5;opacity:.7;margin:-.3em 0 1em 0">V = passes (~25), E = dependency edges (~50), R = transient resources (~15). Everything linear or near-linear.</div>
+<div style="font-size:.84em;line-height:1.5;opacity:.7;margin:-.3em 0 1em 0">V = passes (~25), E = dependency edges (~50), R = transient resources (~15), B = total barriers (~10). Everything linear or near-linear.</div>
 
-That's the full MVP — a single `FrameGraph` class that handles dependency-driven ordering, culling, aliasing, and barriers. Every concept from [Part I](/posts/frame-graph-theory/) now exists as running code.
+<div style="margin:1em 0;padding:.7em 1em;border-radius:8px;border-left:4px solid var(--ds-info);background:rgba(var(--ds-info-rgb),.04);font-size:.88em;line-height:1.6;">
+📝 <strong>The compile/execute barrier separation.</strong>&ensp;
+Barriers follow the same rule as every other graph decision: <strong>compile analyzes and decides, execute submits and runs</strong>. <code>ComputeBarriers()</code> walks sorted passes during compile, compares each resource's tracked state to what the pass needs, and stores every transition in the <code>CompiledPlan</code>. Execute just replays those precomputed barriers — no state comparison, no graph analysis, no decisions.
+<br><br>
+This separation matters beyond just clean architecture. When execute runs on multiple threads recording parallel command lists (as in UE5's <code>FRHICommandList</code> fan-out), you don't want per-pass branching or shared mutable state tracking. Precomputed barriers make execute a pure, stateless playback loop — safe to parallelize and safe to cache across frames.
+</div>
+
+That's the full MVP — a single `FrameGraph` class that handles dependency-driven ordering, culling, aliasing, and precomputed barriers. Compile analyzes and decides; execute submits and runs. Every concept from [Part I](/posts/frame-graph-theory/) now exists as running code.
+
+### 🔮 What's next
+
+The MVP handles one queue, one barrier type, and one allocation strategy. Production engines go further: **async compute** overlaps GPU work across queues, **split barriers** let the driver pipeline state transitions instead of stalling, and **render pass merging** fuses compatible passes into a single hardware render pass (tile-based GPUs love this). [Part III — Beyond MVP](../frame-graph-advanced/) breaks down each of these upgrades and shows where they plug into the architecture we just built.
 
 ---
 

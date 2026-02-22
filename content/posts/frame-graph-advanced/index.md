@@ -246,7 +246,7 @@ Try it — drag the BEGIN marker left to widen the overlap gap and watch the sta
 
 ## 🎛 Putting It All Together
 
-You've now seen every piece the compiler works with — topological sorting, pass culling, barrier insertion, async compute scheduling, memory aliasing, split barriers. In a simple 5-pass pipeline these feel manageable. In a production renderer? You're looking at **15–25 passes, 30+ resource edges, and dozens of implicit dependencies** — all inferred from `read()` and `write()` calls that no human can hold in their head at once.
+You've now seen every piece the compiler works with — topological sorting, pass culling, barrier computation, async compute scheduling, memory aliasing, split barriers. In a simple 5-pass pipeline these feel manageable. In a production renderer? You're looking at **15–25 passes, 30+ resource edges, and dozens of implicit dependencies** — all inferred from `read()` and `write()` calls that no human can hold in their head at once.
 
 <div class="fg-reveal" style="margin:1.2em 0;padding:.85em 1.1em;border-radius:10px;border:1.5px solid rgba(var(--ds-code-rgb),.2);background:linear-gradient(135deg,rgba(var(--ds-code-rgb),.05),transparent);font-size:.92em;line-height:1.65;">
 <strong>This is the trade-off at the heart of every render graph.</strong> Dependencies become <em>implicit</em> — the graph infers ordering from data flow, which means you never declare "pass A must run before pass B." That's powerful: the compiler can reorder, cull, and parallelize freely. But it also means <strong>dependencies are hidden</strong>. Miss a <code>read()</code> call and the graph silently reorders two passes that shouldn't overlap. Add an assert and you'll catch the <em>symptom</em> — but not the missing edge that caused it.
@@ -257,6 +257,10 @@ Since the frame graph is a DAG, every dependency is explicitly encoded in the st
 The explorer below is a production-scale graph. Toggle each compiler feature on and off to see exactly what it contributes. Click any pass to inspect its dependencies — every edge was inferred from `read()` and `write()` calls, not hand-written.
 
 {{< interactive-full-pipeline >}}
+
+### 🔮 What's next
+
+Pass merging, async compute, and split barriers are compiler features — they plug into the same DAG we built in Part II. But how do production engines actually ship all of this at scale? [Part IV — Production Engines](../frame-graph-production/) examines UE5's RDG and Frostbite's FrameGraph side by side, covering parallel command recording, legacy migration, and the engineering trade-offs that only matter at 700+ passes per frame.
 
 ---
 
