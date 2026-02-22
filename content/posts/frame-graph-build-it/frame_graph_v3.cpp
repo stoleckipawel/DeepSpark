@@ -57,6 +57,16 @@ FrameGraph::CompiledPlan FrameGraph::Compile() {
 
 // == v3: execute -- runs the compiled plan =====================
 
+void FrameGraph::EmitBarriers(const std::vector<Barrier>& barriers) {
+    for (auto& b : barriers) {
+        printf("    barrier: resource[%u] %s -> %s\n",
+               b.resourceIndex,
+               StateName(b.oldState),
+               StateName(b.newState));
+        // e.g. vkCmdPipelineBarrier / ID3D12GraphicsCommandList::ResourceBarrier
+    }
+}
+
 void FrameGraph::Execute(const CompiledPlan& plan) {
     printf("[7] Executing (replaying precomputed barriers):\n");
     for (uint32_t orderIdx = 0; orderIdx < plan.sorted.size(); orderIdx++) {
@@ -65,12 +75,7 @@ void FrameGraph::Execute(const CompiledPlan& plan) {
             printf("  -- skip: %s (CULLED)\n", passes[passIdx].name.c_str());
             continue;
         }
-        for (auto& b : plan.barriers[orderIdx]) {
-            printf("    barrier: resource[%u] %s -> %s\n",
-                   b.resourceIndex,
-                   StateName(b.oldState),
-                   StateName(b.newState));
-        }
+        EmitBarriers(plan.barriers[orderIdx]);
         passes[passIdx].Execute(/* &cmdList */);
     }
     passes.clear();

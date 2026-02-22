@@ -124,6 +124,7 @@ class FrameGraph{
   -ScanLifetimes()
   -AliasResources()
   -ComputeBarriers()
+  -EmitBarriers()
 }
 class RenderPass{
   +string name
@@ -204,7 +205,7 @@ Barrier --> ResourceState : old/new state
 
 ### 🔀 Design choices
 
-The three-phase model from [Part I](../frame-graph-theory/) forces nine API decisions. Every choice is driven by the same question: *what does the graph compiler need, and what's the cheapest way to give it?*
+The three-phase model from [Part I](../frame-graph-theory/) forces eight API decisions. Every choice is driven by the same question: *what does the graph compiler need, and what's the cheapest way to give it?*
 
 <div style="margin:1.2em 0;font-size:.88em;">
 <table style="width:100%;border-collapse:collapse;line-height:1.5;">
@@ -223,21 +224,21 @@ The three-phase model from [Part I](../frame-graph-theory/) forces nine API deci
   <td style="padding:.5em .6em;font-weight:700;">①</td>
   <td style="padding:.5em .6em;">How does setup talk to execute?</td>
   <td style="padding:.5em .6em;white-space:nowrap;"><strong>Lambda captures</strong></td>
-  <td style="padding:.5em .6em;opacity:.8;">Zero boilerplate — handles live in scope, both lambdas capture them directly. Won't scale past one TU per pass; migrate to typed pass data when that matters.</td>
+  <td style="padding:.5em .6em;opacity:.8;">Zero boilerplate — handles live in scope, both lambdas capture them directly.</td>
   <td style="padding:.5em .6em;opacity:.55;font-size:.92em;">Type-erased pass data — <code>AddPass&lt;PassData&gt;(setup, exec)</code>. Decouples setup/execute across TUs.</td>
 </tr>
 <tr style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);background:rgba(var(--ds-indigo-rgb),.02);">
   <td style="padding:.5em .6em;font-weight:700;">②</td>
   <td style="padding:.5em .6em;">Where do DAG edges come from?</td>
   <td style="padding:.5em .6em;white-space:nowrap;"><strong>Explicit <code>fg.Read/Write(pass, h)</code></strong></td>
-  <td style="padding:.5em .6em;opacity:.8;">Every edge is an explicit call — easy to grep and debug. Scales fine; a scoped builder is syntactic sugar, not a structural change.</td>
+  <td style="padding:.5em .6em;opacity:.8;">Every edge is an explicit call — easy to grep and debug.</td>
   <td style="padding:.5em .6em;opacity:.55;font-size:.92em;">Scoped builder — <code>builder.Read/Write(h)</code> auto-binds to the current pass. Prevents mis-wiring at scale.</td>
 </tr>
 <tr style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);">
   <td style="padding:.5em .6em;font-weight:700;">③</td>
   <td style="padding:.5em .6em;">What is a resource handle?</td>
   <td style="padding:.5em .6em;white-space:nowrap;"><strong>Plain <code>uint32_t</code> index</strong></td>
-  <td style="padding:.5em .6em;opacity:.8;">One integer, trivially copyable — no templates, no overhead. A <code>using</code> alias away from typed wrappers when pass count grows.</td>
+  <td style="padding:.5em .6em;opacity:.8;">One integer, trivially copyable — no templates, no overhead.</td>
   <td style="padding:.5em .6em;opacity:.55;font-size:.92em;">Typed wrappers — <code>FRDGTextureRef</code> / <code>FRDGBufferRef</code>. Compile-time safety for 700+ passes (UE5).</td>
 </tr>
 <tr><td colspan="5" style="padding:.6em .6em .3em;font-weight:800;font-size:.85em;letter-spacing:.04em;color:var(--ds-code);border-bottom:1px solid rgba(var(--ds-code-rgb),.12);">COMPILE — what the graph analyser decides</td></tr>
@@ -245,7 +246,7 @@ The three-phase model from [Part I](../frame-graph-theory/) forces nine API deci
   <td style="padding:.5em .6em;font-weight:700;">④</td>
   <td style="padding:.5em .6em;">Is compile explicit?</td>
   <td style="padding:.5em .6em;white-space:nowrap;"><strong>Yes — <code>Compile()→Execute(plan)</code></strong></td>
-  <td style="padding:.5em .6em;opacity:.8;">Returned plan struct lets you log, validate, and visualise the DAG — invaluable while learning. Production-ready as-is.</td>
+  <td style="padding:.5em .6em;opacity:.8;">Returned plan struct lets you log, validate, and visualise the DAG — invaluable while learning.</td>
   <td style="padding:.5em .6em;opacity:.55;font-size:.92em;">Implicit — <code>Execute()</code> compiles internally. Simpler call site, less ceremony.</td>
 </tr>
 <tr style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);background:rgba(var(--ds-indigo-rgb),.02);">
@@ -266,7 +267,7 @@ The three-phase model from [Part I](../frame-graph-theory/) forces nine API deci
   <td style="padding:.5em .6em;font-weight:700;">⑦</td>
   <td style="padding:.5em .6em;">Rebuild frequency?</td>
   <td style="padding:.5em .6em;white-space:nowrap;"><strong>Full rebuild every frame</strong></td>
-  <td style="padding:.5em .6em;opacity:.8;">Under 100 µs at ~25 passes — free perf budget to just rebuild. Adapts to res changes & toggles with zero invalidation logic. Cache later if profiling says so.</td>
+  <td style="padding:.5em .6em;opacity:.8;">You need a significantly more complex frame before this becomes visibly heavy — for an MVP, full rebuild is fine.</td>
   <td style="padding:.5em .6em;opacity:.55;font-size:.92em;">Cached topology — re-compile only on structural change. Near-zero steady-state cost but complex invalidation logic.</td>
 </tr>
 <tr><td colspan="5" style="padding:.6em .6em .3em;font-weight:800;font-size:.85em;letter-spacing:.04em;color:var(--ds-success);border-bottom:1px solid rgba(var(--ds-success-rgb),.12);">EXECUTE — how the compiled plan becomes GPU commands</td></tr>
@@ -276,13 +277,6 @@ The three-phase model from [Part I](../frame-graph-theory/) forces nine API deci
   <td style="padding:.5em .6em;white-space:nowrap;"><strong>Single command list</strong></td>
   <td style="padding:.5em .6em;opacity:.8;">Sequential walk — trivial to implement and debug. CPU cost is noise at ~25 passes. Swap to parallel deferred command lists when pass count exceeds ~60.</td>
   <td style="padding:.5em .6em;opacity:.55;font-size:.92em;">Parallel command lists — one per pass group, recorded across threads. Scales to 100+ passes (UE5).</td>
-</tr>
-<tr style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);background:rgba(var(--ds-indigo-rgb),.02);">
-  <td style="padding:.5em .6em;font-weight:700;">⑨</td>
-  <td style="padding:.5em .6em;">How does a pass get the actual GPU resource from a handle?</td>
-  <td style="padding:.5em .6em;white-space:nowrap;"><strong>Context lookup</strong></td>
-  <td style="padding:.5em .6em;opacity:.8;"><code>ctx.GetTexture(handle)</code> — each pass asks for what it needs at runtime. One array lookup per resource, trivially cheap. The callback stays self-contained with no setup from the executor.</td>
-  <td style="padding:.5em .6em;opacity:.55;font-size:.92em;">Bindless indices — handles map directly to descriptor-heap slots. The callback passes an integer to the shader (<code>ResourceDescriptorHeap[idx]</code>) with no CPU-side lookup, but requires a bindless-capable API.</td>
 </tr>
 </tbody>
 </table>
@@ -596,7 +590,9 @@ A sorted graph still runs passes nobody reads from. Culling is dead-code elimina
 
 ### 🚧 Barrier insertion
 
-The GPU needs explicit state transitions between usages — color attachment, shader read, depth, etc. Because the graph already knows every resource’s read/write history ([theory refresher](/posts/frame-graph-theory/#barriers)), the compiler can emit them automatically. Walk each pass’s resources, compare tracked state to what the pass needs, and insert a barrier when they differ:
+GPUs need explicit state transitions between resource usages — color attachment → shader read, undefined → depth, etc. The graph already knows every resource's read/write history ([theory refresher](/posts/frame-graph-theory/#barriers)), so the compiler can figure out every transition *before* execution starts.
+
+The idea: walk the sorted pass list, compare each resource's tracked state to what the pass needs, and record a barrier when they differ. In the final architecture (v3), this happens entirely during `Compile()` — every transition is precomputed and stored in `CompiledPlan`, and `Execute()` just replays them. But v2 doesn't have a compile/execute split yet, so `EmitBarriers()` runs inline during execution — compute the transition and submit it in one step. It's the simplest correct approach, and v3 will separate the two cleanly.
 
 {{< code-diff title="v2 — Barrier insertion + Execute() rewrite" >}}
 @@ New type — resource state tracking (.h) @@
@@ -629,8 +625,8 @@ The GPU needs explicit state transitions between usages — color attachment, sh
      return { static_cast<uint32_t>(entries.size() - 1) };
  }
 
-@@ InsertBarriers() — emit transitions where state changes (.cpp) @@
-+void FrameGraph::InsertBarriers(uint32_t passIdx) {
+@@ EmitBarriers() — emit transitions where state changes (.cpp) @@
++void FrameGraph::EmitBarriers(uint32_t passIdx) {
 +    auto StateForUsage = [](bool isWrite, Format fmt) {
 +        if (isWrite)
 +            return (fmt == Format::D32F) ? ResourceState::DepthAttachment
@@ -658,7 +654,7 @@ The GPU needs explicit state transitions between usages — color attachment, sh
 +    Cull(sorted);
 +    for (uint32_t idx : sorted) {
 +        if (!passes[idx].alive) continue;
-+        InsertBarriers(idx);
++        EmitBarriers(idx);
 +        passes[idx].Execute(/* &cmdList */);
 +    }
 +    passes.clear();
@@ -668,21 +664,9 @@ The GPU needs explicit state transitions between usages — color attachment, sh
 
 All four pieces — versioning, sorting, culling, barriers — compose into that `Execute()` body. Each step feeds the next: versioning creates edges, edges feed the sort, the sort enables culling, and the surviving sorted passes get automatic barriers.
 
-<div style="margin:1.2em 0;padding:.7em 1em;border-radius:8px;border-left:4px solid var(--ds-info);background:rgba(var(--ds-info-rgb),.04);font-size:.88em;line-height:1.6;">
-📝 <strong>V2 simplification — barriers interleaved with execution.</strong>&ensp;
-In v2, <code>InsertBarriers()</code> runs inside the execute loop — it computes <em>and</em> submits barriers per pass. This is the simplest correct approach for a version with no compile/execute split. V3 fixes the architecture: <code>ComputeBarriers()</code> runs during <code>Compile()</code>, stores every transition in <code>CompiledPlan</code>, and <code>Execute()</code> becomes a pure playback loop with no state tracking.
-</div>
+Two simplifications to keep in mind. First, `EmitBarriers()` infers the target state from format — D32F means depth attachment, anything else written is a color attachment, reads are always shader-read. Production engines like UE5's RDG have each pass declare *explicit usage flags* (`ERDGPassFlags::Raster`, `ERDGPassFlags::Compute`, etc.) so the compiler knows whether a texture is a UAV, SRV, render target, or copy destination — independent of pixel format. The upgrade path is clean: add a `ResourceState` parameter to `Read()`/`Write()` and drop the format heuristic.
 
-<div style="margin:1.2em 0;padding:.7em 1em;border-radius:8px;border-left:4px solid var(--ds-warn);background:rgba(var(--ds-warn-rgb),.04);font-size:.88em;line-height:1.6;">
-⚠ <strong>MVP simplification — format-driven barriers.</strong>&ensp;
-Our <code>InsertBarriers()</code> infers resource state from <em>format</em> (e.g. D32F → DepthAttachment, everything else written → ColorAttachment). A production frame graph like UE5's RDG instead has each pass declare <em>explicit usage flags</em> (<code>ERDGPassFlags::Raster</code>, <code>ERDGPassFlags::Compute</code>, etc.) so the compiler knows whether a texture is being used as a UAV, an SRV, a render target, or a copy destination — independent of its pixel format.
-This is a clean upgrade path: add a <code>ResourceState</code> parameter to <code>Read()</code>/<code>Write()</code> and remove the format heuristic.
-</div>
-
-<div style="margin:1.2em 0;padding:.7em 1em;border-radius:8px;border-left:4px solid var(--ds-info);background:rgba(var(--ds-info-rgb),.04);font-size:.88em;line-height:1.6;">
-📝 <strong>Hazard types in real APIs.</strong>&ensp;
-GPU barriers guard against three hazard types: <strong>RAW</strong> (read-after-write — the classic data dependency), <strong>WAR</strong> (write-after-read — new write must wait until prior reads finish), and <strong>WAW</strong> (write-after-write — ordering between consecutive writers). Our MVP only handles the state-change case — it transitions a resource from one <code>ResourceState</code> to another. D3D12 and Vulkan expose finer-grained synchronisation: <code>D3D12_RESOURCE_BARRIER</code> with <code>Transition</code>/<code>UAV</code>/<code>Aliasing</code> types, and Vulkan's <code>VkImageMemoryBarrier</code> with <code>srcAccessMask</code>/<code>dstAccessMask</code>. Handling all three hazard types is covered in <a href="../frame-graph-advanced/">Part III</a>.
-</div>
+Second, our MVP only handles *state-change* barriers — transitioning a resource from one `ResourceState` to another. Real APIs expose finer-grained synchronisation for three hazard types: **RAW** (read-after-write), **WAR** (write-after-read), and **WAW** (write-after-write). D3D12 models these with `D3D12_RESOURCE_BARRIER` (`Transition`/`UAV`/`Aliasing` types); Vulkan uses `VkImageMemoryBarrier` with `srcAccessMask`/`dstAccessMask`. Handling all three is covered in [Part III](../frame-graph-advanced/).
 
 ---
 
@@ -885,6 +869,18 @@ The second half of the algorithm — the greedy free-list allocator. Sort resour
 +    return result;
 +}
 
+@@ EmitBarriers() — replay precomputed transitions (.cpp) @@
++void FrameGraph::EmitBarriers(const std::vector<Barrier>& barriers) {
++    for (auto& b : barriers) {
++        // GPU API call goes here — the Barrier struct carries everything needed:
++        //   b.resourceIndex → which resource to transition
++        //   b.oldState      → current layout / state  (e.g. ShaderRead)
++        //   b.newState      → required layout / state (e.g. ColorAttachment)
++        // Maps directly to ResourceBarrier(StateBefore→StateAfter) on D3D12
++        // or vkCmdPipelineBarrier(oldLayout→newLayout) on Vulkan.
++    }
++}
+
 @@ Execute() — v3 replays precomputed barriers, no analysis (.cpp) @@
 -void FrameGraph::Execute() {
 -    BuildEdges();
@@ -892,7 +888,7 @@ The second half of the algorithm — the greedy free-list allocator. Sort resour
 -    Cull(sorted);
 -    for (uint32_t idx : sorted) {
 -        if (!passes[idx].alive) continue;
--        InsertBarriers(idx);
+-        EmitBarriers(idx);
 -        passes[idx].Execute(/* &cmdList */);
 -    }
 -    passes.clear();
@@ -902,9 +898,7 @@ The second half of the algorithm — the greedy free-list allocator. Sort resour
 +    for (uint32_t orderIdx = 0; orderIdx < plan.sorted.size(); orderIdx++) {
 +        uint32_t passIdx = plan.sorted[orderIdx];
 +        if (!passes[passIdx].alive) continue;
-+        // Submit precomputed barriers — no state tracking here.
-+        for (auto& b : plan.barriers[orderIdx])
-+            SubmitBarrier(b);   // e.g. vkCmdPipelineBarrier
++        EmitBarriers(plan.barriers[orderIdx]);
 +        passes[passIdx].Execute(/* &cmdList */);
 +    }
 +    passes.clear();

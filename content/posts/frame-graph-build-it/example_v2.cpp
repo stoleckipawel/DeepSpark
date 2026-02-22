@@ -1,5 +1,5 @@
 // Frame Graph MVP v2 -- Usage Example
-// Compile: g++ -std=c++17 -o example_v2 example_v2.cpp frame_graph_v2.cpp
+// Compile: clang++ -std=c++17 -o example_v2 example_v2.cpp
 #include "frame_graph_v2.h"
 #include "frame_graph_v2.cpp"  // single-TU build (Godbolt)
 #include <cstdio>

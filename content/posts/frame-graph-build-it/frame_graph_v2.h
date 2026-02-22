@@ -3,7 +3,8 @@
 // Adds: resource versioning, DAG with adjacency list, Kahn's topo-sort,
 //       pass culling, and automatic barrier insertion.
 //
-// Compile: g++ -std=c++17 -o example_v2 example_v2.cpp frame_graph_v2.cpp
+// Compile: clang++ -std=c++17 -o example_v2 example_v2.cpp
+//     or: g++ -std=c++17 -o example_v2 example_v2.cpp
 
 #include <cstdint>
 #include <functional>
@@ -99,5 +100,5 @@ private:
     void BuildEdges();                                // NEW v2
     std::vector<uint32_t> TopoSort();                 // NEW v2
     void Cull(const std::vector<uint32_t>& sorted);   // NEW v2
-    void InsertBarriers(uint32_t passIdx);             // NEW v2
+    void EmitBarriers(uint32_t passIdx);                // NEW v2
 };

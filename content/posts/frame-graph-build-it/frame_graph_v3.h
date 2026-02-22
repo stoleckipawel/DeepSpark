@@ -3,7 +3,8 @@
 // Adds: lifetime analysis, greedy free-list memory aliasing.
 // Builds on v2 (dependencies, topo-sort, culling, barriers).
 //
-// Compile: g++ -std=c++17 -o example_v3 example_v3.cpp frame_graph_v3.cpp
+// Compile: clang++ -std=c++17 -o example_v3 example_v3.cpp
+//     or: g++ -std=c++17 -o example_v3 example_v3.cpp
 
 #include <cstdint>
 #include <functional>
@@ -156,4 +157,5 @@ private:
     std::vector<Lifetime> ScanLifetimes(const std::vector<uint32_t>& sorted);  // NEW v3
     std::vector<uint32_t> AliasResources(const std::vector<Lifetime>& lifetimes); // NEW v3
     std::vector<std::vector<Barrier>> ComputeBarriers(const std::vector<uint32_t>& sorted); // NEW v3
+    void EmitBarriers(const std::vector<Barrier>& barriers);  // NEW v3
 };

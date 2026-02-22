@@ -3,7 +3,8 @@
 // No dependency tracking, no barriers, no aliasing.
 // Passes execute in declaration order.
 //
-// Compile: g++ -std=c++17 -o example_v1 example_v1.cpp frame_graph_v1.cpp
+// Compile: clang++ -std=c++17 -o example_v1 example_v1.cpp
+//     or: g++ -std=c++17 -o example_v1 example_v1.cpp
 
 #include <cstdint>
 #include <functional>

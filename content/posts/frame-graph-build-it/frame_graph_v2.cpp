@@ -47,7 +47,7 @@ void FrameGraph::Execute() {
             printf("  -- skip: %s (CULLED)\n", passes[idx].name.c_str());
             continue;
         }
-        InsertBarriers(idx);
+        EmitBarriers(idx);
         passes[idx].Execute(/* &cmdList */);
     }
     passes.clear();
@@ -116,9 +116,9 @@ void FrameGraph::Cull(const std::vector<uint32_t>& sorted) {
     }
 }
 
-// == Insert barriers where resource state changes ==============
+// == Emit barriers where resource state changes ===============
 
-void FrameGraph::InsertBarriers(uint32_t passIdx) {
+void FrameGraph::EmitBarriers(uint32_t passIdx) {
     auto StateForUsage = [](bool isWrite, Format fmt) {
         if (isWrite)
             return (fmt == Format::D32F) ? ResourceState::DepthAttachment
