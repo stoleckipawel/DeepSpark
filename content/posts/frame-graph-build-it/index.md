@@ -742,7 +742,7 @@ This requires **placed resources** at the API level — GPU memory allocated fro
 The second half of the algorithm — the greedy free-list allocator. Sort resources by `firstUse`, then try to fit each one into an existing block whose previous user has finished:
 
 {{< code-diff title="v3 — Greedy free-list aliasing + Compile() integration" >}}
-@@ FrameGraph — v3 additions (.h) @@
+@@ FrameGraph — v3 public additions (.h) @@
 +    struct CompiledPlan {
 +        std::vector<uint32_t> sorted;
 +        std::vector<uint32_t> mapping;   // mapping[virtualIdx] → physicalBlock
@@ -750,7 +750,11 @@ The second half of the algorithm — the greedy free-list allocator. Sort resour
 +
 +    CompiledPlan Compile();
 +    void Execute(const CompiledPlan& plan);
-+    void Execute();  // convenience: compile + execute in one call
+     void Execute();  // now: convenience wrapper — compile + execute in one call
+
+@@ FrameGraph — v3 private additions (.h) @@
++    std::vector<Lifetime> ScanLifetimes(const std::vector<uint32_t>& sorted);
++    std::vector<uint32_t> AliasResources(const std::vector<Lifetime>& lifetimes);
 
 @@ AliasResources() — greedy free-list scan (.cpp) @@
 +std::vector<uint32_t> FrameGraph::AliasResources(const std::vector<Lifetime>& lifetimes) {
@@ -800,6 +804,31 @@ The second half of the algorithm — the greedy free-list allocator. Sort resour
 +    auto mapping   = AliasResources(lifetimes);  // NEW v3
 +    return { std::move(sorted), std::move(mapping) };
 +}
+
+@@ Execute() — v3 replaces monolithic Execute with Compile + Execute split (.cpp) @@
+-void FrameGraph::Execute() {
+-    BuildEdges();
+-    auto sorted = TopoSort();
+-    Cull(sorted);
+-    for (uint32_t idx : sorted) {
+-        if (!passes[idx].alive) continue;
+-        InsertBarriers(idx);
+-        passes[idx].Execute(/* &cmdList */);
+-    }
+-    passes.clear();
+-    entries.clear();
+-}
++void FrameGraph::Execute(const CompiledPlan& plan) {
++    for (uint32_t idx : plan.sorted) {
++        if (!passes[idx].alive) continue;
++        InsertBarriers(idx);
++        passes[idx].Execute(/* &cmdList */);
++    }
++    passes.clear();
++    entries.clear();
++}
++
++void FrameGraph::Execute() { Execute(Compile()); }
 {{< /code-diff >}}
 
 ~70 new lines on top of v2. Aliasing runs once per frame in O(R log R) — sort, then linear scan of the free list. Sub-microsecond for 15 transient resources.
