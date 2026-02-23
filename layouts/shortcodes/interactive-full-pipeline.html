@@ -375,7 +375,7 @@ function svgText(x,y,str,fill,size,weight,anchor){
 }
 
 /* ─── Minimap ─── */
-var MM_NW=90,MM_NH=24,MM_CG=115,MM_RG=42,MM_PAD=20;
+var MM_NW=100,MM_NH=34,MM_CG=130,MM_RG=52,MM_PAD=20;
 
 function renderMinimap(opts){
   var svg=document.getElementById("pipe-minimap");
@@ -440,17 +440,17 @@ function renderMinimap(opts){
 
     /* selection ring */
     if(isSel){
-      svg.append(el("rect",{x:p.mx-3,y:p.my-3,width:MM_NW+6,height:MM_NH+6,rx:7,
+      svg.append(el("rect",{x:p.mx-3,y:p.my-3,width:MM_NW+6,height:MM_NH+6,rx:11,
         fill:"none",stroke:"#fff","stroke-width":"2",opacity:"0.7"}));
     }
 
     var strokeCol=isOut?"#d97706":isAsync?"#7c3aed":isAlive?"#16a34a":"#4b5563";
-    g.append(el("rect",{x:p.mx,y:p.my,width:MM_NW,height:MM_NH,rx:5,
+    g.append(el("rect",{x:p.mx,y:p.my,width:MM_NW,height:MM_NH,rx:8,
       fill:fill,opacity:isAlive?"1":"0.3",stroke:isSel?"#fff":strokeCol,"stroke-width":isSel?"2":"1"}));
 
     var maxChars=11;
     var label=p.name.length>maxChars?p.name.slice(0,maxChars-1)+"\u2026":p.name;
-    var t=svgText(p.mx+MM_NW/2,p.my+MM_NH/2,isAlive?label:label+" \u2717","#fff","9","600");
+    var t=svgText(p.mx+MM_NW/2,p.my+MM_NH/2,isAlive?label:label+" \u2717","#fff","12","600");
     t.setAttribute("opacity",isAlive?"1":"0.4");
     g.append(t);
 
@@ -474,7 +474,7 @@ function renderMinimap(opts){
 }
 
 /* ─── Focus view ─── */
-var F_NW=155,F_NH=42,F_CG=210,F_PAD=25;
+var F_NW=100,F_NH=34,F_CG=160,F_PAD=25;
 /* Cache focus-view DOM refs (resolved once on first call) */
 var focusRefs=null;
 function getFocusRefs(){
@@ -612,8 +612,7 @@ function renderFocus(opts){
     g.append(el("rect",{x:x,y:y,width:F_NW,height:F_NH,rx:8,
       fill:fill,opacity:na?"1":"0.35",stroke:isCenter?"#fff":strokeCol,"stroke-width":isCenter?"2":"1.5"}));
     var nameStr=na?nodePass.name:nodePass.name+" \u2717";
-    var sz=nameStr.length>16?"10":nameStr.length>12?"11.5":"13";
-    g.append(svgText(x+F_NW/2,y+F_NH/2,nameStr,"#fff",sz,"700"));
+    g.append(svgText(x+F_NW/2,y+F_NH/2,nameStr,"#fff","12","600"));
     /* type chip */
     if(na){
       var chip=nodePass.type==="compute"?"C":"R";
