@@ -111,7 +111,9 @@
 
     /* Side rail */
     if (hasToc) {
-      html += '<div class="snav-rail" id="snav-rail"><div class="snav-rail-inner" id="snav-rail-inner">' +
+      html += '<div class="snav-rail" id="snav-rail">' +
+        '<button class="snav-rail-minimize" id="snav-rail-minimize" aria-label="Minimize navigation" title="Minimize">\u2039</button>' +
+        '<div class="snav-rail-inner" id="snav-rail-inner">' +
         '<div class="snav-rail-title">On this page</div>' +
         '<div class="snav-rail-items" id="snav-rail-items">';
       tocItems.forEach(function(item) {
@@ -134,6 +136,18 @@
     var railEl     = document.getElementById('snav-rail');
     var railPctEl  = document.getElementById('snav-rail-pct');
     var railItemsE = document.getElementById('snav-rail-items');
+
+    /* ── Minimize button toggle ───────────────────────────────────── */
+    if (railEl) {
+      var minBtn = document.getElementById('snav-rail-minimize');
+      if (minBtn) {
+        minBtn.addEventListener('click', function() {
+          var isMin = railEl.classList.toggle('minimized');
+          minBtn.setAttribute('aria-label', isMin ? 'Expand navigation' : 'Minimize navigation');
+          minBtn.title = isMin ? 'Expand' : 'Minimize';
+        });
+      }
+    }
 
     /* ── Rail click → smooth scroll ───────────────────────────────── */
     if (railItemsE) {

@@ -9,6 +9,7 @@
 
 <!-- Side rail (right) -->
 <div class="anav-rail" id="anav-rail">
+  <button class="anav-rail-minimize" id="anav-rail-minimize" aria-label="Minimize navigation" title="Minimize"></button>
   <div class="anav-rail-inner" id="anav-rail-inner">
     <div class="anav-rail-title">Series</div>
     <div class="anav-rail-series" id="anav-rail-series">
@@ -124,6 +125,7 @@
   transform: translateX(20px);
   transition: opacity .3s, transform .3s;
   pointer-events: none;
+  overflow: visible;
 }
 .anav-rail.visible {
   opacity: 1;
@@ -217,6 +219,75 @@
 }
 :is(.dark,.scheme-congo) .anav-rail-pct-bottom {
   border-color: var(--color-neutral-700);
+}
+
+/* ── Minimize button (top-right dash) ───────── */
+.anav-rail-minimize {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
+  width: 28px;
+  height: 18px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 1em;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: .3;
+  transition: opacity .15s, background .15s;
+  padding: 0;
+}
+.anav-rail-minimize::before {
+  content: '';
+  display: block;
+  width: 16px;
+  height: 2px;
+  background: currentColor;
+  border-radius: 1px;
+}
+.anav-rail-minimize:hover {
+  opacity: .7;
+  background: rgba(var(--ds-accent-rgb),.08);
+}
+
+/* Minimized state */
+.anav-rail.minimized .anav-rail-inner {
+  display: none;
+}
+.anav-rail.minimized {
+  width: auto;
+  right: 16px;
+}
+.anav-rail.minimized .anav-rail-minimize {
+  position: static;
+  width: 36px;
+  height: 28px;
+  opacity: .4;
+  border-radius: .4rem;
+  background: rgba(255,255,255,.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--color-neutral-200, #e5e5e5);
+  box-shadow: 0 1px 6px rgba(0,0,0,.06);
+}
+:is(.dark,.scheme-congo) .anav-rail.minimized .anav-rail-minimize {
+  background: rgba(23,23,23,.92);
+  border-color: var(--color-neutral-700);
+  box-shadow: 0 1px 6px rgba(0,0,0,.3);
+}
+.anav-rail.minimized .anav-rail-minimize::before {
+  width: 14px;
+  height: 2px;
+}
+.anav-rail.minimized .anav-rail-minimize:hover {
+  opacity: .9;
 }
 
 /* ── Mobile FAB ───────────────────────────────── */
@@ -355,6 +426,14 @@
     var progressBar = document.getElementById('anav-progress-bar');
     var railItems = document.getElementById('anav-rail-items');
     var railPct = document.getElementById('anav-rail-pct');
+
+    // ── Minimize button toggle ──
+    var minBtn = document.getElementById('anav-rail-minimize');
+    minBtn.addEventListener('click', function() {
+      var isMin = rail.classList.toggle('minimized');
+      minBtn.setAttribute('aria-label', isMin ? 'Expand navigation' : 'Minimize navigation');
+      minBtn.title = isMin ? 'Expand' : 'Minimize';
+    });
 
     // Find the article container
     var article = document.querySelector('article') || document.querySelector('.prose') || document.querySelector('main');
