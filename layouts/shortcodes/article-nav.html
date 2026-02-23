@@ -5,29 +5,6 @@
   <div class="anav-progress-track">
     <div class="anav-progress-bar" id="anav-progress-bar"></div>
   </div>
-  <div class="anav-breadcrumb">
-    <span class="anav-bc-root">Frame Graph</span>
-    <span class="anav-bc-sep">›</span>
-    <span class="anav-bc-part" id="anav-bc-part">Part I</span>
-    <span class="anav-bc-sep">›</span>
-    <span class="anav-bc-section" id="anav-bc-section">—</span>
-    <span class="anav-bc-pct" id="anav-bc-pct">0%</span>
-  </div>
-  <!-- Series tab bar (hidden — progress bar only) -->
-  <div class="anav-series" id="anav-series" style="display:none;">
-    <a href="../frame-graph-theory/" class="anav-series-tab" data-slug="frame-graph-theory">
-      <span class="anav-st-num">I</span><span class="anav-st-label">Theory</span>
-    </a>
-    <a href="../frame-graph-build-it/" class="anav-series-tab" data-slug="frame-graph-build-it">
-      <span class="anav-st-num">II</span><span class="anav-st-label">Build It</span>
-    </a>
-    <a href="../frame-graph-advanced/" class="anav-series-tab" data-slug="frame-graph-advanced">
-      <span class="anav-st-num">III</span><span class="anav-st-label">Beyond MVP</span>
-    </a>
-    <a href="../frame-graph-production/" class="anav-series-tab" data-slug="frame-graph-production">
-      <span class="anav-st-num">IV</span><span class="anav-st-label">Production</span>
-    </a>
-  </div>
 </div>
 
 <!-- Side rail (right) -->
@@ -87,100 +64,6 @@
   will-change: transform;
   border-radius: 0 2px 2px 0;
 }
-.anav-breadcrumb {
-  display: none;
-}
-:is(.dark,.scheme-congo) .anav-breadcrumb {
-  background: rgba(23,23,23,.92);
-  border-color: var(--color-neutral-700);
-}
-.anav-bc-root {
-  opacity: .4;
-  font-weight: 600;
-}
-.anav-bc-sep {
-  opacity: .25;
-  font-size: 1.1em;
-}
-.anav-bc-part {
-  color: var(--ds-accent);
-  font-weight: 700;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.anav-bc-part:hover { text-decoration: underline; }
-.anav-bc-section {
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 400px;
-}
-.anav-bc-pct {
-  margin-left: auto;
-  font-weight: 700;
-  color: var(--ds-accent);
-  white-space: nowrap;
-  min-width: 3em;
-  text-align: right;
-}
-
-/* ── Series tab bar (top, inside sticky header) ── */
-.anav-series {
-  display: flex;
-  gap: 0;
-  background: rgba(255,255,255,.88);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-bottom: 1px solid var(--color-neutral-200, #e5e5e5);
-  padding: 0 .6em;
-}
-:is(.dark,.scheme-congo) .anav-series {
-  background: rgba(23,23,23,.88);
-  border-color: var(--color-neutral-700);
-}
-.anav-series-tab {
-  display: flex;
-  align-items: center;
-  gap: .35em;
-  padding: .4em .7em;
-  font-family: ui-monospace, SFMono-Regular, monospace;
-  font-size: .78em;
-  font-weight: 600;
-  color: inherit;
-  opacity: .45;
-  text-decoration: none;
-  border-bottom: 2px solid transparent;
-  transition: opacity .15s, border-color .15s;
-  white-space: nowrap;
-}
-.anav-series-tab:hover {
-  opacity: .8;
-  text-decoration: none;
-}
-.anav-series-tab.active {
-  opacity: 1;
-  font-weight: 800;
-  border-bottom-color: var(--ds-accent);
-  color: var(--ds-accent);
-}
-.anav-st-num {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.5em;
-  height: 1.5em;
-  border-radius: 50%;
-  background: rgba(var(--ds-accent-rgb),.08);
-  font-size: .85em;
-  font-weight: 800;
-}
-.anav-series-tab.active .anav-st-num {
-  background: var(--ds-accent);
-  color: #fff;
-}
-.anav-st-label { }
-
 /* ── Series links in side rail ── */
 .anav-rail-series {
   display: flex;
@@ -418,35 +301,12 @@
   .anav-mobile-fab {
     display: block;
   }
-  /* Breadcrumb adjustments for mobile */
-  .anav-breadcrumb {
-    font-size: .78em;
-    padding: .35em .7em;
-    gap: .3em;
-  }
-  .anav-bc-section {
-    max-width: 40vw;
-  }
   .anav-progress-track {
     height: 4px;
   }
 }
 
 @media (max-width: 500px) {
-  .anav-breadcrumb {
-    font-size: .72em;
-    padding: .3em .5em;
-    gap: .2em;
-  }
-  .anav-bc-root {
-    display: none;
-  }
-  .anav-bc-root + .anav-bc-sep {
-    display: none;
-  }
-  .anav-bc-section {
-    max-width: 35vw;
-  }
   .anav-rail {
     bottom: 80px;
     right: 8px;
@@ -479,11 +339,11 @@
   }
 
   function initNav() {
-    // ── Series tab bar: highlight current page ──
+    // ── Series links in side rail: highlight current page ──
     (function() {
       var path = window.location.pathname.replace(/\/+$/, '');
       var slug = path.split('/').pop();
-      document.querySelectorAll('.anav-series-tab[data-slug], .anav-rs-link[data-slug]').forEach(function(el) {
+      document.querySelectorAll('.anav-rs-link[data-slug]').forEach(function(el) {
         if (el.getAttribute('data-slug') === slug) {
           el.classList.add('active');
         }
@@ -493,9 +353,6 @@
     var topBar = document.getElementById('anav-top');
     var rail = document.getElementById('anav-rail');
     var progressBar = document.getElementById('anav-progress-bar');
-    var bcPart = document.getElementById('anav-bc-part');
-    var bcSection = document.getElementById('anav-bc-section');
-    var bcPct = document.getElementById('anav-bc-pct');
     var railItems = document.getElementById('anav-rail-items');
     var railPct = document.getElementById('anav-rail-pct');
 
@@ -609,14 +466,6 @@
       }, { passive: true });
     })();
 
-    // Breadcrumb part click — scroll to part
-    bcPart.addEventListener('click', function() {
-      var partIdx = parseInt(bcPart.getAttribute('data-part') || '0');
-      if (parts[partIdx]) {
-        parts[partIdx].el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    });
-
     // Show threshold — show nav after scrolling past first heading
     var showThreshold = 200;
     var ticking = false;
@@ -653,7 +502,6 @@
 
       // Progress bar — use scaleX (compositor-friendly) instead of width
       progressBar.style.transform = 'scaleX(' + (pct / 100) + ')';
-      bcPct.textContent = pct + '%';
       railPct.textContent = pct + '% read';
 
       // Scroll spy — find current section (reads only)
@@ -668,15 +516,6 @@
       }
 
       if (currentSection) {
-        // Update breadcrumb
-        if (parts[currentSection.partIdx]) {
-          var partShort = parts[currentSection.partIdx].name.split('\u2014')[0].trim();
-          bcPart.textContent = partShort;
-          bcPart.setAttribute('data-part', currentSection.partIdx);
-          bcPart.style.color = partColors[currentSection.partIdx] || 'var(--ds-accent)';
-        }
-        bcSection.textContent = currentSection.isPart ? '\u2014' : currentSection.name;
-
         // Update rail active state — swap only changed element
         var nextLink = railItems.querySelector('[data-target="' + currentSection.id + '"]');
         if (nextLink !== prevActiveLink) {

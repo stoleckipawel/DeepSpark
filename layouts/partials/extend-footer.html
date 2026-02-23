@@ -107,22 +107,7 @@
     /* ── Build DOM ────────────────────────────────────────────────── */
     var html = '<div class="snav-top" id="snav-top">' +
       '<div class="snav-progress-track"><div class="snav-progress-bar" id="snav-progress-bar"></div></div>' +
-      '<div class="snav-breadcrumb">';
-
-    crumbs.forEach(function(c, i) {
-      if (i > 0) html += '<span class="snav-bc-sep">\u203a</span>';
-      if (c.url) {
-        html += '<span class="snav-bc-item"><a href="' + c.url + '">' + c.name + '</a></span>';
-      } else {
-        html += '<span class="snav-bc-current" id="snav-bc-current">' + c.name + '</span>';
-      }
-    });
-    if (hasToc) {
-      html += '<span class="snav-bc-sep">\u203a</span>';
-      html += '<span class="snav-bc-section" id="snav-bc-section">\u2014</span>';
-    }
-    html += '<span class="snav-bc-pct" id="snav-bc-pct">0%</span>';
-    html += '</div></div>';
+      '</div>';
 
     /* Side rail */
     if (hasToc) {
@@ -146,12 +131,9 @@
     /* ── References ───────────────────────────────────────────────── */
     var topEl      = document.getElementById('snav-top');
     var barEl      = document.getElementById('snav-progress-bar');
-    var bcSection  = document.getElementById('snav-bc-section');
-    var bcPct      = document.getElementById('snav-bc-pct');
     var railEl     = document.getElementById('snav-rail');
     var railPctEl  = document.getElementById('snav-rail-pct');
     var railItemsE = document.getElementById('snav-rail-items');
-    var bcCurEl    = document.getElementById('snav-bc-current');
 
     /* ── Rail click → smooth scroll ───────────────────────────────── */
     if (railItemsE) {
@@ -163,10 +145,6 @@
       });
     }
 
-    /* Breadcrumb current → scroll to top */
-    if (bcCurEl) bcCurEl.addEventListener('click', function() {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
 
     /* ── Mobile FAB & backdrop ────────────────────────────────────── */
     var fab = document.getElementById('snav-mobile-fab');
@@ -220,13 +198,11 @@
         if (railEl) railEl.classList.toggle('visible', show);
 
         barEl.style.transform = 'scaleX(' + (pct / 100) + ')';
-        bcPct.textContent = pct + '%';
         if (railPctEl) railPctEl.textContent = pct + '% read';
 
         /* Scrollspy — swap only changed active link */
         if (hasToc) {
           if (cur) {
-            bcSection.textContent = cur.name;
             var next = railItemsE.querySelector('[data-target="' + cur.id + '"]');
             if (next !== prevActive) {
               if (prevActive) prevActive.classList.remove('active');
@@ -239,7 +215,6 @@
               prevActive = next;
             }
           } else {
-            bcSection.textContent = '\u2014';
             if (prevActive) { prevActive.classList.remove('active'); prevActive = null; }
           }
         }
