@@ -1,27 +1,27 @@
 ﻿---
 title: "Frame Graph — Build It"
 date: 2026-02-10
+lastmod: 2026-02-23
 draft: false
+authors: ["Pawel Stolecki"]
 description: "Three iterations from blank file to working frame graph with automatic barriers and memory aliasing."
 tags: ["rendering", "frame-graph", "gpu", "architecture", "cpp"]
 categories: ["analysis"]
 series: ["Rendering Architecture"]
+summary: "Three C++ iterations — v1 scaffold, v2 dependencies and barriers, v3 lifetime analysis and memory aliasing — building a complete frame graph from scratch."
 showTableOfContents: false
+keywords: ["frame graph C++", "render graph implementation", "topological sort", "Kahn algorithm", "barrier insertion", "memory aliasing", "resource lifetime", "GPU programming"]
 ---
 
 {{< article-nav >}}
 
-<div style="margin:0 0 1.5em;padding:.7em 1em;border-radius:8px;background:rgba(var(--ds-indigo-rgb),.04);border:1px solid rgba(var(--ds-indigo-rgb),.12);font-size:.88em;line-height:1.6;opacity:.85;">
+<div class="ds-series-nav">
 📖 <strong>Part II of IV.</strong>&ensp; <a href="../frame-graph-theory/">Theory</a> → <em>Build It</em> → <a href="../frame-graph-advanced/">Beyond MVP</a> → <a href="../frame-graph-production/">Production Engines</a>
 </div>
 
 *Part I laid out the theory — declare, compile, execute. Now we turn that blueprint into code. Three iterations, each one building on the last: v1 lays the scaffold, v2 adds dependency-driven execution order (topological sort, pass culling, and automatic barriers), and v3 introduces lifetime analysis so non-overlapping resources can share the same heap. Time to get our hands dirty.*
 
 <!-- MVP progression — animated power-up timeline -->
-<style>
-@keyframes mvp-glow { 0%,100%{box-shadow:0 0 8px rgba(var(--ds-success-rgb),.25),0 0 0 3px rgba(var(--ds-success-rgb),.15);} 50%{box-shadow:0 0 20px rgba(var(--ds-success-rgb),.45),0 0 0 5px rgba(var(--ds-success-rgb),.2);} }
-@keyframes mvp-bar-shine { 0%{background-position:200% 0;} 100%{background-position:-200% 0;} }
-</style>
 <div style="margin:1.6em 0 1.2em;position:relative;padding-left:3em;">
   <div style="margin-left:-3em;margin-bottom:1.4em;font-size:1.15em;font-weight:900;text-align:center;letter-spacing:.03em;">🧬 MVP Progression</div>
   <!-- vertical connector -->
@@ -29,73 +29,61 @@ showTableOfContents: false
 
   <!-- ── v1 ── -->
   <a href="#-v1--the-scaffold" style="text-decoration:none;color:inherit;display:block;position:relative;margin-bottom:1.6em;cursor:pointer;" onmouseover="this.querySelector('.mvp-card').style.transform='translateX(4px)';this.querySelector('.mvp-card').style.borderColor='rgba(var(--ds-info-rgb),.5)'" onmouseout="this.querySelector('.mvp-card').style.transform='';this.querySelector('.mvp-card').style.borderColor='rgba(var(--ds-info-rgb),.2)'">
-    <div style="position:absolute;left:-3em;top:.3em;width:2.3em;height:2.3em;border-radius:50%;background:var(--ds-info);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.72em;color:#fff;box-shadow:0 0 0 3px rgba(var(--ds-info-rgb),.15);z-index:1;">v1</div>
-    <div class="mvp-card" style="padding:.8em 1em;border-radius:10px;border:1.5px solid rgba(var(--ds-info-rgb),.2);background:linear-gradient(135deg,rgba(var(--ds-info-rgb),.07) 0%,transparent 60%);transition:all .2s ease;">
-      <div style="display:flex;align-items:baseline;gap:.5em;margin-bottom:.3em;">
-        <span style="font-weight:900;font-size:1em;color:var(--ds-info);">The Scaffold</span>
-        <span style="font-size:.65em;font-weight:700;padding:.15em .5em;border-radius:9px;background:rgba(var(--ds-info-rgb),.12);color:var(--ds-info);white-space:nowrap;">~90 LOC</span>
+    <div class="ds-dot ds-dot--info" style="left:-3em;top:.3em;">v1</div>
+    <div class="mvp-card ds-mvp-card ds-mvp-card--info">
+      <div class="ds-mvp-card__title ds-mvp-card__title--info">
+        <span>The Scaffold</span>
+        <span class="ds-badge ds-badge--info ds-badge--loc">~90 LOC</span>
       </div>
-      <div style="font-size:.84em;line-height:1.5;opacity:.85;margin-bottom:.5em;">Pass declaration, virtual resources, linear execution.</div>
-      <!-- unlocks -->
-      <div style="display:flex;flex-wrap:wrap;gap:.35em;margin-bottom:.6em;">
-        <span style="font-size:.68em;padding:.15em .55em;border-radius:9px;background:rgba(var(--ds-info-rgb),.1);color:var(--ds-info);font-weight:700;">🔓 AddPass</span>
-        <span style="font-size:.68em;padding:.15em .55em;border-radius:9px;background:rgba(var(--ds-info-rgb),.1);color:var(--ds-info);font-weight:700;">🔓 CreateResource</span>
-        <span style="font-size:.68em;padding:.15em .55em;border-radius:9px;background:rgba(var(--ds-info-rgb),.1);color:var(--ds-info);font-weight:700;">🔓 ImportResource</span>
-        <span style="font-size:.68em;padding:.15em .55em;border-radius:9px;background:rgba(var(--ds-info-rgb),.1);color:var(--ds-info);font-weight:700;">🔓 Execute()</span>
+      <div class="ds-mvp-card__desc">Pass declaration, virtual resources, linear execution.</div>
+      <div class="ds-mvp-card__tags">
+        <span class="ds-badge ds-badge--info">🔓 AddPass</span>
+        <span class="ds-badge ds-badge--info">🔓 CreateResource</span>
+        <span class="ds-badge ds-badge--info">🔓 ImportResource</span>
+        <span class="ds-badge ds-badge--info">🔓 Execute()</span>
       </div>
-      <!-- power bar -->
-      <div style="height:8px;border-radius:4px;background:rgba(127,127,127,.08);overflow:hidden;">
-        <div style="width:20%;height:100%;border-radius:4px;background:var(--ds-info);"></div>
-      </div>
-      <div style="display:flex;justify-content:space-between;margin-top:.25em;font-size:.6em;opacity:.4;font-weight:600;"><span>DECLARE</span><span>COMPILE</span><span>EXECUTE</span></div>
+      <div class="ds-power-bar"><div class="ds-power-bar__fill ds-power-bar__fill--info"></div></div>
+      <div class="ds-power-bar__labels"><span>DECLARE</span><span>COMPILE</span><span>EXECUTE</span></div>
     </div>
   </a>
 
   <!-- ── v2 ── -->
   <a href="#-mvp-v2--dependencies--barriers" style="text-decoration:none;color:inherit;display:block;position:relative;margin-bottom:1.6em;cursor:pointer;" onmouseover="this.querySelector('.mvp-card').style.transform='translateX(4px)';this.querySelector('.mvp-card').style.borderColor='rgba(var(--ds-code-rgb),.5)'" onmouseout="this.querySelector('.mvp-card').style.transform='';this.querySelector('.mvp-card').style.borderColor='rgba(var(--ds-code-rgb),.2)'">
-    <div style="position:absolute;left:-3em;top:.3em;width:2.3em;height:2.3em;border-radius:50%;background:var(--ds-code);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.72em;color:#fff;box-shadow:0 0 0 3px rgba(var(--ds-code-rgb),.18);z-index:1;">v2</div>
-    <div class="mvp-card" style="padding:.8em 1em;border-radius:10px;border:1.5px solid rgba(var(--ds-code-rgb),.2);background:linear-gradient(135deg,rgba(var(--ds-code-rgb),.07) 0%,transparent 60%);transition:all .2s ease;">
-      <div style="display:flex;align-items:baseline;gap:.5em;margin-bottom:.3em;">
-        <span style="font-weight:900;font-size:1em;color:var(--ds-code);">Dependencies & Barriers</span>
-        <span style="font-size:.65em;font-weight:700;padding:.15em .5em;border-radius:9px;background:rgba(var(--ds-code-rgb),.12);color:var(--ds-code);white-space:nowrap;">~260 LOC</span>
+    <div class="ds-dot ds-dot--code" style="left:-3em;top:.3em;">v2</div>
+    <div class="mvp-card ds-mvp-card ds-mvp-card--code">
+      <div class="ds-mvp-card__title ds-mvp-card__title--code">
+        <span>Dependencies & Barriers</span>
+        <span class="ds-badge ds-badge--code ds-badge--loc">~260 LOC</span>
       </div>
-      <div style="font-size:.84em;line-height:1.5;opacity:.85;margin-bottom:.5em;">Resource versioning → edges → topo-sort → dead-pass culling → automatic barrier insertion.</div>
-      <!-- unlocks -->
-      <div style="display:flex;flex-wrap:wrap;gap:.35em;margin-bottom:.6em;">
-        <span style="font-size:.68em;padding:.15em .55em;border-radius:9px;background:rgba(var(--ds-code-rgb),.1);color:var(--ds-code);font-weight:700;">🔓 read / write</span>
-        <span style="font-size:.68em;padding:.15em .55em;border-radius:9px;background:rgba(var(--ds-code-rgb),.1);color:var(--ds-code);font-weight:700;">🔓 topo-sort</span>
-        <span style="font-size:.68em;padding:.15em .55em;border-radius:9px;background:rgba(var(--ds-code-rgb),.1);color:var(--ds-code);font-weight:700;">🔓 pass culling</span>
-        <span style="font-size:.68em;padding:.15em .55em;border-radius:9px;background:rgba(var(--ds-code-rgb),.1);color:var(--ds-code);font-weight:700;">🔓 auto barriers</span>
+      <div class="ds-mvp-card__desc">Resource versioning → edges → topo-sort → dead-pass culling → automatic barrier insertion.</div>
+      <div class="ds-mvp-card__tags">
+        <span class="ds-badge ds-badge--code">🔓 read / write</span>
+        <span class="ds-badge ds-badge--code">🔓 topo-sort</span>
+        <span class="ds-badge ds-badge--code">🔓 pass culling</span>
+        <span class="ds-badge ds-badge--code">🔓 auto barriers</span>
       </div>
-      <!-- power bar -->
-      <div style="height:8px;border-radius:4px;background:rgba(127,127,127,.08);overflow:hidden;">
-        <div style="width:65%;height:100%;border-radius:4px;background:linear-gradient(90deg,var(--ds-info),var(--ds-code));"></div>
-      </div>
-      <div style="display:flex;justify-content:space-between;margin-top:.25em;font-size:.6em;opacity:.4;font-weight:600;"><span>DECLARE</span><span>COMPILE</span><span>EXECUTE</span></div>
+      <div class="ds-power-bar"><div class="ds-power-bar__fill ds-power-bar__fill--v2"></div></div>
+      <div class="ds-power-bar__labels"><span>DECLARE</span><span>COMPILE</span><span>EXECUTE</span></div>
     </div>
   </a>
 
   <!-- ── v3 ── -->
   <a href="#-mvp-v3--lifetimes--aliasing" style="text-decoration:none;color:inherit;display:block;position:relative;cursor:pointer;" onmouseover="this.querySelector('.mvp-card').style.transform='translateX(4px)';this.querySelector('.mvp-card').style.borderColor='rgba(var(--ds-success-rgb),.6)'" onmouseout="this.querySelector('.mvp-card').style.transform='';this.querySelector('.mvp-card').style.borderColor='rgba(var(--ds-success-rgb),.3)'">
-    <div style="position:absolute;left:-3em;top:.3em;width:2.3em;height:2.3em;border-radius:50%;background:var(--ds-success);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.72em;color:#fff;animation:mvp-glow 2.5s ease-in-out infinite;z-index:1;">v3</div>
-    <div class="mvp-card" style="padding:.8em 1em;border-radius:10px;border:2px solid rgba(var(--ds-success-rgb),.3);background:linear-gradient(135deg,rgba(var(--ds-success-rgb),.09) 0%,rgba(var(--ds-success-rgb),.02) 40%,transparent 70%);transition:all .2s ease;box-shadow:0 2px 16px rgba(var(--ds-success-rgb),.08);">
-      <div style="display:flex;align-items:baseline;gap:.5em;margin-bottom:.3em;">
-        <span style="font-weight:900;font-size:1.05em;color:var(--ds-success);">Lifetimes & Aliasing</span>
-        <span style="font-size:.65em;font-weight:700;padding:.15em .5em;border-radius:9px;background:rgba(var(--ds-success-rgb),.12);color:var(--ds-success);white-space:nowrap;">~500 LOC</span>
-        <span style="font-size:.62em;font-weight:800;padding:.15em .5em;border-radius:9px;background:var(--ds-success);color:#fff;white-space:nowrap;">★ FULL MVP</span>
+    <div class="ds-dot ds-dot--success" style="left:-3em;top:.3em;">v3</div>
+    <div class="mvp-card ds-mvp-card ds-mvp-card--success">
+      <div class="ds-mvp-card__title ds-mvp-card__title--success">
+        <span>Lifetimes & Aliasing</span>
+        <span class="ds-badge ds-badge--success ds-badge--loc">~500 LOC</span>
+        <span class="ds-badge ds-badge--solid-success" style="font-size:.62em;font-weight:800;">★ FULL MVP</span>
       </div>
-      <div style="font-size:.84em;line-height:1.5;opacity:.85;margin-bottom:.5em;">Compile precomputes everything — sort, cull, lifetimes, aliasing, barriers — into a <code>CompiledPlan</code>.</div>
-      <!-- unlocks -->
-      <div style="display:flex;flex-wrap:wrap;gap:.35em;margin-bottom:.6em;">
-        <span style="font-size:.68em;padding:.15em .55em;border-radius:9px;background:rgba(var(--ds-success-rgb),.1);color:var(--ds-success);font-weight:700;">🔓 lifetime scan</span>
-        <span style="font-size:.68em;padding:.15em .55em;border-radius:9px;background:rgba(var(--ds-success-rgb),.1);color:var(--ds-success);font-weight:700;">🔓 memory aliasing</span>
-        <span style="font-size:.68em;padding:.15em .55em;border-radius:9px;background:rgba(var(--ds-success-rgb),.12);color:var(--ds-success);font-weight:700;">⚡ VRAM aliasing</span>
+      <div class="ds-mvp-card__desc">Compile precomputes everything — sort, cull, lifetimes, aliasing, barriers — into a <code>CompiledPlan</code>.</div>
+      <div class="ds-mvp-card__tags">
+        <span class="ds-badge ds-badge--success">🔓 lifetime scan</span>
+        <span class="ds-badge ds-badge--success">🔓 memory aliasing</span>
+        <span class="ds-badge ds-badge--success">⚡ VRAM aliasing</span>
       </div>
-      <!-- power bar — full, with animated shine -->
-      <div style="height:8px;border-radius:4px;background:rgba(127,127,127,.08);overflow:hidden;">
-        <div style="width:100%;height:100%;border-radius:4px;background:linear-gradient(90deg,var(--ds-info),var(--ds-code),var(--ds-success));background-size:200% 100%;animation:mvp-bar-shine 3s linear infinite;"></div>
-      </div>
-      <div style="display:flex;justify-content:space-between;margin-top:.25em;font-size:.6em;opacity:.4;font-weight:600;"><span>DECLARE</span><span>COMPILE</span><span>EXECUTE</span></div>
+      <div class="ds-power-bar"><div class="ds-power-bar__fill ds-power-bar__fill--full"></div></div>
+      <div class="ds-power-bar__labels"><span>DECLARE</span><span>COMPILE</span><span>EXECUTE</span></div>
     </div>
   </a>
 </div>
@@ -1114,11 +1102,11 @@ Both features plug directly into the `CompiledPlan` architecture: async compute 
 
 ---
 
-<div style="margin:2em 0 0;padding:1em 1.2em;border-radius:10px;border:1px solid rgba(var(--ds-indigo-rgb),.2);background:rgba(var(--ds-indigo-rgb),.03);display:flex;justify-content:space-between;align-items:center;">
-  <a href="../frame-graph-theory/" style="text-decoration:none;font-weight:700;font-size:.95em;">
+<div class="ds-article-footer">
+  <a href="../frame-graph-theory/">
     ← Previous: Part I — Theory
   </a>
-  <a href="../frame-graph-advanced/" style="text-decoration:none;font-weight:700;font-size:.95em;">
+  <a href="../frame-graph-advanced/">
     Next: Part III — Beyond MVP →
   </a>
 </div>

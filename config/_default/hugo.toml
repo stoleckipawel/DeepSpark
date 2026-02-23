@@ -3,13 +3,18 @@
 # https://blowfish.page/docs/getting-started/
 
 # theme = "blowfish" # UNCOMMENT THIS LINE
-# baseURL = "https://your_domain.com/"
+baseURL = "https://stoleckipawel.dev/"
 defaultContentLanguage = "en"
 
 # pluralizeListTitles = "true" # hugo function useful for non-english languages, find out more in  https://gohugo.io/getting-started/configuration/#pluralizelisttitles
 
 enableRobotsTXT = true
-summaryLength = 0
+summaryLength = 30
+
+enableGitInfo = true
+
+[frontmatter]
+  lastmod = ["lastmod", ":git", "date"]
 
 buildDrafts = false
 buildFuture = false
@@ -39,7 +44,7 @@ enableEmoji = true
   home = ["HTML", "RSS", "JSON"]
 
 [related]
-  threshold = 0
+  threshold = 30
   toLower = false
 
     [[related.indices]]

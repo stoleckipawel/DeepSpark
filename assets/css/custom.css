@@ -1,3 +1,323 @@
+/* ═══════════════════════════════════════════════════════════════
+   UNIFIED COMPONENT CLASSES
+   Replaces recurring inline styles across articles.
+   Colour comes from --ds-* tokens in schemes/deepspark.css.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Series navigation banner (top of each article) ──────────── */
+.ds-series-nav {
+  margin: 0 0 1.5em;
+  padding: .7em 1em;
+  border-radius: 8px;
+  background: rgba(var(--ds-indigo-rgb), .04);
+  border: 1px solid rgba(var(--ds-indigo-rgb), .12);
+  font-size: .88em;
+  line-height: 1.6;
+  opacity: .85;
+}
+
+/* ── Article prev/next footer navigation ─────────────────────── */
+.ds-article-footer {
+  margin: 2em 0 0;
+  padding: 1em 1.2em;
+  border-radius: 10px;
+  border: 1px solid rgba(var(--ds-indigo-rgb), .15);
+  background: rgba(var(--ds-indigo-rgb), .03);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: .9em;
+  gap: 1em;
+}
+.ds-article-footer a {
+  text-decoration: none;
+  font-weight: 600;
+  transition: color .15s;
+}
+.ds-article-footer a:hover {
+  color: var(--ds-accent);
+}
+
+/* ── Callout boxes (left-border accent) ──────────────────────── */
+.ds-callout {
+  margin: 1em 0;
+  padding: .85em 1.1em;
+  border-radius: 10px;
+  border: 1.5px solid rgba(var(--ds-code-rgb), .15);
+  background: linear-gradient(135deg, rgba(var(--ds-code-rgb), .04), transparent);
+  font-size: .9em;
+  line-height: 1.65;
+}
+.ds-callout--info {
+  border-left: 4px solid var(--ds-info);
+  background: rgba(var(--ds-info-rgb), .04);
+  border-color: rgba(var(--ds-info-rgb), .18);
+}
+.ds-callout--success {
+  border-left: 4px solid var(--ds-success);
+  background: rgba(var(--ds-success-rgb), .04);
+  border-color: rgba(var(--ds-success-rgb), .18);
+}
+.ds-callout--danger {
+  border-left: 4px solid var(--ds-danger);
+  background: rgba(var(--ds-danger-rgb), .04);
+  border-color: rgba(var(--ds-danger-rgb), .18);
+}
+.ds-callout--warn {
+  border-left: 4px solid var(--ds-warn);
+  background: rgba(var(--ds-warn-rgb), .04);
+  border-color: rgba(var(--ds-warn-rgb), .18);
+}
+.ds-callout--code {
+  border-left: 4px solid var(--ds-code);
+  background: rgba(var(--ds-code-rgb), .04);
+  border-color: rgba(var(--ds-code-rgb), .18);
+}
+
+/* ── Comparison grid (2-col side-by-side) ────────────────────── */
+.ds-compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1em;
+  margin: 1.2em 0;
+}
+@media (max-width: 640px) {
+  .ds-compare { grid-template-columns: 1fr; }
+}
+
+/* ── Comparison card (inside ds-compare or standalone) ───────── */
+.ds-card {
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1.5px solid rgba(var(--ds-indigo-rgb), .15);
+}
+.ds-card--danger { border-color: rgba(var(--ds-danger-rgb), .25); }
+.ds-card--success { border-color: rgba(var(--ds-success-rgb), .25); }
+.ds-card--info { border-color: rgba(var(--ds-info-rgb), .25); }
+.ds-card--code { border-color: rgba(var(--ds-code-rgb), .25); }
+.ds-card--warn { border-color: rgba(var(--ds-warn-rgb), .25); }
+
+.ds-card__header {
+  padding: .55em .9em;
+  font-weight: 800;
+  font-size: .82em;
+  border-bottom: 1px solid rgba(var(--ds-indigo-rgb), .1);
+}
+.ds-card__header--danger  { background: rgba(var(--ds-danger-rgb), .06);  color: var(--ds-danger);  border-color: rgba(var(--ds-danger-rgb), .12); }
+.ds-card__header--success { background: rgba(var(--ds-success-rgb), .06); color: var(--ds-success); border-color: rgba(var(--ds-success-rgb), .12); }
+.ds-card__header--info    { background: rgba(var(--ds-info-rgb), .06);    color: var(--ds-info);    border-color: rgba(var(--ds-info-rgb), .12); }
+.ds-card__header--code    { background: rgba(var(--ds-code-rgb), .06);    color: var(--ds-code);    border-color: rgba(var(--ds-code-rgb), .12); }
+.ds-card__header--warn    { background: rgba(var(--ds-warn-rgb), .06);    color: var(--ds-warn);    border-color: rgba(var(--ds-warn-rgb), .12); }
+.ds-card__header--neutral { background: rgba(156,163,175, .1);           color: inherit;           border-color: rgba(156,163,175, .2); }
+
+.ds-card__body {
+  padding: .8em .9em;
+  font-size: .86em;
+  line-height: 1.65;
+}
+
+/* ── Split panel (compile vs execute, danger vs success) ──────── */
+.ds-split {
+  margin: 1em 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1.5px solid rgba(var(--ds-indigo-rgb), .2);
+}
+@media (max-width: 640px) {
+  .ds-split { grid-template-columns: 1fr; }
+}
+.ds-split__left {
+  padding: .8em 1em;
+  border-right: 1px solid rgba(var(--ds-indigo-rgb), .15);
+}
+.ds-split__right {
+  padding: .8em 1em;
+}
+.ds-split__left--danger  { background: rgba(var(--ds-danger-rgb), .04); }
+.ds-split__left--code    { background: rgba(var(--ds-code-rgb), .04); }
+.ds-split__right--success { background: rgba(var(--ds-success-rgb), .04); }
+
+.ds-split__title {
+  font-weight: 800;
+  font-size: .82em;
+  margin-bottom: .5em;
+}
+.ds-split__title--danger  { color: var(--ds-danger); }
+.ds-split__title--success { color: var(--ds-success); }
+.ds-split__title--code    { color: var(--ds-code); }
+.ds-split__title--info    { color: var(--ds-info); }
+
+/* ── Numbered step grid ──────────────────────────────────────── */
+.ds-steps {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: .4em .9em;
+  align-items: start;
+}
+.ds-steps__num {
+  font-weight: 700;
+  color: var(--ds-code);
+}
+
+/* ── Section box (header / body / footer container) ──────────── */
+.ds-section {
+  margin: 1.2em 0;
+  border-radius: 10px;
+  overflow: hidden;
+  font-size: .85em;
+}
+.ds-section--code   { border: 1.5px solid rgba(var(--ds-code-rgb), .2); }
+.ds-section--indigo { border: 1.5px solid rgba(var(--ds-indigo-rgb), .15); }
+.ds-section--info   { border: 1.5px solid rgba(var(--ds-info-rgb), .2); }
+
+.ds-section__header {
+  padding: .5em .8em;
+  font-weight: 700;
+  font-size: .9em;
+  text-align: center;
+}
+.ds-section__header--code   { background: rgba(var(--ds-code-rgb), .06);   border-bottom: 1px solid rgba(var(--ds-code-rgb), .1);  color: var(--ds-code); }
+.ds-section__header--indigo { background: rgba(var(--ds-indigo-rgb), .06); border-bottom: 1px solid rgba(var(--ds-indigo-rgb), .1); }
+
+.ds-section__body {
+  padding: .8em 1.1em;
+  line-height: 1.7;
+}
+
+.ds-section__footer {
+  padding: .7em 1.1em;
+}
+.ds-section__footer--success { background: rgba(var(--ds-success-rgb), .06); border-top: 1px solid rgba(var(--ds-success-rgb), .1); }
+
+/* ── Badge / pill tag ────────────────────────────────────────── */
+.ds-badge {
+  display: inline-block;
+  font-size: .68em;
+  font-weight: 700;
+  padding: .15em .55em;
+  border-radius: 9px;
+  white-space: nowrap;
+}
+.ds-badge--info    { background: rgba(var(--ds-info-rgb), .1);    color: var(--ds-info); }
+.ds-badge--code    { background: rgba(var(--ds-code-rgb), .1);    color: var(--ds-code); }
+.ds-badge--success { background: rgba(var(--ds-success-rgb), .1); color: var(--ds-success); }
+.ds-badge--solid-success { background: var(--ds-success); color: #fff; }
+
+.ds-badge--loc {
+  font-size: .65em;
+  padding: .15em .5em;
+}
+
+/* ── MVP timeline progress bar ───────────────────────────────── */
+.ds-power-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(127, 127, 127, .08);
+  overflow: hidden;
+}
+.ds-power-bar__fill {
+  height: 100%;
+  border-radius: 4px;
+}
+.ds-power-bar__fill--info    { width: 20%;  background: var(--ds-info); }
+.ds-power-bar__fill--v2      { width: 65%;  background: linear-gradient(90deg, var(--ds-info), var(--ds-code)); }
+.ds-power-bar__fill--full    { width: 100%; background: linear-gradient(90deg, var(--ds-info), var(--ds-code), var(--ds-success)); background-size: 200% 100%; animation: mvp-bar-shine 3s linear infinite; }
+
+.ds-power-bar__labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: .25em;
+  font-size: .6em;
+  opacity: .4;
+  font-weight: 600;
+}
+
+/* ── Timeline dot (vertical timelines) ───────────────────────── */
+.ds-dot {
+  position: absolute;
+  width: 2.3em;
+  height: 2.3em;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: .72em;
+  color: #fff;
+  z-index: 1;
+}
+.ds-dot--info    { background: var(--ds-info);    box-shadow: 0 0 0 3px rgba(var(--ds-info-rgb), .15); }
+.ds-dot--code    { background: var(--ds-code);    box-shadow: 0 0 0 3px rgba(var(--ds-code-rgb), .18); }
+.ds-dot--success { background: var(--ds-success); animation: mvp-glow 2.5s ease-in-out infinite; }
+
+/* ── MVP card (timeline version cards) ───────────────────────── */
+.ds-mvp-card {
+  padding: .8em 1em;
+  border-radius: 10px;
+  transition: all .2s ease;
+}
+.ds-mvp-card--info {
+  border: 1.5px solid rgba(var(--ds-info-rgb), .2);
+  background: linear-gradient(135deg, rgba(var(--ds-info-rgb), .07) 0%, transparent 60%);
+}
+.ds-mvp-card--code {
+  border: 1.5px solid rgba(var(--ds-code-rgb), .2);
+  background: linear-gradient(135deg, rgba(var(--ds-code-rgb), .07) 0%, transparent 60%);
+}
+.ds-mvp-card--success {
+  border: 2px solid rgba(var(--ds-success-rgb), .3);
+  background: linear-gradient(135deg, rgba(var(--ds-success-rgb), .09) 0%, rgba(var(--ds-success-rgb), .02) 40%, transparent 70%);
+  box-shadow: 0 2px 16px rgba(var(--ds-success-rgb), .08);
+}
+
+.ds-mvp-card__title {
+  display: flex;
+  align-items: baseline;
+  gap: .5em;
+  margin-bottom: .3em;
+}
+.ds-mvp-card__title--info    > span:first-child { font-weight: 900; font-size: 1em;   color: var(--ds-info); }
+.ds-mvp-card__title--code    > span:first-child { font-weight: 900; font-size: 1em;   color: var(--ds-code); }
+.ds-mvp-card__title--success > span:first-child { font-weight: 900; font-size: 1.05em; color: var(--ds-success); }
+
+.ds-mvp-card__desc {
+  font-size: .84em;
+  line-height: 1.5;
+  opacity: .85;
+  margin-bottom: .5em;
+}
+
+.ds-mvp-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35em;
+  margin-bottom: .6em;
+}
+
+/* ── Inline code-like <pre> blocks inside cards ──────────────── */
+.ds-pre {
+  margin: .5em 0 0;
+  padding: .5em .8em;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, .04);
+  font-size: .82em;
+  line-height: 1.5;
+  overflow-x: auto;
+}
+
+/* ── MVP keyframe animations (moved from inline <style>) ─────── */
+@keyframes mvp-glow {
+  0%, 100% { box-shadow: 0 0 8px rgba(var(--ds-success-rgb), .25), 0 0 0 3px rgba(var(--ds-success-rgb), .15); }
+  50%      { box-shadow: 0 0 20px rgba(var(--ds-success-rgb), .45), 0 0 0 5px rgba(var(--ds-success-rgb), .2); }
+}
+@keyframes mvp-bar-shine {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 /* ── Full-width layout overrides ─────────────────────────────── */
 
 /* Make header logo 50% bigger than default (80px → 120px) */

@@ -1,17 +1,21 @@
 ---
 title: "Frame Graph — Theory"
 date: 2026-02-09
+lastmod: 2026-02-23
 draft: false
+authors: ["Pawel Stolecki"]
 description: "The theory behind frame graphs — how a DAG of passes and resources gives the compiler enough information to automate scheduling, barriers, and memory aliasing."
 tags: ["rendering", "frame-graph", "gpu", "architecture"]
 categories: ["analysis"]
 series: ["Rendering Architecture"]
+summary: "Declare → Compile → Execute. How a directed acyclic graph of render passes and virtual resources lets an engine automate topological sorting, barrier insertion, pass culling, and VRAM aliasing."
 showTableOfContents: false
+keywords: ["frame graph", "render graph", "render pass", "DAG", "topological sort", "GPU barriers", "resource aliasing", "VRAM", "Vulkan", "D3D12"]
 ---
 
 {{< article-nav >}}
 
-<div style="margin:0 0 1.5em;padding:.7em 1em;border-radius:8px;background:rgba(var(--ds-indigo-rgb),.04);border:1px solid rgba(var(--ds-indigo-rgb),.12);font-size:.88em;line-height:1.6;opacity:.85;">
+<div class="ds-series-nav">
 📖 <strong>Part I of IV.</strong>&ensp; <em>Theory</em> → <a href="../frame-graph-build-it/">Build It</a> → <a href="../frame-graph-advanced/">Beyond MVP</a> → <a href="../frame-graph-production/">Production Engines</a>
 </div>
 
@@ -508,8 +512,8 @@ The allocator is a two-step process:
   </div>
 
   <!-- Pitfalls -->
-  <div style="padding:.7em 1.2em;background:rgba(234,179,8,.04);border-top:1px solid rgba(234,179,8,.12);">
-    <div style="font-size:.78em;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:#ca8a04;margin-bottom:.4em;">⚠ Pitfalls</div>
+  <div style="padding:.7em 1.2em;background:rgba(var(--ds-warn-rgb),.04);border-top:1px solid rgba(var(--ds-warn-rgb),.12);">
+    <div style="font-size:.78em;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--ds-warn-dark);margin-bottom:.4em;">⚠ Pitfalls</div>
     <div style="display:grid;grid-template-columns:auto 1fr;gap:.2em .8em;font-size:.85em;line-height:1.6;">
       <span style="font-weight:700;opacity:.7;">Garbage</span><span>Aliased memory has stale contents — first use must be a full clear or overwrite</span>
       <span style="font-weight:700;opacity:.7;">Transient only</span><span>Imported resources live across frames — only single-frame transients qualify</span>
@@ -743,7 +747,7 @@ How often should the graph recompile? Three approaches, each a valid tradeoff:
     </div>
   </div>
   <div class="fg-hoverable" style="border-radius:10px;border:1.5px solid var(--color-neutral-400,#9ca3af);overflow:hidden;">
-    <div style="padding:.5em .8em;background:rgba(156,163,175,.1);font-weight:800;font-size:.95em;border-bottom:1px solid rgba(156,163,175,.2);">
+    <div style="padding:.5em .8em;background:rgba(var(--ds-slate-rgb),.1);font-weight:800;font-size:.95em;border-bottom:1px solid rgba(var(--ds-slate-rgb),.2);">
       🔒 Static
     </div>
     <div style="padding:.7em .8em;font-size:.88em;line-height:1.6;">
@@ -827,8 +831,8 @@ That's the full theory — sorting, culling, barriers, aliasing — everything a
 
 ---
 
-<div style="margin:2em 0 0;padding:1em 1.2em;border-radius:10px;border:1px solid rgba(var(--ds-info-rgb),.2);background:rgba(var(--ds-info-rgb),.03);display:flex;justify-content:flex-end;">
-  <a href="../frame-graph-build-it/" style="text-decoration:none;font-weight:700;font-size:.95em;">
+<div class="ds-article-footer" style="justify-content:flex-end;">
+  <a href="../frame-graph-build-it/">
     Next: Part II — Build It →
   </a>
 </div>

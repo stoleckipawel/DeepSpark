@@ -1,17 +1,21 @@
 ---
 title: "Frame Graph — Production Engines"
 date: 2026-02-11
+lastmod: 2026-02-23
 draft: false
+authors: ["Pawel Stolecki"]
 description: "How UE5 and Frostbite implement frame graphs at scale — plus the upgrade roadmap from MVP to production."
 tags: ["rendering", "frame-graph", "gpu", "architecture", "ue5"]
 categories: ["analysis"]
 series: ["Rendering Architecture"]
+summary: "UE5 RDG and Frostbite FrameGraph at production scale — parallel command recording, bindless integration, barrier batching, and the upgrade path from MVP."
 showTableOfContents: false
+keywords: ["UE5 RDG", "Render Dependency Graph", "Frostbite frame graph", "parallel command recording", "bindless rendering", "production rendering"]
 ---
 
 {{< article-nav >}}
 
-<div style="margin:0 0 1.5em;padding:.7em 1em;border-radius:8px;background:rgba(var(--ds-indigo-rgb),.04);border:1px solid rgba(var(--ds-indigo-rgb),.12);font-size:.88em;line-height:1.6;opacity:.85;">
+<div class="ds-series-nav">
 📖 <strong>Part IV of IV.</strong>&ensp; <a href="../frame-graph-theory/">Theory</a> → <a href="../frame-graph-build-it/">Build It</a> → <a href="../frame-graph-advanced/">Beyond MVP</a> → <em>Production Engines</em>
 </div>
 
@@ -260,8 +264,8 @@ The point isn't that every project needs a render graph. The point is that if yo
 
 ---
 
-<div style="margin:2em 0 0;padding:1em 1.2em;border-radius:10px;border:1px solid rgba(var(--ds-indigo-rgb),.2);background:rgba(var(--ds-indigo-rgb),.03);display:flex;justify-content:flex-start;">
-  <a href="../frame-graph-advanced/" style="text-decoration:none;font-weight:700;font-size:.95em;">
+<div class="ds-article-footer" style="justify-content:flex-start;">
+  <a href="../frame-graph-advanced/">
     ← Previous: Part III — Beyond MVP
   </a>
 </div>

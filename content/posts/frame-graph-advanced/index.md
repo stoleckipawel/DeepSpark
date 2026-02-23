@@ -1,17 +1,21 @@
 ---
 title: "Frame Graph — Beyond MVP"
 date: 2026-02-10T12:00:00
+lastmod: 2026-02-23
 draft: false
+authors: ["Pawel Stolecki"]
 description: "Async compute and split barriers — how the frame graph compiler squeezes more performance from the same DAG."
 tags: ["rendering", "frame-graph", "gpu", "architecture"]
 categories: ["analysis"]
 series: ["Rendering Architecture"]
+summary: "How the frame graph compiler schedules async compute across GPU queues and splits barrier transitions to hide cache-flush latency."
 showTableOfContents: false
+keywords: ["async compute", "split barriers", "GPU queue", "fence minimization", "render graph optimization", "Vulkan", "D3D12"]
 ---
 
 {{< article-nav >}}
 
-<div style="margin:0 0 1.5em;padding:.7em 1em;border-radius:8px;background:rgba(var(--ds-indigo-rgb),.04);border:1px solid rgba(var(--ds-indigo-rgb),.12);font-size:.88em;line-height:1.6;opacity:.85;">
+<div class="ds-series-nav">
 📖 <strong>Part III of IV.</strong>&ensp; <a href="../frame-graph-theory/">Theory</a> → <a href="../frame-graph-build-it/">Build It</a> → <em>Beyond MVP</em> → <a href="../frame-graph-production/">Production Engines</a>
 </div>
 
@@ -175,8 +179,8 @@ The passes between begin and end are the **overlap gap** — they execute while 
     <div style="font-size:.8em;font-weight:600;margin:.25em 0;">passes</div>
     <div style="font-size:.78em;opacity:.7;">No gap — degenerates into a regular barrier with extra API cost</div>
   </div>
-  <div class="fg-hoverable" style="border-radius:8px;border:1.5px solid rgba(234,179,8,.2);background:rgba(234,179,8,.03);padding:.7em .8em;text-align:center;">
-    <div style="font-weight:800;font-size:1.3em;color:#eab308;">1</div>
+  <div class="fg-hoverable" style="border-radius:8px;border:1.5px solid rgba(var(--ds-warn-rgb),.2);background:rgba(var(--ds-warn-rgb),.03);padding:.7em .8em;text-align:center;">
+    <div style="font-weight:800;font-size:1.3em;color:var(--ds-warn);">1</div>
     <div style="font-size:.8em;font-weight:600;margin:.25em 0;">pass</div>
     <div style="font-size:.78em;opacity:.7;">Marginal — might not cover the full flush latency</div>
   </div>
@@ -214,11 +218,11 @@ Async compute and split barriers are compiler features — they plug into the sa
 
 ---
 
-<div style="margin:2em 0 0;padding:1em 1.2em;border-radius:10px;border:1px solid rgba(var(--ds-info-rgb),.2);background:rgba(var(--ds-info-rgb),.03);display:flex;justify-content:space-between;">
-  <a href="../frame-graph-build-it/" style="text-decoration:none;font-weight:700;font-size:.95em;">
+<div class="ds-article-footer">
+  <a href="../frame-graph-build-it/">
     ← Previous: Part II — Build It
   </a>
-  <a href="../frame-graph-production/" style="text-decoration:none;font-weight:700;font-size:.95em;">
+  <a href="../frame-graph-production/">
     Next: Part IV — Production Engines →
   </a>
 </div>

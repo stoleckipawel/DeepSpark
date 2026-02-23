@@ -13,3 +13,13 @@ title = "Deep Spark"
   # secondaryLogo = "img/secondary-logo.png"
   description = "Graphics software engineering — real-time rendering notes, GPU experiments, and performance analysis."
   # copyright = "Copy, _right?_ :thinking_face:"
+
+[params.author]
+  name = "Pawel Stolecki"
+  headline = "Rendering Engineer"
+  # image = "images/author.jpg"
+  links = [
+    { x-twitter = "https://x.com/stoleckipawel" },
+    { linkedin = "https://www.linkedin.com/in/stoleckipawel/" },
+    { youtube = "https://www.youtube.com/@stoleckipawel" },
+  ]
