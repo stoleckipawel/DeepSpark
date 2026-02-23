@@ -4,10 +4,6 @@ keywords: ["real-time rendering", "GPU programming", "frame graph", "rendering a
 ---
 
 <style>
-@keyframes fadeSlideUp {
-  from { opacity: 0; transform: translateY(16px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
 @keyframes shimmer {
   0%   { background-position: -200% center; }
   100% { background-position: 200% center; }
@@ -15,7 +11,6 @@ keywords: ["real-time rendering", "GPU programming", "frame graph", "rendering a
 
 /* ── Series card ──────────────────────────────────────────────── */
 .posts-hero {
-  animation: fadeSlideUp .6s ease-out both;
   position: relative;
 }
 .posts-hero::before {
@@ -30,7 +25,6 @@ keywords: ["real-time rendering", "GPU programming", "frame graph", "rendering a
   padding: 1.5px;
 }
 .series-card {
-  animation: fadeSlideUp .55s .15s ease-out both;
   transition: transform .2s ease, box-shadow .2s ease;
 }
 .series-card:hover {
@@ -38,15 +32,11 @@ keywords: ["real-time rendering", "GPU programming", "frame graph", "rendering a
   box-shadow: 0 8px 24px rgba(var(--ds-accent-rgb),.1);
 }
 .part-link {
-  animation: fadeSlideUp .45s ease-out both;
   transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
   text-decoration: none !important;
   color: inherit !important;
   display: block;
 }
-.part-link:nth-child(1) { animation-delay: .25s; }
-.part-link:nth-child(2) { animation-delay: .35s; }
-.part-link:nth-child(3) { animation-delay: .45s; }
 .part-link:hover {
   transform: translateY(-2px);
   border-color: rgba(var(--ds-accent-rgb),.35) !important;

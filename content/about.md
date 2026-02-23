@@ -9,30 +9,13 @@ showWordCount: false
 
 <!-- Animations -->
 <style>
-@keyframes fadeSlideUp {
-  from { opacity: 0; transform: translateY(18px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-@keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(var(--ds-accent-rgb),.5), 0 0 8px rgba(var(--ds-accent-rgb),.15); }
-  50%      { box-shadow: 0 0 0 8px rgba(var(--ds-accent-rgb),0), 0 0 16px rgba(var(--ds-highlight-rgb),.08); }
-}
 @keyframes shimmer {
   0%   { background-position: -200% center; }
   100% { background-position: 200% center; }
 }
-@keyframes tagPop {
-  from { opacity: 0; transform: scale(.85); }
-  to   { opacity: 1; transform: scale(1); }
-}
 
 /* Hero */
 .about-hero {
-  animation: fadeSlideUp .7s ease-out both;
 }
 .about-hero::before {
   content: '';
@@ -54,18 +37,11 @@ showWordCount: false
 
 /* Topic cards */
 .about-card {
-  animation: fadeSlideUp .5s ease-out both;
   transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
 }
-.about-card:nth-child(1) { animation-delay: .10s; }
-.about-card:nth-child(2) { animation-delay: .17s; }
-.about-card:nth-child(3) { animation-delay: .24s; }
-.about-card:nth-child(4) { animation-delay: .31s; }
-.about-card:nth-child(5) { animation-delay: .38s; }
-.about-card:nth-child(6) { animation-delay: .45s; }
 .about-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 6px 24px rgba(var(--ds-accent-rgb),.12), 0 0 40px rgba(var(--ds-accent-rgb),.04);
+  box-shadow: 0 6px 24px rgba(var(--ds-accent-rgb),.12);
   border-color: rgba(var(--ds-accent-rgb),.4);
   background: rgba(var(--ds-accent-rgb),.06);
 }
@@ -79,7 +55,6 @@ showWordCount: false
 
 /* Author card */
 .about-author {
-  animation: fadeSlideUp .6s .3s ease-out both;
 }
 .about-author::before {
   content: '';
@@ -90,11 +65,7 @@ showWordCount: false
 
 /* Timeline entries */
 .tl-entry {
-  animation: fadeSlideUp .55s ease-out both;
 }
-.tl-entry:nth-child(1) { animation-delay: .4s; }
-.tl-entry:nth-child(2) { animation-delay: .55s; }
-.tl-entry:nth-child(3) { animation-delay: .70s; }
 
 /* Pulsing current-role dot — uses pseudo-element so box-shadow doesn’t shift the dot */
 .tl-dot-active {
@@ -104,30 +75,20 @@ showWordCount: false
   content: '';
   position: absolute; inset: -3px;
   border-radius: 50%;
-  animation: pulseGlow 2.4s ease-in-out infinite;
 }
 
-/* Skill tags staggered pop */
+/* Skill tags */
 .tl-tags span {
-  animation: tagPop .35s ease-out both;
 }
-.tl-tags span:nth-child(1) { animation-delay: .50s; }
-.tl-tags span:nth-child(2) { animation-delay: .57s; }
-.tl-tags span:nth-child(3) { animation-delay: .64s; }
-.tl-tags span:nth-child(4) { animation-delay: .71s; }
-.tl-tags span:nth-child(5) { animation-delay: .78s; }
-.tl-tags span:nth-child(6) { animation-delay: .85s; }
 
-/* Current badge pulse */
+/* Current badge */
 .badge-current {
-  animation: fadeIn .4s .45s ease-out both;
   position: relative;
 }
 .badge-current::after {
   content: '';
   position: absolute; inset: -2px; border-radius: 7px;
   background: rgba(var(--ds-highlight-rgb),.12);
-  animation: pulseGlow 2.8s 1s ease-in-out infinite;
 }
 
 /* Section headings — warm underline accent */
@@ -143,19 +104,10 @@ showWordCount: false
   opacity: .7;
 }
 
-/* Disclaimer fade */
+/* Disclaimer */
 .about-disclaimer {
-  animation: fadeIn .6s .9s ease-out both;
 }
 
-/* Reduce motion for accessibility */
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-delay: 0ms !important;
-    transition-duration: 0.01ms !important;
-  }
-}
 </style>
 
 <!-- Hero intro -->
