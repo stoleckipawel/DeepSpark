@@ -191,10 +191,6 @@ A frame graph models an entire frame as a **directed acyclic graph (DAG)**. Each
 <div style="margin:1.6em 0 .5em;text-align:center;">
 <svg viewBox="0 0 1050 210" width="100%" style="max-width:1050px;display:block;margin:0 auto;font-family:inherit;" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <filter id="gB" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur"/><feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.23  0 0 0 0 0.51  0 0 0 0 0.96  0 0 0 0.35 0"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-    <filter id="gO" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur"/><feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.96  0 0 0 0 0.62  0 0 0 0 0.04  0 0 0 0.35 0"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-    <filter id="gG" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur"/><feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.13  0 0 0 0 0.77  0 0 0 0 0.37  0 0 0 0.35 0"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-    <filter id="gR" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur"/><feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.94  0 0 0 0 0.27  0 0 0 0 0.27  0 0 0 0.35 0"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
     <linearGradient id="grB" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#60a5fa"/><stop offset="100%" stop-color="#2563eb"/></linearGradient>
     <linearGradient id="grO" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#fbbf24"/><stop offset="100%" stop-color="#d97706"/></linearGradient>
     <linearGradient id="grG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#4ade80"/><stop offset="100%" stop-color="#16a34a"/></linearGradient>
@@ -220,19 +216,19 @@ A frame graph models an entire frame as a **directed acyclic graph (DAG)**. Each
   <path class="flow flow-lg flow-d7" d="M650,106 L720,106"/>
   <path class="flow flow-lg flow-d8" d="M830,106 L910,106"/>
   <!-- nodes -->
-  <rect x="10" y="86" width="105" height="44" rx="22" fill="url(#grB)" filter="url(#gB)"/>
+  <rect x="10" y="86" width="105" height="44" rx="22" fill="url(#grB)"/>
   <text x="62" y="113" text-anchor="middle" fill="#fff" font-weight="700" font-size="12" letter-spacing=".5">Z-Prepass</text>
-  <rect x="195" y="20" width="125" height="44" rx="22" fill="url(#grB)" filter="url(#gB)"/>
+  <rect x="195" y="20" width="125" height="44" rx="22" fill="url(#grB)"/>
   <text x="257" y="47" text-anchor="middle" fill="#fff" font-weight="700" font-size="12" letter-spacing=".5">Shadows</text>
-  <rect x="200" y="138" width="100" height="44" rx="22" fill="url(#grB)" filter="url(#gB)"/>
+  <rect x="200" y="138" width="100" height="44" rx="22" fill="url(#grB)"/>
   <text x="250" y="165" text-anchor="middle" fill="#fff" font-weight="700" font-size="12" letter-spacing=".5">GBuffer</text>
-  <rect x="380" y="138" width="82" height="44" rx="22" fill="url(#grO)" filter="url(#gO)"/>
+  <rect x="380" y="138" width="82" height="44" rx="22" fill="url(#grO)"/>
   <text x="421" y="165" text-anchor="middle" fill="#fff" font-weight="700" font-size="12" letter-spacing=".5">SSAO</text>
-  <rect x="548" y="82" width="102" height="50" rx="25" fill="url(#grO)" filter="url(#gO)"/>
+  <rect x="548" y="82" width="102" height="50" rx="25" fill="url(#grO)"/>
   <text x="599" y="112" text-anchor="middle" fill="#fff" font-weight="700" font-size="12" letter-spacing=".5">Lighting</text>
-  <rect x="720" y="84" width="110" height="44" rx="22" fill="url(#grG)" filter="url(#gG)"/>
+  <rect x="720" y="84" width="110" height="44" rx="22" fill="url(#grG)"/>
   <text x="775" y="111" text-anchor="middle" fill="#fff" font-weight="700" font-size="12" letter-spacing=".5">PostProcess</text>
-  <rect x="910" y="86" width="70" height="40" rx="20" fill="url(#grR)" filter="url(#gR)"/>
+  <rect x="910" y="86" width="70" height="40" rx="20" fill="url(#grR)"/>
   <text x="945" y="111" text-anchor="middle" fill="#fff" font-weight="600" font-size="11" letter-spacing=".3">Present</text>
   <!-- edge labels -->
   <text x="155" y="68" text-anchor="middle" fill="rgba(255,255,255,.4)" font-size="9.5" font-style="italic" letter-spacing=".3">depth</text>
@@ -254,18 +250,18 @@ The GPU never sees this graph. It exists only on the CPU, long enough for the sy
 Every frame follows a three-phase lifecycle:
 
 <!-- 3-step lifecycle — distinct style from the DAG above -->
-<div class="fg-reveal" style="margin:.8em auto 1.2em;max-width:560px;">
+<div style="margin:.8em auto 1.2em;max-width:560px;">
   <div class="fg-lifecycle" style="display:flex;align-items:stretch;gap:0;border-radius:10px;overflow:hidden;border:1.5px solid rgba(var(--ds-indigo-rgb),.2);">
     <a href="#-the-declare-step" aria-label="Jump to Declare section" style="flex:1;padding:.7em .6em;text-align:center;background:rgba(var(--ds-info-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.12);text-decoration:none;color:inherit;transition:background .2s ease;cursor:pointer;" onmouseover="this.style.background='rgba(var(--ds-info-rgb),.14)'" onmouseout="this.style.background='rgba(var(--ds-info-rgb),.06)'">
       <div style="font-weight:800;font-size:.88em;letter-spacing:.04em;color:var(--ds-info);">①&ensp;DECLARE</div>
       <div style="font-size:.75em;opacity:.6;margin-top:.2em;">passes &amp; dependencies</div>
     </a>
-    <span style="display:flex;align-items:center;flex-shrink:0;"><svg viewBox="0 0 28 20" width="20" height="14" fill="none"><line x1="2" y1="10" x2="17" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity=".15"/><line x1="2" y1="10" x2="17" y2="10" class="flow flow-sm flow-current" style="animation-duration:1.4s"/><polyline points="15,4 24,10 15,16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity=".35"/></svg></span>
+    <span style="display:flex;align-items:center;flex-shrink:0;"><svg viewBox="0 0 28 20" width="20" height="14" fill="none"><line x1="2" y1="10" x2="17" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity=".15"/><polyline points="15,4 24,10 15,16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity=".35"/></svg></span>
     <a href="#-the-compile-step" aria-label="Jump to Compile section" style="flex:1;padding:.7em .6em;text-align:center;background:rgba(var(--ds-code-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.12);text-decoration:none;color:inherit;transition:background .2s ease;cursor:pointer;" onmouseover="this.style.background='rgba(var(--ds-code-rgb),.14)'" onmouseout="this.style.background='rgba(var(--ds-code-rgb),.06)'">
       <div style="font-weight:800;font-size:.88em;letter-spacing:.04em;color:var(--ds-code);">②&ensp;COMPILE</div>
       <div style="font-size:.75em;opacity:.6;margin-top:.2em;">order · aliases · barriers</div>
     </a>
-    <span style="display:flex;align-items:center;flex-shrink:0;"><svg viewBox="0 0 28 20" width="20" height="14" fill="none"><line x1="2" y1="10" x2="17" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity=".15"/><line x1="2" y1="10" x2="17" y2="10" class="flow flow-sm flow-current"/><polyline points="15,4 24,10 15,16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity=".35"/></svg></span>
+    <span style="display:flex;align-items:center;flex-shrink:0;"><svg viewBox="0 0 28 20" width="20" height="14" fill="none"><line x1="2" y1="10" x2="17" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity=".15"/><polyline points="15,4 24,10 15,16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity=".35"/></svg></span>
     <a href="#-the-execute-step" aria-label="Jump to Execute section" style="flex:1;padding:.7em .6em;text-align:center;background:rgba(var(--ds-success-rgb),.06);text-decoration:none;color:inherit;transition:background .2s ease;cursor:pointer;" onmouseover="this.style.background='rgba(var(--ds-success-rgb),.14)'" onmouseout="this.style.background='rgba(var(--ds-success-rgb),.06)'">
       <div style="font-weight:800;font-size:.88em;letter-spacing:.04em;color:var(--ds-success);">③&ensp;EXECUTE</div>
       <div style="font-size:.75em;opacity:.6;margin-top:.2em;">record GPU commands</div>
