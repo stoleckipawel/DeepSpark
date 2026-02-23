@@ -320,23 +320,9 @@
 
 /* ── Full-width layout overrides ─────────────────────────────── */
 
-/* Make header logo 50% bigger than default (80px → 120px) */
-.main-menu img.logo {
-  max-height: 120px !important;
-  max-width: 120px !important;
-}
-
-/* Subtle warm glow line beneath the header */
+/* Hide the theme navigation bar — only progress bar shown at top */
 .main-menu {
-  border-bottom: 1px solid rgba(var(--ds-accent-rgb),.1);
-  padding-bottom: .35em;
-}
-
-/* Header icon (next to text logo) */
-.main-menu img.header-icon {
-  max-height: 62px !important;
-  max-width: 62px !important;
-  border-radius: 8px;
+  display: none !important;
 }
 
 /* ── Top nav bar — Deep Spark brand styling ──────────────────── */
@@ -419,6 +405,27 @@ section.prose > div.max-w-prose {
 body.toc-sidebar-hidden .toc-right  { display: none !important; }
 body.toc-sidebar-hidden .toc-inside { display: block !important; }
 body.toc-sidebar-hidden section.prose { flex-direction: column !important; }
+
+/* Sidebar TOC — 50% smaller */
+.toc-right {
+  font-size: .65em !important;
+  max-width: 160px !important;
+  line-height: 1.35;
+  padding: .3em !important;
+}
+.toc-right a {
+  padding: .1em 0 !important;
+}
+.toc-right ul {
+  padding-left: .5em !important;
+  margin: 0 !important;
+}
+.toc-right li {
+  margin: .05em 0 !important;
+}
+.toc-right > nav > ul > li > a {
+  font-weight: 600;
+}
 
 /* ── Collapsible code blocks (include-code shortcode) ────────── */
 

@@ -32,7 +32,7 @@ keywords: ["frame graph", "render graph", "render pass", "DAG", "topological sor
     <div style="padding:.6em 1em;font-size:.72em;text-transform:uppercase;letter-spacing:.06em;font-weight:700;color:var(--ds-danger);background:rgba(var(--ds-danger-rgb),.04);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.06);">❌ Manual</div>
     <div style="padding:.6em .5em;background:rgba(var(--ds-indigo-rgb),.02);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.06);"></div>
     <div style="padding:.6em 1em;font-size:.72em;text-transform:uppercase;letter-spacing:.06em;font-weight:700;color:var(--ds-success);background:rgba(var(--ds-success-rgb),.04);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);">✅ Frame Graph</div>
-    <!-- Row 1 -->
+    <!-- Row 1 — Execution order -->
     <div style="padding:.65em 1em;font-size:.88em;opacity:.5;text-decoration:line-through;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.06);text-align:right;">
       Passes run in whatever order you wrote them.
     </div>
@@ -40,27 +40,27 @@ keywords: ["frame graph", "render graph", "render pass", "DAG", "topological sor
       <svg viewBox="0 0 24 16" width="20" height="13" fill="none"><path d="M4 8h12m-4-4l5 4-5 4" stroke="var(--ds-success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity=".5"/></svg>
     </div>
     <div style="padding:.65em 1em;font-size:.88em;font-weight:700;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);">
-      Auto-sorted — no ordering bugs.
+      Auto-sorted — dependency order, zero ordering bugs.
     </div>
-    <!-- Row 2 -->
+    <!-- Row 2 — Barriers -->
     <div style="padding:.65em 1em;font-size:.88em;opacity:.5;text-decoration:line-through;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.06);text-align:right;">
-      Every resource state tracked and every transition placed by hand.
+      Every resource transition tracked and placed by hand.
     </div>
     <div style="padding:.65em .3em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.06);display:flex;align-items:center;justify-content:center;">
       <svg viewBox="0 0 24 16" width="20" height="13" fill="none"><path d="M4 8h12m-4-4l5 4-5 4" stroke="var(--ds-success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity=".5"/></svg>
     </div>
     <div style="padding:.65em 1em;font-size:.88em;font-weight:700;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);">
-      States tracked and transitions inserted automatically.
+      Barriers derived and batched from declared reads &amp; writes.
     </div>
-    <!-- Row 3 -->
+    <!-- Row 3 — Memory aliasing -->
     <div style="padding:.65em 1em;font-size:.88em;opacity:.5;text-decoration:line-through;border-right:1px solid rgba(var(--ds-indigo-rgb),.06);text-align:right;">
-      Every resource gets its own allocation.
+      Every resource gets its own allocation for the full frame.
     </div>
     <div style="padding:.65em .3em;border-right:1px solid rgba(var(--ds-indigo-rgb),.06);display:flex;align-items:center;justify-content:center;">
       <svg viewBox="0 0 24 16" width="20" height="13" fill="none"><path d="M4 8h12m-4-4l5 4-5 4" stroke="var(--ds-success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity=".5"/></svg>
     </div>
     <div style="padding:.65em 1em;font-size:.88em;font-weight:700;color:var(--ds-success);">
-      Resources aliased — up to 50% VRAM savings.
+      Non-overlapping lifetimes share memory — significant VRAM savings.
     </div>
   </div>
   <!-- Footer -->

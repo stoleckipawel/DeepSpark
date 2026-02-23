@@ -13,8 +13,8 @@
     <span class="anav-bc-section" id="anav-bc-section">—</span>
     <span class="anav-bc-pct" id="anav-bc-pct">0%</span>
   </div>
-  <!-- Series tab bar -->
-  <div class="anav-series" id="anav-series">
+  <!-- Series tab bar (hidden — progress bar only) -->
+  <div class="anav-series" id="anav-series" style="display:none;">
     <a href="../frame-graph-theory/" class="anav-series-tab" data-slug="frame-graph-theory">
       <span class="anav-st-num">I</span><span class="anav-st-label">Theory</span>
     </a>
@@ -88,16 +88,7 @@
   border-radius: 0 2px 2px 0;
 }
 .anav-breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: .4em;
-  padding: .45em 1em;
-  font-family: ui-monospace, SFMono-Regular, monospace;
-  font-size: .88em;
-  background: rgba(255,255,255,.92);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-bottom: 1px solid var(--color-neutral-200, #e5e5e5);
+  display: none;
 }
 :is(.dark,.scheme-congo) .anav-breadcrumb {
   background: rgba(23,23,23,.92);
