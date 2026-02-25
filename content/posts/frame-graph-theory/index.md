@@ -275,32 +275,33 @@ The separation is deliberate: declaration is cheap, compilation is where the opt
 
 ## 📋 The Declare Step
 
-Each frame starts on the CPU. You register passes, describe the resources they need, and declare who reads or writes what. No GPU work happens yet — you're building a description of the frame.
+The declare step is pure CPU work — you're building a **description** of what this frame needs, not executing it. The key principle: separate *what to do* from *doing it*, because the compiler needs to see everything before it can optimize anything.
+
+### 🔧 Registering a pass
+
+A pass is a unit of GPU work — a draw call, a compute dispatch, a copy. To add one you give the graph two things:
 
 <div style="margin:1em 0 1.2em;border-radius:10px;border:1px solid rgba(var(--ds-info-rgb),.12);background:rgba(var(--ds-info-rgb),.02);overflow:hidden;">
 
   <div style="display:grid;grid-template-columns:2.2em 1fr;gap:0 .8em;padding:.75em 1em;">
-    <div style="grid-row:1/3;font-size:1em;color:var(--ds-info);opacity:.35;text-align:center;padding-top:.2em;">●</div>
-    <div><span style="font-weight:700;color:var(--ds-info);font-size:.88em;letter-spacing:.02em;">REGISTER PASSES</span></div>
-    <div style="font-size:.84em;line-height:1.55;opacity:.6;">Tell the graph <em>what work</em> this frame needs — each pass gets a setup callback to declare resources and an execute callback for later GPU recording. &ensp;<code style="font-size:.9em;">addPass(setup, execute)</code></div>
+    <div style="grid-row:1/3;font-size:1em;color:var(--ds-info);opacity:.35;text-align:center;padding-top:.2em;">①</div>
+    <div><span style="font-weight:700;color:var(--ds-info);font-size:.88em;letter-spacing:.02em;">SETUP CALLBACK</span></div>
+    <div style="font-size:.84em;line-height:1.55;opacity:.6;">Runs <strong>now</strong>, on the CPU. Declares which resources the pass will touch and how (read, write, render target, UAV, etc.). This is where graph edges come from.</div>
   </div>
 
   <div style="border-top:1px solid rgba(var(--ds-info-rgb),.08);display:grid;grid-template-columns:2.2em 1fr;gap:0 .8em;padding:.75em 1em;">
-    <div style="grid-row:1/3;font-size:1em;color:var(--ds-info);opacity:.35;text-align:center;padding-top:.2em;">●</div>
-    <div><span style="font-weight:700;color:var(--ds-info);font-size:.88em;letter-spacing:.02em;">DESCRIBE RESOURCES</span></div>
-    <div style="font-size:.84em;line-height:1.55;opacity:.6;">Declare every texture and buffer a pass will touch — size, format, usage — without allocating GPU memory. Everything stays virtual. &ensp;<code style="font-size:.9em;">create({1920,1080, RGBA8})</code></div>
-  </div>
-
-  <div style="border-top:1px solid rgba(var(--ds-info-rgb),.08);display:grid;grid-template-columns:2.2em 1fr;gap:0 .8em;padding:.75em 1em;">
-    <div style="grid-row:1/3;font-size:1em;color:var(--ds-info);opacity:.35;text-align:center;padding-top:.2em;">●</div>
-    <div><span style="font-weight:700;color:var(--ds-info);font-size:.88em;letter-spacing:.02em;">CONNECT READS &amp; WRITES</span></div>
-    <div style="font-size:.84em;line-height:1.55;opacity:.6;">Wire up the edges: <em>this pass reads that texture, that pass writes this buffer.</em> These connections drive execution order, barriers, and memory aliasing. &ensp;<code style="font-size:.9em;">read(h)</code> / <code style="font-size:.9em;">write(h)</code></div>
+    <div style="grid-row:1/3;font-size:1em;color:var(--ds-info);opacity:.35;text-align:center;padding-top:.2em;">②</div>
+    <div><span style="font-weight:700;color:var(--ds-info);font-size:.88em;letter-spacing:.02em;">EXECUTE CALLBACK</span></div>
+    <div style="font-size:.84em;line-height:1.55;opacity:.6;">Stored for <strong>later</strong>. Records actual GPU commands (draw calls, dispatches, copies) into a command list — only invoked during the execute phase, potentially on a worker thread.</div>
   </div>
 
 </div>
-<div style="text-align:center;font-size:.78em;opacity:.4;">CPU only — the GPU is idle during this phase</div>
 
-What does a "virtual resource" actually look like at this point? Just a lightweight descriptor and a handle — no GPU memory behind it yet:
+The setup callback is where everything that matters for the compiler happens — read, write, and create declarations build the edges and resource descriptors that drive sorting, barriers, and aliasing. The execute callback is opaque to the compiler; it just gets invoked at the right time with the right resources bound.
+
+### 📦 Virtual resources
+
+When a pass creates a resource, the graph stores only a **descriptor** — dimensions, format, usage flags. No GPU memory is allocated. The resource is *virtual*: an opaque handle the compiler tracks, backed by nothing until the compile step decides where it lives in physical memory.
 
 <div style="margin:.6em 0 1em;padding:.65em 1em;border-radius:8px;border:1px dashed rgba(var(--ds-indigo-rgb),.14);background:rgba(var(--ds-indigo-rgb),.02);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5em;">
   <div>
@@ -310,32 +311,52 @@ What does a "virtual resource" actually look like at this point? Just a lightwei
   <span style="font-size:.75em;color:var(--ds-warn);opacity:.7;font-weight:600;">description only — no GPU memory yet</span>
 </div>
 
-### 📦 Transient vs. imported
+This is deliberate — the compiler needs to see **every** resource across the entire frame before it can decide which ones can share physical memory.
 
-When you declare a resource, the graph needs to know one thing: **does it live inside this frame, or does it come from outside?**
+Virtual resources fall into two categories:
 
 <div class="fg-grid-stagger ds-grid-2col">
   <div class="fg-hoverable ds-card ds-card--info">
     <div class="ds-card-header ds-card-header--info">🔀 Transient</div>
     <div class="ds-card-body">
-      <strong>Lifetime:</strong> single frame<br>
-      <strong>Declared as:</strong> description (size, format)<br>
-      <strong>GPU memory:</strong> allocated and aliased at compile<br>
+      <strong>Lifetime:</strong> single frame — created and destroyed within the graph<br>
+      <strong>Declared as:</strong> descriptor (size, format, usage flags)<br>
+      <strong>GPU memory:</strong> allocated at compile, freed at frame end<br>
       <strong>Aliasable:</strong> <span style="color:var(--ds-success);font-weight:700;">Yes</span> — non-overlapping lifetimes share physical memory<br>
       <strong>Examples:</strong> GBuffer MRTs, SSAO scratch, bloom scratch
     </div>
   </div>
   <div class="fg-hoverable ds-card ds-card--code">
-    <div class="ds-card-header ds-card-header--code">📌 Imported</div>
+    <div class="ds-card-header ds-card-header--code">📌 Imported (external)</div>
     <div class="ds-card-body">
-      <strong>Lifetime:</strong> across frames<br>
-      <strong>Declared as:</strong> existing GPU handle<br>
-      <strong>GPU memory:</strong> already allocated externally<br>
+      <strong>Lifetime:</strong> spans multiple frames — owned by an external system<br>
+      <strong>Declared as:</strong> existing GPU handle registered into the graph<br>
+      <strong>GPU memory:</strong> already allocated; the graph only tracks state<br>
       <strong>Aliasable:</strong> <span style="color:var(--ds-danger);font-weight:700;">No</span> — lifetime extends beyond the frame<br>
       <strong>Examples:</strong> backbuffer, TAA history, shadow atlas, blue noise LUT
     </div>
   </div>
 </div>
+
+<div class="fg-reveal" style="margin:.8em 0;padding:.65em 1em;border-radius:8px;border:1.5px solid rgba(var(--ds-code-rgb),.15);background:rgba(var(--ds-code-rgb),.03);font-size:.88em;line-height:1.6;">
+<strong>Why the distinction matters.</strong> Transient resources are the compiler's playground — it controls their allocation, placement, and aliasing. Imported resources are <em>constraints</em>: the compiler must respect their existing memory and state, and their lifetimes are pinned to the start or end of the graph.
+</div>
+
+### 🔗 Reads, writes, and edges
+
+Every read and write declaration inside a setup callback creates an **edge** in the DAG:
+
+<div style="margin:1em 0;padding:.85em 1.1em;border-radius:10px;border:1.5px solid rgba(var(--ds-info-rgb),.18);background:linear-gradient(135deg,rgba(var(--ds-info-rgb),.04),transparent);font-size:.88em;line-height:1.65;">
+  <div style="display:grid;grid-template-columns:auto 1fr;gap:.3em .9em;align-items:start;">
+    <span style="font-weight:700;color:var(--ds-info);">Read</span><span>Adds an edge <em>from</em> the last writer of a resource <em>to</em> this pass. Also declares the access type (shader resource, copy source, etc.) so the compiler knows what barrier state is needed.</span>
+    <span style="font-weight:700;color:var(--ds-success);">Write</span><span>Bumps the resource version. Any future read will depend on <em>this</em> pass, not the previous writer. Also declares access type (render target, UAV, copy dest, etc.).</span>
+    <span style="font-weight:700;color:var(--ds-code);">Create</span><span>Allocates a new virtual resource from a descriptor and immediately marks its first version. No GPU memory yet — just metadata for the compiler.</span>
+  </div>
+</div>
+
+A write produces a new version of a resource; a read consumes whatever version exists. Multiple passes can read the same version without conflict — only a write bumps the version and creates a new dependency.
+
+These edges are the **entire input** to the compile step. Every optimization — topological sorting, dead-pass culling, barrier insertion, memory aliasing — operates on this edge set. Nothing else is needed: declare correctly, and the rest is automatic.
 
 ---
 
@@ -366,11 +387,9 @@ The declared DAG goes in; an optimized execution plan comes out — all on the C
   </div>
 </div>
 
-### 🔗 How edges form — resource versioning
+### 🔗 Resource versioning in practice
 
-Before the compiler can sort anything, it needs edges. Edges come from **resource versioning**: every time a pass writes a resource, the version number increments. Readers attach to whatever version existed when they were declared. Multiple passes can read the same version without conflict — only a write creates a new one.
-
-This is how the graph knows *exactly* which pass depends on which, even when the same resource is written more than once per frame:
+We saw that reads and writes create edges. Here's the concrete mechanism: every time a pass writes a resource, the **version number** increments. Readers attach to whatever version existed when they were declared. This is how the graph knows *exactly* which pass depends on which, even when the same resource is written more than once per frame:
 
 <div style="margin:1.2em 0;font-size:.85em;">
   <div style="border-radius:10px;overflow:hidden;border:1.5px solid rgba(var(--ds-indigo-rgb),.15);">

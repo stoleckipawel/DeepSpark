@@ -9,7 +9,7 @@ colorScheme = "deepspark"
 defaultAppearance = "dark" # valid options: light or dark
 autoSwitchAppearance = false
 
-enableA11y = true
+enableA11y = false
 enableSearch = true
 enableCodeCopy = true
 enableStructuredBreadcrumbs = true
