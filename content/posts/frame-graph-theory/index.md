@@ -269,7 +269,7 @@ Every frame follows a three-phase lifecycle:
   </div>
 </div>
 
-The separation is deliberate: declaration is cheap, compilation is where the optimization happens, and execution is a straight walk through an already-optimal plan. Let's look at each phase.
+The three phases are distinct for a reason: declaration is lightweight and descriptive, compilation is where the graph is analyzed and optimized, and execution simply follows the plan. Let's break down what happens in each.
 
 ---
 
@@ -279,7 +279,7 @@ The declare step is pure CPU work — you're building a **description** of what 
 
 ### 🔧 Registering a pass
 
-A pass is a unit of GPU work — a draw call, a compute dispatch, a copy. To add one you give the graph two things:
+A pass is a logical unit of GPU work — it might contain a single compute dispatch or hundreds of draw calls. To add one you give the graph two things:
 
 <div style="margin:1em 0 1.2em;border-radius:10px;border:1px solid rgba(var(--ds-info-rgb),.12);background:rgba(var(--ds-info-rgb),.02);overflow:hidden;">
 
@@ -338,25 +338,21 @@ Virtual resources fall into two categories:
   </div>
 </div>
 
-<div class="fg-reveal" style="margin:.8em 0;padding:.65em 1em;border-radius:8px;border:1.5px solid rgba(var(--ds-code-rgb),.15);background:rgba(var(--ds-code-rgb),.03);font-size:.88em;line-height:1.6;">
-<strong>Why the distinction matters.</strong> Transient resources are the compiler's playground — it controls their allocation, placement, and aliasing. Imported resources are <em>constraints</em>: the compiler must respect their existing memory and state, and their lifetimes are pinned to the start or end of the graph.
-</div>
-
 ### 🔗 Reads, writes, and edges
 
-Every read and write declaration inside a setup callback creates an **edge** in the DAG:
+Each read or write you declare in a setup callback forms a connection in the dependency graph:
 
 <div style="margin:1em 0;padding:.85em 1.1em;border-radius:10px;border:1.5px solid rgba(var(--ds-info-rgb),.18);background:linear-gradient(135deg,rgba(var(--ds-info-rgb),.04),transparent);font-size:.88em;line-height:1.65;">
   <div style="display:grid;grid-template-columns:auto 1fr;gap:.3em .9em;align-items:start;">
-    <span style="font-weight:700;color:var(--ds-info);">Read</span><span>Adds an edge <em>from</em> the last writer of a resource <em>to</em> this pass. Also declares the access type (shader resource, copy source, etc.) so the compiler knows what barrier state is needed.</span>
-    <span style="font-weight:700;color:var(--ds-success);">Write</span><span>Bumps the resource version. Any future read will depend on <em>this</em> pass, not the previous writer. Also declares access type (render target, UAV, copy dest, etc.).</span>
-    <span style="font-weight:700;color:var(--ds-code);">Create</span><span>Allocates a new virtual resource from a descriptor and immediately marks its first version. No GPU memory yet — just metadata for the compiler.</span>
+    <span style="font-weight:700;color:var(--ds-info);">Read</span><span>Connects this pass to the last writer of a resource, specifying how the resource will be accessed.</span>
+    <span style="font-weight:700;color:var(--ds-success);">Write</span><span>Advances the resource to a new version, making future reads depend on this pass instead of earlier writers, and defines the intended access.</span>
+    <span style="font-weight:700;color:var(--ds-code);">Create</span><span>Introduces a new virtual resource, tracked by the graph but not yet backed by memory.</span>
   </div>
 </div>
 
-A write produces a new version of a resource; a read consumes whatever version exists. Multiple passes can read the same version without conflict — only a write bumps the version and creates a new dependency.
+A write always produces a new version; a read uses the latest available version. Multiple passes can read the same version, but only a write creates a new one and a new dependency.
 
-These edges are the **entire input** to the compile step. Every optimization — topological sorting, dead-pass culling, barrier insertion, memory aliasing — operates on this edge set. Nothing else is needed: declare correctly, and the rest is automatic.
+These connections define the structure the graph will use in the next phase. The details of how the graph is optimized and scheduled are handled during compilation.
 
 ---
 
@@ -474,7 +470,7 @@ The algorithm is simple: start from every output the frame needs (typically just
 
 The sorted order tells the compiler exactly when each resource is first written and last read — its **lifetime**. Two resources whose lifetimes don't overlap can share the same physical memory, even if they're completely different formats or sizes. The GPU allocates one large heap and places multiple resources at different offsets within it.
 
-Without aliasing, every transient texture gets its own allocation for the entire frame — even if it's only alive for 2–3 passes. With aliasing, a GBuffer that's done by pass 3 and a bloom buffer that starts at pass 4 can sit in the same memory. Frostbite reported roughly **50% transient VRAM reduction** on Battlefield 1's deferred pipeline using this approach.
+Without aliasing, every transient texture gets its own allocation for the entire frame — even if it's only alive for 2–3 passes. With aliasing, a GBuffer that's done by pass 3 and a bloom buffer that starts at pass 4 can sit in the same memory. Real-world deferred pipelines commonly see **40–50% transient VRAM reduction** once aliasing is enabled.
 
 The allocator works in two passes: first, walk the sorted pass list and record each transient resource's first write and last read. Then scan resources in order of first-use — for each one, check if an existing heap block is free (its previous occupant has finished). If so, reuse it. If not, allocate a new block.
 
@@ -541,8 +537,7 @@ How often should the graph recompile? Three approaches, each a valid tradeoff:
     <div style="padding:.7em .8em;font-size:.88em;line-height:1.6;">
       Rebuild every frame.<br>
       <strong>Cost:</strong> microseconds<br>
-      <strong>Flexibility:</strong> total — passes can appear, disappear, or change every frame<br>
-      <span style="opacity:.6;font-size:.9em;">Used by: production engines</span>
+      <strong>Flexibility:</strong> total — passes can appear, disappear, or change every frame
     </div>
   </div>
   <div class="fg-hoverable" style="border-radius:10px;border:1.5px solid var(--ds-info);overflow:hidden;">
@@ -552,8 +547,7 @@ How often should the graph recompile? Three approaches, each a valid tradeoff:
     <div style="padding:.7em .8em;font-size:.88em;line-height:1.6;">
       Cache compiled result, invalidate on change.<br>
       <strong>Cost:</strong> near-zero on hit<br>
-      <strong>Flexibility:</strong> total, but requires dirty-tracking to know when to invalidate the cache<br>
-      <span style="opacity:.6;font-size:.9em;">Used by: UE5</span>
+      <strong>Flexibility:</strong> total, but requires dirty-tracking to know when to invalidate the cache
     </div>
   </div>
   <div class="fg-hoverable" style="border-radius:10px;border:1.5px solid var(--color-neutral-400,#9ca3af);overflow:hidden;">
@@ -569,7 +563,11 @@ How often should the graph recompile? Three approaches, each a valid tradeoff:
   </div>
 </div>
 
-Most engines use **dynamic** or **hybrid**. The compile is so cheap that caching buys little — but some engines do it anyway to skip redundant barrier recalculation.
+**Dynamic** is the simplest approach and the most common starting point. The compile cost is low — sorting, culling, aliasing, and barrier computation are all CPU-side integer work over small arrays — but it isn't zero. It scales with the number of passes and resources, and on CPU-constrained platforms (consoles, mobile) or graphs with hundreds of passes, the per-frame cost can become noticeable.
+
+**Hybrid** exists precisely because of that cost. When the graph topology is mostly stable frame-to-frame — same passes, same connections — there's no reason to recompute the same plan 60 times per second. A hybrid approach caches the compiled result and only invalidates when the declared graph actually changes (typically detected by hashing the pass + resource set). The tradeoff is complexity: you need reliable dirty-tracking and must guarantee a stale plan is never replayed against a changed graph.
+
+**Static** compiles once at init and replays the same plan forever. It's rarely useful because the whole point of a frame graph is flexibility — feature toggles, dynamic quality scaling, debug overlays. A locked pipeline can't adapt. It appears occasionally in fixed-function scenarios like a VR compositor that always runs the same few passes.
 
 ---
 
