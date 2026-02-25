@@ -148,7 +148,10 @@ function init(){
   document.getElementById("topo-next").disabled=false;
   highlightRule(1);
   document.getElementById("topo-explain").innerHTML=
-    "Counted in-degrees. Passes with 0 incoming edges enter the queue.";
+    "<strong>Step 1 — Count prerequisites.</strong> Each pass gets a number showing how many passes must finish before it can run. "+
+    queue.map(function(i){return "<strong>"+passes[i].name+"</strong>"}).join(" and ")+
+    (queue.length===1?" has":"  have")+" zero incoming edges — nothing blocks "+(queue.length===1?"it":"them")+
+    ", so "+(queue.length===1?"it goes":"they go")+" straight into the ready queue.";
   render();
 }
 
@@ -263,10 +266,13 @@ window.topoNext=function(){
     highlightRule(5);
     if(sorted.length===passes.length){
       document.getElementById("topo-explain").innerHTML=
-        "Done \u2014 "+sorted.map(function(i){return passes[i].name}).join(" \u2192 ")+". All dependencies satisfied.";
+        "<strong>All done!</strong> Every pass made it to the output: "+
+        sorted.map(function(i){return passes[i].name}).join(" → ")+
+        ". The queue drained completely, which means there were no circular dependencies — the graph is valid and this execution order respects every edge.";
     }else{
       document.getElementById("topo-explain").innerHTML=
-        "Cycle detected \u2014 only "+sorted.length+"/"+passes.length+" passes sorted.";
+        "<strong>Problem — cycle detected.</strong> Only "+sorted.length+" of "+passes.length+
+        " passes could be sorted. The remaining passes depend on each other in a loop, so none of them can ever reach zero prerequisites. The graph is invalid.";
     }
     currentPopped=-1;render();return;
   }
@@ -293,13 +299,25 @@ window.topoNext=function(){
 
   sorted.push(cur);
 
-  // Build concise explanation
-  var html="Popped <strong>"+passes[cur].name+"</strong>";
+  // Build educational explanation for this step
+  var html="<strong>Step "+(step+1)+" — Pick "+passes[cur].name+" from the queue.</strong> ";
+  html+="Its prerequisite count was zero, so all passes it depends on have already finished. We add it to the output list.";
+
   if(outEdges.length>0){
-    html+=", consumed "+outEdges.length+" edge"+(outEdges.length>1?"s":"");
-    if(newlyQueued.length>0) html+=" \u2192 "+newlyQueued.join(", ")+" now ready";
+    html+="<br><strong>Update counts:</strong> "+passes[cur].name+" feeds into ";
+    html+=outEdges.map(function(e){return passes[e.to].name}).join(", ")+". ";
+    html+="We subtract 1 from each of their prerequisite counts";
+    if(decremented.length>0){
+      html+=" ("+decremented.map(function(d){return d.name+": now "+d.deg}).join(", ")+")";
+    }
+    html+=".";
+    if(newlyQueued.length>0){
+      html+=" <strong>"+newlyQueued.join(" and ")+"</strong> "+(newlyQueued.length===1?"drops":"drop")+
+        " to zero — "+(newlyQueued.length===1?"it's":"they're")+" unblocked and "+(newlyQueued.length===1?"enters":"enter")+" the ready queue.";
+    }
+  }else{
+    html+="<br>"+passes[cur].name+" has no outgoing edges — no other pass was waiting on it, so no counts change.";
   }
-  html+=".";
 
   highlightRule(2);
   document.getElementById("topo-explain").innerHTML=html;
@@ -307,10 +325,10 @@ window.topoNext=function(){
   // Check if done
   if(queue.length===0&&sorted.length===passes.length){
     done=true;
-    html+="<br>Done \u2014 "+sorted.map(function(i){return passes[i].name}).join(" \u2192 ")+".";
+    html+="<br><strong>Queue is empty and all "+passes.length+" passes are in the output — sorting complete!</strong> Final order: "+
+      sorted.map(function(i){return passes[i].name}).join(" → ")+".";
     document.getElementById("topo-next").disabled=true;
     document.getElementById("topo-explain").innerHTML=html;
-    document.getElementById("topo-next").disabled=true;
     highlightRule(5);
   }
 

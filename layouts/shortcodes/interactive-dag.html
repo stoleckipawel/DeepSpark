@@ -20,8 +20,8 @@
 </div>
 
 <style>
-.dag-explain{font-size:.84em;line-height:1.65;margin:.5em 0;padding:.5em .8em;border-radius:.375rem;border-left:3px solid var(--ds-info);background:var(--color-neutral-100,#f5f5f5);min-height:1.5em}
-:is(.dark,.scheme-congo) .dag-explain{background:var(--color-neutral-900);border-color:var(--ds-info)}
+.dag-explain{font-size:.84em;line-height:1.65;margin:.5em 0;padding:.5em .8em;border-radius:.375rem;background:var(--color-neutral-100,#f5f5f5);min-height:1.5em;opacity:.75}
+:is(.dark,.scheme-congo) .dag-explain{background:var(--color-neutral-900)}
 .dag-ex-active{color:var(--ds-info);border-color:var(--ds-info);font-weight:600}
 :is(.dark,.scheme-congo) .dag-ex-active{color:var(--ds-info);border-color:var(--ds-info)}
 #dag-svg{width:100%;max-height:280px;display:block;margin:0 auto}
@@ -29,9 +29,14 @@
 #dag-svg .node text{font:600 12px ui-monospace,SFMono-Regular,monospace;fill:#fff;pointer-events:none;text-anchor:middle;dominant-baseline:central}
 #dag-svg .edge{cursor:pointer}
 #dag-svg .edge path:not(.flow){fill:none;stroke-width:2;transition:stroke .2s,opacity .2s}
+#dag-svg .edge.edge-active path:not(.flow){animation:edge-color-pulse 1.6s ease-in-out infinite}
 #dag-svg .edge polygon{transition:fill .2s,opacity .2s}
+#dag-svg .edge.edge-active polygon{animation:edge-color-pulse 1.6s ease-in-out infinite}
 #dag-svg .edge-label{font:500 10px system-ui,sans-serif;pointer-events:none;text-anchor:middle;dominant-baseline:central;transition:fill .2s,opacity .2s}
 #dag-svg .edge-hit{fill:transparent;stroke:transparent;stroke-width:22;cursor:pointer}
+#dag-svg .edge:hover path:not(.flow){stroke-width:3}
+#dag-svg .edge:hover path:not(.flow),#dag-svg .edge:hover polygon{animation:none!important}
+@keyframes edge-color-pulse{0%,100%{opacity:1}50%{opacity:.45}}
 </style>
 
 <script>
@@ -176,7 +181,7 @@ function render(){
   // Draw edges
   edges.forEach((e,i)=>{
     const g=document.createElementNS("http://www.w3.org/2000/svg","g");
-    g.setAttribute("class","edge");
+    g.setAttribute("class","edge"+(e.active?" edge-active":""));
     const p=edgePath(e);
     const hit=document.createElementNS("http://www.w3.org/2000/svg","path");
     hit.setAttribute("d",p.d);hit.setAttribute("class","edge-hit");
