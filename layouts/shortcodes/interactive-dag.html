@@ -1,48 +1,29 @@
 {{/* Interactive DAG + Pass Culling — click edges to toggle, see dead passes culled */}}
 <div class="interactive-widget" id="dag-widget">
-  <div class="widget-header">
-    <span class="widget-icon">🔬</span>
-    <span class="widget-title">Interactive: DAG &amp; Pass Culling</span>
-    <p class="widget-hint">Click any edge to disable it. Passes that can't reach the output are automatically culled.</p>
-  </div>
   <div class="widget-body">
-    <div class="dag-example-bar" id="dag-example-bar">
-      <span class="dag-example-label">Example:</span>
-      <button class="widget-btn dag-ex-btn dag-ex-active" data-ex="0" onclick="dagSetExample(0)">Deferred Shading</button>
-      <button class="widget-btn dag-ex-btn" data-ex="1" onclick="dagSetExample(1)">Shadow + Bloom</button>
-      <button class="widget-btn dag-ex-btn" data-ex="2" onclick="dagSetExample(2)">Forward + TAA</button>
-    </div>
     <svg id="dag-svg" viewBox="0 0 640 300" xmlns="http://www.w3.org/2000/svg"></svg>
     <div class="widget-info" id="dag-info">
-      <div><strong>Topological order:</strong> <span id="dag-topo">—</span></div>
-      <div><strong>Active:</strong> <span id="dag-active">5</span> / <span id="dag-total">5</span> passes</div>
+      <div><strong>Order:</strong> <span id="dag-topo">—</span> &ensp; <strong>Active:</strong> <span id="dag-active">5</span>/<span id="dag-total">5</span></div>
     </div>
     <div class="dag-explain" id="dag-explain"></div>
-    <button class="widget-btn" onclick="dagReset()">Reset Edges</button>
+    <div class="widget-toolbar">
+      <div class="widget-toolbar-left">
+        <button class="widget-pill dag-ex-btn dag-ex-active" data-ex="0" onclick="dagSetExample(0)">Deferred Shading</button>
+        <button class="widget-pill dag-ex-btn" data-ex="1" onclick="dagSetExample(1)">Shadow + Bloom</button>
+        <button class="widget-pill dag-ex-btn" data-ex="2" onclick="dagSetExample(2)">Forward + TAA</button>
+      </div>
+      <div class="widget-toolbar-right">
+        <button class="widget-pill" onclick="dagReset()">Reset</button>
+      </div>
+    </div>
   </div>
 </div>
 
 <style>
-.interactive-widget{margin:1.5em 0;border:1px solid var(--color-neutral-300,#d4d4d4);border-radius:.75rem;overflow:hidden;background:var(--color-neutral-50,#fafafa)}
-:is(.dark,.scheme-congo) .interactive-widget{background:var(--color-neutral-800,#262626);border-color:var(--color-neutral-600,#525252)}
-.widget-header{padding:.75em 1em .4em;border-bottom:1px solid var(--color-neutral-200,#e5e5e5);border-top:2px solid rgba(var(--ds-info-rgb),.5)}
-:is(.dark,.scheme-congo) .widget-header{border-color:var(--color-neutral-700);border-top-color:rgba(var(--ds-info-rgb),.6)}
-.widget-icon{font-size:1em;margin-right:.3em}
-.widget-title{font-weight:700;font-size:.95em}
-.widget-hint{margin:.4em 0 .15em;font-size:.82em;line-height:1.55;color:var(--color-neutral-600,#4b5563)}
-:is(.dark,.scheme-congo) .widget-hint{color:var(--color-neutral-400)}
-.widget-body{padding:1em}
-.widget-info{font-family:ui-monospace,SFMono-Regular,monospace;font-size:.82em;margin:.5em 0;line-height:1.7}
-.widget-btn{font-size:.8em;padding:.4em 1em;border:1.5px solid var(--color-neutral-300,#d1d5db);border-radius:.375rem;background:var(--color-neutral-100,#f5f5f5);cursor:pointer;color:var(--color-neutral-700,#374151);font-weight:500;transition:all .15s}
-.widget-btn:hover{background:var(--color-neutral-200,#e5e5e5);border-color:var(--color-neutral-400)}
-:is(.dark,.scheme-congo) .widget-btn{background:var(--color-neutral-700,#404040);border-color:var(--color-neutral-600);color:var(--color-neutral-200)}
-:is(.dark,.scheme-congo) .widget-btn:hover{background:var(--color-neutral-600);border-color:var(--color-neutral-500)}
 .dag-explain{font-size:.84em;line-height:1.65;margin:.5em 0;padding:.5em .8em;border-radius:.375rem;border-left:3px solid var(--ds-info);background:var(--color-neutral-100,#f5f5f5);min-height:1.5em}
 :is(.dark,.scheme-congo) .dag-explain{background:var(--color-neutral-900);border-color:var(--ds-info)}
-.dag-example-bar{display:flex;align-items:center;gap:.5em;margin-bottom:.75em;flex-wrap:wrap}
-.dag-example-label{font-size:.82em;font-weight:700;opacity:.6}
-.dag-ex-btn{font-size:.78em!important;padding:.35em .9em!important;border-radius:999px!important;font-weight:600!important}
-.dag-ex-active{background:var(--ds-info)!important;color:#fff!important;border-color:var(--ds-info)!important}
+.dag-ex-active{color:var(--ds-info);border-color:var(--ds-info);font-weight:600}
+:is(.dark,.scheme-congo) .dag-ex-active{color:var(--ds-info);border-color:var(--ds-info)}
 #dag-svg{width:100%;max-height:280px;display:block;margin:0 auto}
 #dag-svg .node rect{rx:8;ry:8;stroke-width:1.5;cursor:default;transition:fill .2s,stroke .2s,opacity .2s}
 #dag-svg .node text{font:600 12px ui-monospace,SFMono-Regular,monospace;fill:#fff;pointer-events:none;text-anchor:middle;dominant-baseline:central}

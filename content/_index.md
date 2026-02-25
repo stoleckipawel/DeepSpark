@@ -4,11 +4,6 @@ keywords: ["real-time rendering", "GPU programming", "frame graph", "rendering a
 ---
 
 <style>
-@keyframes shimmer {
-  0%   { background-position: -200% center; }
-  100% { background-position: 200% center; }
-}
-
 /* ── Series card ──────────────────────────────────────────────── */
 .posts-hero {
   position: relative;

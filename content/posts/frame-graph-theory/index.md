@@ -7,7 +7,6 @@ authors: ["Pawel Stolecki"]
 description: "The theory behind frame graphs — how a DAG of passes and resources gives the compiler enough information to automate scheduling, barriers, and memory aliasing."
 tags: ["rendering", "frame-graph", "gpu", "architecture"]
 categories: ["analysis"]
-series: ["Rendering Architecture"]
 summary: "Declare → Compile → Execute. How a directed acyclic graph of render passes and virtual resources lets an engine automate topological sorting, barrier insertion, pass culling, and VRAM aliasing."
 showTableOfContents: false
 keywords: ["frame graph", "render graph", "render pass", "DAG", "topological sort", "GPU barriers", "resource aliasing", "VRAM", "Vulkan", "D3D12"]
@@ -98,18 +97,16 @@ Behind every smooth frame is a brutal scheduling problem — which passes can ru
 <div class="fg-reveal" style="position:relative;margin:1.4em 0;padding-left:2.2em;border-left:3px solid var(--color-neutral-300,#d4d4d4);">
 
   <div style="margin-bottom:1.6em;">
-    <div class="fg-dot-bounce" style="position:absolute;left:-0.8em;width:1.4em;height:1.4em;border-radius:50%;background:var(--ds-success);display:flex;align-items:center;justify-content:center;font-size:.7em;color:#fff;font-weight:700;">1</div>
     <div style="font-weight:800;font-size:1.05em;color:var(--ds-success);margin-bottom:.3em;">Month 1 — 3 passes, everything's fine</div>
     <div style="font-size:.92em;line-height:1.6;">
       Depth prepass → GBuffer → lighting. Two barriers, hand-placed. Two textures, both allocated at init. Code is clean, readable, correct.
     </div>
-    <div style="margin-top:.4em;padding:.4em .8em;border-radius:6px;background:rgba(var(--ds-success-rgb),.06);font-size:.88em;font-style:italic;border-left:3px solid var(--ds-success);">
+    <div class="ds-callout ds-callout--success" style="margin-top:.4em;padding:.4em .8em;font-size:.88em;font-style:italic;">
       At this scale, manual management works. You know every resource by name.
     </div>
   </div>
 
   <div style="margin-bottom:1.6em;">
-    <div class="fg-dot-bounce" style="position:absolute;left:-0.8em;width:1.4em;height:1.4em;border-radius:50%;background:var(--ds-warn);display:flex;align-items:center;justify-content:center;font-size:.7em;color:#fff;font-weight:700;">6</div>
     <div style="font-weight:800;font-size:1.05em;color:var(--ds-warn);margin-bottom:.3em;">Month 6 — 12 passes, cracks appear</div>
     <div style="font-size:.92em;line-height:1.6;">
       Same renderer, now with SSAO, SSR, bloom, TAA, shadow cascades. Three things going wrong simultaneously:
@@ -125,13 +122,12 @@ Behind every smooth frame is a brutal scheduling problem — which passes can ru
         <strong>Silent reordering</strong> — two branches touch the render loop. Git merges cleanly, but the shadow pass ends up after lighting. Subtly wrong output ships unnoticed.
       </div>
     </div>
-    <div style="margin-top:.5em;padding:.4em .8em;border-radius:6px;background:rgba(var(--ds-warn-rgb),.06);font-size:.88em;font-style:italic;border-left:3px solid var(--ds-warn);">
+    <div class="ds-callout ds-callout--warn" style="margin-top:.5em;padding:.4em .8em;font-size:.88em;font-style:italic;">
       No single change broke it. The accumulation broke it.
     </div>
   </div>
 
   <div>
-    <div class="fg-dot-bounce" style="position:absolute;left:-0.8em;width:1.4em;height:1.4em;border-radius:50%;background:var(--ds-danger);display:flex;align-items:center;justify-content:center;font-size:.65em;color:#fff;font-weight:700;">18</div>
     <div style="font-weight:800;font-size:1.05em;color:var(--ds-danger);margin-bottom:.3em;">Month 18 — 25 passes, nobody touches it</div>
     <div style="font-size:.92em;line-height:1.6;margin-bottom:.5em;">The renderer works, but:</div>
     <div style="display:grid;gap:.4em;">
@@ -145,7 +141,7 @@ Behind every smooth frame is a brutal scheduling problem — which passes can ru
         <strong>2 days to add a new pass.</strong> 30 minutes for the shader, the rest to figure out where to slot it and what barriers it needs.
       </div>
     </div>
-    <div style="margin-top:.5em;padding:.4em .8em;border-radius:6px;background:rgba(var(--ds-danger-rgb),.06);font-size:.88em;font-style:italic;border-left:3px solid var(--ds-danger);">
+    <div class="ds-callout ds-callout--danger" style="margin-top:.5em;padding:.4em .8em;font-size:.88em;font-style:italic;">
       The renderer isn't wrong. It's <em>fragile</em>. Every change is a risk.
     </div>
   </div>
@@ -191,9 +187,13 @@ A frame graph models an entire frame as a **directed acyclic graph (DAG)**. Each
 <div style="margin:1.6em 0 .5em;text-align:center;">
 <svg viewBox="0 0 1050 210" width="100%" style="max-width:1050px;display:block;margin:0 auto;font-family:inherit;" xmlns="http://www.w3.org/2000/svg">
   <defs>
+    <!-- grB: --ds-info-light (#60a5fa) → --ds-info-dark (#2563eb) -->
     <linearGradient id="grB" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#60a5fa"/><stop offset="100%" stop-color="#2563eb"/></linearGradient>
+    <!-- grO: --ds-warn-light (#fbbf24) → --ds-warn-dark (#d97706) -->
     <linearGradient id="grO" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#fbbf24"/><stop offset="100%" stop-color="#d97706"/></linearGradient>
+    <!-- grG: --ds-success-light (#4ade80) → --ds-success-dark (#16a34a) -->
     <linearGradient id="grG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#4ade80"/><stop offset="100%" stop-color="#16a34a"/></linearGradient>
+    <!-- grR: red-400 (#f87171) → --ds-danger-dark (#dc2626) -->
     <linearGradient id="grR" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f87171"/><stop offset="100%" stop-color="#dc2626"/></linearGradient>
     <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1,1 L9,5 L1,9" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
   </defs>
@@ -253,12 +253,12 @@ Every frame follows a three-phase lifecycle:
 <div style="margin:.8em auto 1.2em;max-width:560px;">
   <div class="fg-lifecycle" style="display:flex;align-items:stretch;gap:0;border-radius:10px;overflow:hidden;border:1.5px solid rgba(var(--ds-indigo-rgb),.2);">
     <a href="#-the-declare-step" aria-label="Jump to Declare section" style="flex:1;padding:.7em .6em;text-align:center;background:rgba(var(--ds-info-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.12);text-decoration:none;color:inherit;transition:background .2s ease;cursor:pointer;" onmouseover="this.style.background='rgba(var(--ds-info-rgb),.14)'" onmouseout="this.style.background='rgba(var(--ds-info-rgb),.06)'">
-      <div style="font-weight:800;font-size:.88em;letter-spacing:.04em;color:var(--ds-info);">①&ensp;DECLARE</div>
+      <div style="font-weight:800;font-size:.88em;letter-spacing:.04em;color:var(--ds-info-light);">①&ensp;DECLARE</div>
       <div style="font-size:.75em;opacity:.6;margin-top:.2em;">passes &amp; dependencies</div>
     </a>
     <span style="display:flex;align-items:center;flex-shrink:0;"><svg viewBox="0 0 28 20" width="20" height="14" fill="none"><line x1="2" y1="10" x2="17" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity=".15"/><polyline points="15,4 24,10 15,16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity=".35"/></svg></span>
     <a href="#-the-compile-step" aria-label="Jump to Compile section" style="flex:1;padding:.7em .6em;text-align:center;background:rgba(var(--ds-code-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.12);text-decoration:none;color:inherit;transition:background .2s ease;cursor:pointer;" onmouseover="this.style.background='rgba(var(--ds-code-rgb),.14)'" onmouseout="this.style.background='rgba(var(--ds-code-rgb),.06)'">
-      <div style="font-weight:800;font-size:.88em;letter-spacing:.04em;color:var(--ds-code);">②&ensp;COMPILE</div>
+      <div style="font-weight:800;font-size:.88em;letter-spacing:.04em;color:var(--ds-code-light);">&ensp;COMPILE</div>
       <div style="font-size:.75em;opacity:.6;margin-top:.2em;">order · aliases · barriers</div>
     </a>
     <span style="display:flex;align-items:center;flex-shrink:0;"><svg viewBox="0 0 28 20" width="20" height="14" fill="none"><line x1="2" y1="10" x2="17" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity=".15"/><polyline points="15,4 24,10 15,16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity=".35"/></svg></span>
@@ -277,54 +277,47 @@ The separation is deliberate: declaration is cheap, compilation is where the opt
 
 Each frame starts on the CPU. You register passes, describe the resources they need, and declare who reads or writes what. No GPU work happens yet — you're building a description of the frame.
 
-<div style="margin:1em 0 1.2em;display:grid;gap:.6em;">
+<div style="margin:1em 0 1.2em;border-radius:10px;border:1px solid rgba(var(--ds-info-rgb),.12);background:rgba(var(--ds-info-rgb),.02);overflow:hidden;">
 
-  <div class="fg-hoverable" style="display:grid;grid-template-columns:2.2em 1fr;gap:0 .8em;padding:.8em 1em;border-radius:10px;border:1.5px solid rgba(var(--ds-info-rgb),.2);background:rgba(var(--ds-info-rgb),.03);">
-    <div style="grid-row:1/3;font-size:1.1em;color:var(--ds-info);opacity:.5;text-align:center;padding-top:.25em;">●</div>
-    <div><span style="font-weight:800;color:var(--ds-info);font-size:.92em;letter-spacing:.03em;">REGISTER PASSES</span></div>
-    <div style="font-size:.86em;line-height:1.6;opacity:.75;">Tell the graph <em>what work</em> this frame needs — each pass gets a setup callback to declare resources and an execute callback for later GPU recording.
-      <div style="margin-top:.35em;"><code style="font-size:.92em;">addPass(setup, execute)</code></div>
-    </div>
+  <div style="display:grid;grid-template-columns:2.2em 1fr;gap:0 .8em;padding:.75em 1em;">
+    <div style="grid-row:1/3;font-size:1em;color:var(--ds-info);opacity:.35;text-align:center;padding-top:.2em;">●</div>
+    <div><span style="font-weight:700;color:var(--ds-info);font-size:.88em;letter-spacing:.02em;">REGISTER PASSES</span></div>
+    <div style="font-size:.84em;line-height:1.55;opacity:.6;">Tell the graph <em>what work</em> this frame needs — each pass gets a setup callback to declare resources and an execute callback for later GPU recording. &ensp;<code style="font-size:.9em;">addPass(setup, execute)</code></div>
   </div>
 
-  <div class="fg-hoverable" style="display:grid;grid-template-columns:2.2em 1fr;gap:0 .8em;padding:.8em 1em;border-radius:10px;border:1.5px solid rgba(var(--ds-info-rgb),.2);background:rgba(var(--ds-info-rgb),.03);">
-    <div style="grid-row:1/3;font-size:1.1em;color:var(--ds-info);opacity:.5;text-align:center;padding-top:.25em;">●</div>
-    <div><span style="font-weight:800;color:var(--ds-info);font-size:.92em;letter-spacing:.03em;">DESCRIBE RESOURCES</span></div>
-    <div style="font-size:.86em;line-height:1.6;opacity:.75;">Declare every texture and buffer a pass will touch — size, format, usage — without allocating GPU memory. Everything stays virtual.
-      <div style="margin-top:.35em;"><code style="font-size:.92em;">create({1920,1080, RGBA8})</code></div>
-    </div>
+  <div style="border-top:1px solid rgba(var(--ds-info-rgb),.08);display:grid;grid-template-columns:2.2em 1fr;gap:0 .8em;padding:.75em 1em;">
+    <div style="grid-row:1/3;font-size:1em;color:var(--ds-info);opacity:.35;text-align:center;padding-top:.2em;">●</div>
+    <div><span style="font-weight:700;color:var(--ds-info);font-size:.88em;letter-spacing:.02em;">DESCRIBE RESOURCES</span></div>
+    <div style="font-size:.84em;line-height:1.55;opacity:.6;">Declare every texture and buffer a pass will touch — size, format, usage — without allocating GPU memory. Everything stays virtual. &ensp;<code style="font-size:.9em;">create({1920,1080, RGBA8})</code></div>
   </div>
 
-  <div class="fg-hoverable" style="display:grid;grid-template-columns:2.2em 1fr;gap:0 .8em;padding:.8em 1em;border-radius:10px;border:1.5px solid rgba(var(--ds-info-rgb),.2);background:rgba(var(--ds-info-rgb),.03);">
-    <div style="grid-row:1/3;font-size:1.1em;color:var(--ds-info);opacity:.5;text-align:center;padding-top:.25em;">●</div>
-    <div><span style="font-weight:800;color:var(--ds-info);font-size:.92em;letter-spacing:.03em;">CONNECT READS &amp; WRITES</span></div>
-    <div style="font-size:.86em;line-height:1.6;opacity:.75;">Wire up the edges: <em>this pass reads that texture, that pass writes this buffer.</em> These connections drive execution order, barriers, and memory aliasing.
-      <div style="margin-top:.35em;"><code style="font-size:.92em;">read(h)</code> / <code style="font-size:.92em;">write(h)</code></div>
-    </div>
+  <div style="border-top:1px solid rgba(var(--ds-info-rgb),.08);display:grid;grid-template-columns:2.2em 1fr;gap:0 .8em;padding:.75em 1em;">
+    <div style="grid-row:1/3;font-size:1em;color:var(--ds-info);opacity:.35;text-align:center;padding-top:.2em;">●</div>
+    <div><span style="font-weight:700;color:var(--ds-info);font-size:.88em;letter-spacing:.02em;">CONNECT READS &amp; WRITES</span></div>
+    <div style="font-size:.84em;line-height:1.55;opacity:.6;">Wire up the edges: <em>this pass reads that texture, that pass writes this buffer.</em> These connections drive execution order, barriers, and memory aliasing. &ensp;<code style="font-size:.9em;">read(h)</code> / <code style="font-size:.9em;">write(h)</code></div>
   </div>
 
-  <div style="text-align:center;font-size:.8em;opacity:.5;margin-top:-.1em;">CPU only — the GPU is idle during this phase</div>
 </div>
+<div style="text-align:center;font-size:.78em;opacity:.4;">CPU only — the GPU is idle during this phase</div>
 
-<div class="fg-reveal" style="margin:1.2em 0;padding:1.1em 1.3em;border-radius:10px;border:1.5px dashed rgba(var(--ds-indigo-rgb),.3);background:rgba(var(--ds-indigo-rgb),.04);display:flex;align-items:center;gap:1.2em;flex-wrap:wrap;">
-  <div style="flex:1;min-width:180px;">
-    <div style="font-size:1.15em;font-weight:800;margin:.1em 0;">Handle #3</div>
-    <div style="font-size:.82em;opacity:.6;">1920×1080 · RGBA8 · render target</div>
+What does a "virtual resource" actually look like at this point? Just a lightweight descriptor and a handle — no GPU memory behind it yet:
+
+<div style="margin:.6em 0 1em;padding:.65em 1em;border-radius:8px;border:1px dashed rgba(var(--ds-indigo-rgb),.14);background:rgba(var(--ds-indigo-rgb),.02);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5em;">
+  <div>
+    <span style="font-weight:700;font-size:.88em;">Handle #3</span>
+    <span style="font-size:.78em;opacity:.45;margin-left:.5em;">1920×1080 · RGBA8 · render target</span>
   </div>
-  <div style="flex-shrink:0;padding:.4em .8em;border-radius:6px;background:rgba(var(--ds-warn-rgb),.1);color:var(--ds-warn);font-weight:700;font-size:.8em;">description only — no GPU memory yet</div>
-</div>
-<div style="text-align:center;font-size:.82em;opacity:.6;margin-top:-.2em;">
-  Resources stay virtual at this stage — just a description and a handle. Memory comes later.
+  <span style="font-size:.75em;color:var(--ds-warn);opacity:.7;font-weight:600;">description only — no GPU memory yet</span>
 </div>
 
 ### 📦 Transient vs. imported
 
 When you declare a resource, the graph needs to know one thing: **does it live inside this frame, or does it come from outside?**
 
-<div class="fg-grid-stagger" style="display:grid;grid-template-columns:1fr 1fr;gap:1em;margin:1.2em 0;">
-  <div class="fg-hoverable" style="border-radius:10px;border:1.5px solid rgba(var(--ds-info-rgb),.3);overflow:hidden;">
-    <div style="padding:.6em .9em;font-weight:800;font-size:.95em;background:rgba(var(--ds-info-rgb),.08);border-bottom:1px solid rgba(var(--ds-info-rgb),.15);color:var(--ds-info);">⚡ Transient</div>
-    <div style="padding:.7em .9em;font-size:.88em;line-height:1.7;">
+<div class="fg-grid-stagger ds-grid-2col">
+  <div class="fg-hoverable ds-card ds-card--info">
+    <div class="ds-card-header ds-card-header--info">🔀 Transient</div>
+    <div class="ds-card-body">
       <strong>Lifetime:</strong> single frame<br>
       <strong>Declared as:</strong> description (size, format)<br>
       <strong>GPU memory:</strong> allocated and aliased at compile<br>
@@ -332,9 +325,9 @@ When you declare a resource, the graph needs to know one thing: **does it live i
       <strong>Examples:</strong> GBuffer MRTs, SSAO scratch, bloom scratch
     </div>
   </div>
-  <div class="fg-hoverable" style="border-radius:10px;border:1.5px solid rgba(var(--ds-code-rgb),.3);overflow:hidden;">
-    <div style="padding:.6em .9em;font-weight:800;font-size:.95em;background:rgba(var(--ds-code-rgb),.08);border-bottom:1px solid rgba(var(--ds-code-rgb),.15);color:var(--ds-code);">📌 Imported</div>
-    <div style="padding:.7em .9em;font-size:.88em;line-height:1.7;">
+  <div class="fg-hoverable ds-card ds-card--code">
+    <div class="ds-card-header ds-card-header--code">📌 Imported</div>
+    <div class="ds-card-body">
       <strong>Lifetime:</strong> across frames<br>
       <strong>Declared as:</strong> existing GPU handle<br>
       <strong>GPU memory:</strong> already allocated externally<br>
@@ -353,17 +346,17 @@ The declared DAG goes in; an optimized execution plan comes out — all on the C
 <div style="margin:1.2em 0;border-radius:12px;overflow:hidden;border:1.5px solid rgba(var(--ds-code-rgb),.25);">
   <!-- INPUT -->
   <div style="padding:.7em 1.1em;background:rgba(var(--ds-code-rgb),.08);border-bottom:1px solid rgba(var(--ds-code-rgb),.15);display:flex;align-items:center;gap:.8em;">
-    <span style="font-weight:800;font-size:.85em;color:var(--ds-code);text-transform:uppercase;letter-spacing:.04em;">📥 In</span>
+    <span style="font-weight:800;font-size:.85em;color:var(--ds-code-light);text-transform:uppercase;letter-spacing:.04em;">📥 In</span>
     <span style="font-size:.88em;opacity:.8;">declared passes + virtual resources + read/write edges</span>
   </div>
   <!-- PIPELINE -->
   <div style="padding:.8em 1.3em;background:rgba(var(--ds-code-rgb),.03);">
     <div style="display:grid;grid-template-columns:auto 1fr;gap:.35em 1em;align-items:center;font-size:.88em;">
-      <span style="font-weight:700;color:var(--ds-code);">①</span><span><strong>Sort</strong> passes into dependency order</span>
+      <span style="font-weight:700;color:var(--ds-code-light);">①</span><span><strong>Sort</strong> passes into dependency order</span>
       <span style="font-weight:700;color:var(--ds-code);">②</span><span><strong>Cull</strong> passes whose outputs are never read</span>
       <span style="font-weight:700;color:var(--ds-code);">③</span><span><strong>Scan lifetimes</strong> — record each transient resource's first and last use</span>
       <span style="font-weight:700;color:var(--ds-code);">④</span><span><strong>Alias</strong> — assign non-overlapping resources to shared memory slots</span>
-      <span style="font-weight:700;color:var(--ds-code);">⑤</span><span><strong>Compute barriers</strong> — insert transitions at every resource state change</span>
+      <span style="font-weight:700;color:var(--ds-code-light);">⑤</span><span><strong>Compute barriers</strong> — insert transitions at every resource state change</span>
     </div>
   </div>
   <!-- OUTPUT -->
@@ -383,23 +376,23 @@ This is how the graph knows *exactly* which pass depends on which, even when the
   <div style="border-radius:10px;overflow:hidden;border:1.5px solid rgba(var(--ds-indigo-rgb),.15);">
     <div style="padding:.5em .8em;background:rgba(var(--ds-indigo-rgb),.06);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.1);font-weight:700;font-size:.9em;text-align:center;">Resource versioning — HDR target through the frame</div>
     <div style="display:grid;grid-template-columns:auto auto 1fr;gap:0;">
-      <div style="padding:.45em .6em;background:rgba(var(--ds-info-rgb),.06);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-weight:700;text-align:center;color:var(--ds-info);font-size:.82em;">v1</div>
-      <div style="padding:.45em .6em;background:rgba(var(--ds-info-rgb),.12);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-weight:700;text-align:center;color:var(--ds-info);font-size:.75em;">WRITE</div>
+      <div style="padding:.45em .6em;background:rgba(var(--ds-info-rgb),.06);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-weight:700;text-align:center;color:var(--ds-info-light);font-size:.82em;">v1</div>
+      <div style="padding:.45em .6em;background:rgba(var(--ds-info-rgb),.12);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-weight:700;text-align:center;color:var(--ds-info-light);font-size:.75em;">WRITE</div>
       <div style="padding:.45em .8em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);font-size:.86em;">
         <span style="font-weight:700;">Lighting</span> — renders lit color into HDR target
       </div>
       <div style="padding:.35em .6em;background:rgba(var(--ds-info-rgb),.03);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-size:.7em;opacity:.4;text-align:center;">v1</div>
-      <div style="padding:.35em .6em;background:rgba(var(--ds-code-rgb),.08);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-weight:600;text-align:center;color:var(--ds-code);font-size:.75em;">read</div>
+      <div style="padding:.35em .6em;background:rgba(var(--ds-code-rgb),.08);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-weight:600;text-align:center;color:var(--ds-code-light);font-size:.75em;">read</div>
       <div style="padding:.35em .8em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);font-size:.84em;opacity:.85;">
         <span style="font-weight:600;">Bloom</span> — samples bright pixels <span style="opacity:.4;font-size:.88em;">(still v1)</span>
       </div>
       <div style="padding:.35em .6em;background:rgba(var(--ds-info-rgb),.03);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-size:.7em;opacity:.4;text-align:center;">v1</div>
-      <div style="padding:.35em .6em;background:rgba(var(--ds-code-rgb),.08);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-weight:600;text-align:center;color:var(--ds-code);font-size:.75em;">read</div>
+      <div style="padding:.35em .6em;background:rgba(var(--ds-code-rgb),.08);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-weight:600;text-align:center;color:var(--ds-code-light);font-size:.75em;">read</div>
       <div style="padding:.35em .8em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);font-size:.84em;opacity:.85;">
         <span style="font-weight:600;">Reflections</span> — samples for SSR <span style="opacity:.4;font-size:.88em;">(still v1)</span>
       </div>
       <div style="padding:.35em .6em;background:rgba(var(--ds-info-rgb),.03);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-size:.7em;opacity:.4;text-align:center;">v1</div>
-      <div style="padding:.35em .6em;background:rgba(var(--ds-code-rgb),.08);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-weight:600;text-align:center;color:var(--ds-code);font-size:.75em;">read</div>
+      <div style="padding:.35em .6em;background:rgba(var(--ds-code-rgb),.08);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-weight:600;text-align:center;color:var(--ds-code-light);font-size:.75em;">read</div>
       <div style="padding:.35em .8em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);font-size:.84em;opacity:.85;">
         <span style="font-weight:600;">Fog</span> — reads scene color for aerial blending <span style="opacity:.4;font-size:.88em;">(still v1)</span>
       </div>
@@ -409,7 +402,7 @@ This is how the graph knows *exactly* which pass depends on which, even when the
         <span style="font-weight:700;">Composite</span> — overwrites with final blended result <span style="opacity:.4;font-size:.88em;">(bumps to v2)</span>
       </div>
       <div style="padding:.35em .6em;background:rgba(var(--ds-success-rgb),.03);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-size:.7em;opacity:.4;text-align:center;">v2</div>
-      <div style="padding:.35em .6em;background:rgba(var(--ds-code-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-weight:600;text-align:center;color:var(--ds-code);font-size:.75em;">read</div>
+      <div style="padding:.35em .6em;background:rgba(var(--ds-code-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-weight:600;text-align:center;color:var(--ds-code-light);font-size:.75em;">read</div>
       <div style="padding:.35em .8em;font-size:.84em;opacity:.85;">
         <span style="font-weight:600;">Tonemap</span> — maps HDR → SDR for display <span style="opacity:.4;font-size:.88em;">(reads v2, not v1)</span>
       </div>
@@ -428,7 +421,7 @@ The standard approach is **Kahn's algorithm**:
 
 <div style="margin:1em 0;padding:.9em 1.1em;border-radius:10px;border:1.5px solid rgba(var(--ds-code-rgb),.18);background:linear-gradient(135deg,rgba(var(--ds-code-rgb),.04),transparent);font-size:.9em;line-height:1.7;">
   <div style="display:grid;grid-template-columns:auto 1fr;gap:.4em .9em;align-items:start;">
-    <span style="font-weight:700;color:var(--ds-code);">①</span><span><strong>Count</strong> incoming edges for every pass. A pass with zero incoming edges has no unmet dependencies.</span>
+    <span style="font-weight:700;color:var(--ds-code-light);">①</span><span><strong>Count</strong> incoming edges for every pass. A pass with zero incoming edges has no unmet dependencies.</span>
     <span style="font-weight:700;color:var(--ds-code);">②</span><span><strong>Emit</strong> any zero-count pass — its dependencies are already satisfied.</span>
     <span style="font-weight:700;color:var(--ds-code);">③</span><span><strong>Decrement</strong> the counts of its successors. If a successor hits zero, it's now ready — add it to the queue.</span>
     <span style="font-weight:700;color:var(--ds-code);">④</span><span><strong>Repeat</strong> until the queue drains. If fewer passes come out than went in, there's a cycle — the graph is invalid.</span>
@@ -438,18 +431,14 @@ The standard approach is **Kahn's algorithm**:
 The whole walk is **O(V + E)** — linear in passes and edges. It runs once per frame and finishes in microseconds.
 
 <div class="fg-reveal" style="margin:1em 0;padding:.85em 1.1em;border-radius:10px;border:1.5px solid rgba(var(--ds-code-rgb),.18);background:linear-gradient(135deg,rgba(var(--ds-code-rgb),.04),transparent);font-size:.9em;line-height:1.65;">
-<strong>Sorting bonus — fewer context rolls.</strong> A <em>context roll</em> happens every time the GPU switches render targets: caches flush, attachments rebind, and the pipeline drains. In a naïve hand-ordered renderer those switches are whatever order you hard-coded. With Kahn's algorithm the compiler often has <strong>multiple passes at zero in-degree simultaneously</strong> — it can pick the one that targets the <em>same</em> render target as the previous pass. That one tie-breaking heuristic groups passes by attachment and can cut render-target switches by 30–50%, turning a <em>correctness</em> tool (topological sort) into a <em>performance</em> tool (state-change minimiser).
+<strong>Sorting bonus — fewer context rolls.</strong> A <em>context roll</em> happens every time the GPU switches render targets: caches flush, attachments rebind, and the pipeline drains. In a naAZve hand-ordered renderer those switches are whatever order you hard-coded. With Kahn's algorithm the compiler often has <strong>multiple passes at zero in-degree simultaneously</strong> — it can pick the one that targets the <em>same</em> render target as the previous pass. That one tie-breaking heuristic groups passes by attachment and can cut render-target switches by 30–50%, turning a <em>correctness</em> tool (topological sort) into a <em>performance</em> tool (state-change minimiser).
 </div>
-
-Step through the algorithm interactively — watch nodes with zero in-degree get emitted one by one:
 
 {{< interactive-toposort >}}
 
 ### ✂ Culling
 
 With the sorted order established, the compiler walks backward from the final outputs and removes any pass whose results are never read. Dead-code elimination for GPU work — entire passes vanish without a feature flag.
-
-Toggle edges in the DAG below — disconnect a pass and the compiler removes it along with its resources in real time:
 
 {{< interactive-dag >}}
 
@@ -461,7 +450,7 @@ The allocator is a two-step process:
 
 <div style="margin:1em 0;padding:.9em 1.1em;border-radius:10px;border:1.5px solid rgba(var(--ds-code-rgb),.18);background:linear-gradient(135deg,rgba(var(--ds-code-rgb),.04),transparent);font-size:.9em;line-height:1.7;">
   <div style="display:grid;grid-template-columns:auto 1fr;gap:.4em .9em;align-items:start;">
-    <span style="font-weight:700;color:var(--ds-code);">①</span><span><strong>Scan lifetimes</strong> — walk the sorted pass list and record each transient resource's first and last use. Imported resources are excluded (externally owned, live across frames).</span>
+    <span style="font-weight:700;color:var(--ds-code-light);">①</span><span><strong>Scan lifetimes</strong> — walk the sorted pass list and record each transient resource's first and last use. Imported resources are excluded (externally owned, live across frames).</span>
     <span style="font-weight:700;color:var(--ds-code);">②</span><span><strong>Free-list scan</strong> — sort resources by first-use. For each one, try to fit it into an existing physical block whose previous user has finished. Fit → reuse that block. No fit → allocate a new one. This is <strong>greedy interval coloring</strong> — O(R log R) for the sort, then linear for the scan.</span>
   </div>
 </div>
@@ -533,8 +522,6 @@ The allocator is a two-step process:
   </div>
 </div>
 
-Drag the timeline below to see how resources share physical blocks as their lifetimes end:
-
 {{< interactive-aliasing >}}
 
 ### 🚧 Barriers
@@ -550,7 +537,7 @@ The compiler analyzes the graph and builds the full transition plan. No GPU work
 <div style="margin:1.2em 0;border-radius:10px;overflow:hidden;border:1.5px solid rgba(var(--ds-code-rgb),.2);">
   <!-- Step 1 -->
   <div style="padding:.7em 1.1em;border-bottom:1px solid rgba(var(--ds-code-rgb),.1);background:rgba(var(--ds-code-rgb),.04);">
-    <div style="font-weight:800;font-size:.82em;color:var(--ds-code);margin-bottom:.3em;">① Build resource usage timeline</div>
+    <div style="font-weight:800;font-size:.82em;color:var(--ds-code-light);margin-bottom:.3em;">① Build resource usage timeline</div>
     <div style="font-size:.86em;line-height:1.6;opacity:.85;">
       Every pass declared its reads and writes. The compiler walks those declarations and builds a per-resource usage history:
     </div>
@@ -561,7 +548,7 @@ The compiler analyzes the graph and builds the full transition plan. No GPU work
   </div>
   <!-- Step 2 -->
   <div style="padding:.7em 1.1em;border-bottom:1px solid rgba(var(--ds-code-rgb),.1);">
-    <div style="font-weight:800;font-size:.82em;color:var(--ds-code);margin-bottom:.3em;">② Track previous state</div>
+    <div style="font-weight:800;font-size:.82em;color:var(--ds-code-light);margin-bottom:.3em;">① Track previous state</div>
     <div style="font-size:.86em;line-height:1.6;opacity:.85;">
       For each resource, start with <code>currentState = Undefined</code>, then walk passes in topological order.
     </div>
@@ -577,20 +564,20 @@ The compiler analyzes the graph and builds the full transition plan. No GPU work
     currentState = requiredState</code></pre>
     <div style="font-size:.84em;line-height:1.6;opacity:.75;margin-top:.5em;">
       Example — GBuffer writes Albedo as <code>ColorAttachment</code>, then Lighting reads it as <code>ShaderRead</code>. The compiler stores:<br>
-      <strong style="color:var(--ds-code)">Barrier: ColorAttachment → ShaderRead</strong><br>
+      <strong style="color:var(--ds-code-light)">Barrier: ColorAttachment → ShaderRead</strong><br>
       This is purely analysis. Nothing is sent to the GPU yet.
     </div>
   </div>
   <!-- Step 4 -->
   <div style="padding:.7em 1.1em;border-bottom:1px solid rgba(var(--ds-code-rgb),.1);">
-    <div style="font-weight:800;font-size:.82em;color:var(--ds-code);margin-bottom:.3em;">④ Optimize (production)</div>
+    <div style="font-weight:800;font-size:.82em;color:var(--ds-code-light);margin-bottom:.3em;">① Optimize (production)</div>
     <div style="font-size:.86em;line-height:1.6;opacity:.85;">
       A production compiler will merge multiple transitions into one barrier call, batch transitions per pass, remove redundant transitions, and eliminate transitions for resources that are about to be aliased. Still compile-time — still no GPU work.
     </div>
   </div>
   <!-- Step 5 -->
   <div style="padding:.7em 1.1em;background:rgba(var(--ds-success-rgb),.04);">
-    <div style="font-weight:800;font-size:.82em;color:var(--ds-code);margin-bottom:.3em;">⑤ Store in CompiledPlan</div>
+    <div style="font-weight:800;font-size:.82em;color:var(--ds-code-light);margin-bottom:.3em;">⑤ Store in CompiledPlan</div>
     <div style="font-size:.86em;line-height:1.6;opacity:.85;">
       The output is a list of precomputed barriers per pass — stored alongside the execution callbacks:
     </div>
@@ -618,9 +605,9 @@ Just issuing commands. The GPU receives exactly what was precomputed.
 
 #### 📌 Concrete example
 
-<div style="margin:1em 0;display:grid;grid-template-columns:1fr 1fr;gap:0;border-radius:10px;overflow:hidden;border:1.5px solid rgba(var(--ds-indigo-rgb),.2);">
+<div class="ds-grid-2col" style="gap:0;border-radius:10px;overflow:hidden;border:1.5px solid rgba(var(--ds-indigo-rgb),.2);">
   <div style="padding:.8em 1em;background:rgba(var(--ds-code-rgb),.04);border-right:1px solid rgba(var(--ds-indigo-rgb),.15);">
-    <div style="font-weight:800;font-size:.82em;color:var(--ds-code);margin-bottom:.5em;">COMPILE generates:</div>
+    <div style="font-weight:800;font-size:.82em;color:var(--ds-code-light);margin-bottom:.5em;">COMPILE generates:</div>
     <div style="font-size:.82em;line-height:1.65;font-family:ui-monospace,monospace;">
       <strong>GBuffer</strong><br>
       &ensp;pre: Undefined → ColorAttachment<br><br>
@@ -646,43 +633,6 @@ Just issuing commands. The GPU receives exactly what was precomputed.
     <div style="font-size:.78em;opacity:.5;margin-top:.5em;">Exactly as precomputed.</div>
   </div>
 </div>
-
-#### 💡 Why this separation matters
-
-<div style="margin:1em 0;display:grid;grid-template-columns:1fr 1fr;gap:0;border-radius:10px;overflow:hidden;border:1.5px solid rgba(var(--ds-indigo-rgb),.2);">
-  <div style="padding:.7em 1em;background:rgba(var(--ds-danger-rgb),.04);border-right:1px solid rgba(var(--ds-indigo-rgb),.15);">
-    <div style="font-weight:800;font-size:.82em;color:var(--ds-danger);margin-bottom:.4em;">❌ Barriers computed during execute</div>
-    <div style="font-size:.84em;line-height:1.7;opacity:.85;">
-      • mixing analysis with submission<br>
-      • re-evaluating state every frame<br>
-      • harder to cache compiled graphs<br>
-      • harder to multithread execute
-    </div>
-  </div>
-  <div style="padding:.7em 1em;background:rgba(var(--ds-success-rgb),.04);">
-    <div style="font-weight:800;font-size:.82em;color:var(--ds-success);margin-bottom:.4em;">✅ Barriers computed during compile</div>
-    <div style="font-size:.84em;line-height:1.7;opacity:.85;">
-      • execution is lightweight playback<br>
-      • compiled plans are cacheable<br>
-      • compile is safe to multithread<br>
-      • CPU graph logic separated from GPU submission
-    </div>
-  </div>
-</div>
-
-<div style="font-size:.86em;line-height:1.5;opacity:.65;margin:.4em 0 .8em;">
-That's why engines like Epic's Render Dependency Graph and Unity's SRP frame graph systems compute transitions during compile and submit during execute.
-</div>
-
-<div style="margin:.8em 0 1em;padding:.65em 1em;border-radius:8px;border:1.5px solid rgba(var(--ds-code-rgb),.15);background:rgba(var(--ds-code-rgb),.03);font-size:.88em;line-height:1.6;">
-<strong style="color:var(--ds-code);">The clean rule:</strong>&ensp; Compile = analyze + decide. &ensp;Execute = submit + run. &ensp;Barriers follow that exact separation.
-</div>
-
-<div style="margin:.6em 0;padding:.5em .9em;border-radius:8px;border-left:3px solid rgba(var(--ds-code-rgb),.4);background:rgba(var(--ds-code-rgb),.04);font-size:.85em;line-height:1.5;">
-🔨 <a href="../frame-graph-build-it/#v2-barriers" style="font-weight:600;">Part II</a> turns this into running code — <code>ComputeBarriers()</code> runs during compile, stores every transition in <code>CompiledPlan</code>, and <code>Execute()</code> replays them with zero state tracking.
-</div>
-
-Step through a full pipeline — watch each resource's state update as passes execute, and see exactly where the compiler places each barrier:
 
 {{< interactive-barriers >}}
 
@@ -733,7 +683,7 @@ How often should the graph recompile? Three approaches, each a valid tradeoff:
   </div>
   <div class="fg-hoverable" style="border-radius:10px;border:1.5px solid var(--ds-info);overflow:hidden;">
     <div style="padding:.5em .8em;background:rgba(var(--ds-info-rgb),.1);font-weight:800;font-size:.95em;border-bottom:1px solid rgba(var(--ds-info-rgb),.2);">
-      ⚡ Hybrid
+       Hybrid
     </div>
     <div style="padding:.7em .8em;font-size:.88em;line-height:1.6;">
       Cache compiled result, invalidate on change.<br>
@@ -761,9 +711,9 @@ Most engines use **dynamic** or **hybrid**. The compile is so cheap that caching
 
 ## 💰 The Payoff
 
-<div class="fg-compare" style="margin:1.2em 0;display:grid;grid-template-columns:1fr 1fr;gap:0;border-radius:10px;overflow:hidden;border:2px solid rgba(var(--ds-indigo-rgb),.25);box-shadow:0 2px 8px rgba(0,0,0,.08);">
-  <div style="padding:.6em 1em;font-weight:800;font-size:.95em;background:rgba(var(--ds-danger-rgb),.1);border-bottom:1.5px solid rgba(var(--ds-indigo-rgb),.15);border-right:1.5px solid rgba(var(--ds-indigo-rgb),.15);color:var(--ds-danger);">❌ Without Graph</div>
-  <div style="padding:.6em 1em;font-weight:800;font-size:.95em;background:rgba(var(--ds-success-rgb),.1);border-bottom:1.5px solid rgba(var(--ds-indigo-rgb),.15);color:var(--ds-success);">✅ With Graph</div>
+<div class="fg-compare ds-grid-2col" style="gap:0;border-radius:10px;overflow:hidden;border:2px solid rgba(var(--ds-indigo-rgb),.25);box-shadow:0 2px 8px rgba(0,0,0,.08);">
+  <div class="ds-card-header ds-card-header--danger" style="border-right:1.5px solid rgba(var(--ds-indigo-rgb),.15);">❌ Without Graph</div>
+  <div class="ds-card-header ds-card-header--success">✅ With Graph</div>
 
   <div style="padding:.55em .8em;font-size:.88em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.1);border-right:1.5px solid rgba(var(--ds-indigo-rgb),.15);background:rgba(var(--ds-danger-rgb),.02);">
     <strong>Memory aliasing</strong><br><span style="opacity:.65">Opt-in, fragile, rarely done</span>

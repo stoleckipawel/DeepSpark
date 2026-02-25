@@ -1,17 +1,6 @@
 {{/* Interactive Barrier State Table — step through passes and watch barriers fire */}}
 <div class="interactive-widget" id="barrier-widget">
-  <div class="widget-header">
-    <span class="widget-icon">🔬</span>
-    <span class="widget-title">Interactive: Automatic Barrier Insertion</span>
-    <p class="widget-hint">Step through execution. Watch resource states change and barriers fire automatically.</p>
-  </div>
   <div class="widget-body">
-    <div class="barrier-example-bar">
-      <span class="barrier-example-label">Example:</span>
-      <button class="widget-btn barrier-ex-btn barrier-ex-active" data-ex="0" onclick="barrierSetExample(0)">Deferred Pipeline</button>
-      <button class="widget-btn barrier-ex-btn" data-ex="1" onclick="barrierSetExample(1)">Compute Post-FX</button>
-      <button class="widget-btn barrier-ex-btn" data-ex="2" onclick="barrierSetExample(2)">Shadow + Forward</button>
-    </div>
     <div class="barrier-pass-bar" id="barrier-passes"></div>
     <table class="barrier-table">
       <thead>
@@ -25,9 +14,16 @@
       <tbody id="barrier-tbody"></tbody>
     </table>
     <div class="barrier-log" id="barrier-log"></div>
-    <div class="widget-btn-row">
-      <button class="widget-btn widget-btn-primary" id="barrier-next" onclick="barrierNext()">Next Pass ▶</button>
-      <button class="widget-btn" onclick="barrierReset()">Reset</button>
+    <div class="widget-toolbar">
+      <div class="widget-toolbar-left">
+        <button class="widget-pill barrier-ex-btn barrier-ex-active" data-ex="0" onclick="barrierSetExample(0)">Deferred Pipeline</button>
+        <button class="widget-pill barrier-ex-btn" data-ex="1" onclick="barrierSetExample(1)">Compute Post-FX</button>
+        <button class="widget-pill barrier-ex-btn" data-ex="2" onclick="barrierSetExample(2)">Shadow + Forward</button>
+      </div>
+      <div class="widget-toolbar-right">
+        <button class="widget-pill" onclick="barrierReset()">Reset</button>
+        <button class="widget-btn widget-btn-primary" id="barrier-next" onclick="barrierNext()">Next Pass ▶</button>
+      </div>
     </div>
   </div>
 </div>
@@ -50,15 +46,13 @@
 .state-depth{background:var(--ds-code);color:#fff}
 .state-shader{background:var(--ds-warn);color:#fff}
 .state-present{background:var(--ds-danger);color:#fff}
-.barrier-arrow{font-weight:700;color:var(--ds-info);margin:0 .3em}
+.barrier-arrow{font-weight:700;color:var(--ds-info-light);margin:0 .3em}
 .barrier-log{font-family:ui-monospace,monospace;font-size:.78em;max-height:120px;overflow-y:auto;padding:.5em;margin:.5em 0;border:1px solid var(--color-neutral-200,#e5e5e5);border-radius:.375rem;background:var(--color-neutral-100,#f5f5f5)}
 :is(.dark,.scheme-congo) .barrier-log{background:var(--color-neutral-900);border-color:var(--color-neutral-700)}
 .barrier-log-entry{margin:.2em 0;line-height:1.5}
-.barrier-log-entry.barrier-fired{color:var(--ds-info);font-weight:600}
-.barrier-example-bar{display:flex;align-items:center;gap:.5em;margin-bottom:.75em;flex-wrap:wrap}
-.barrier-example-label{font-size:.82em;font-weight:700;color:var(--color-neutral-500)}
-.barrier-ex-btn{font-size:.78em!important;padding:.35em .9em!important;border-radius:999px!important;font-weight:600!important}
-.barrier-ex-active{background:var(--ds-info)!important;color:#fff!important;border-color:var(--ds-info)!important}
+.barrier-log-entry.barrier-fired{color:var(--ds-info-light);font-weight:600}
+.barrier-ex-active{color:var(--ds-info);border-color:var(--ds-info);font-weight:600}
+:is(.dark,.scheme-congo) .barrier-ex-active{color:var(--ds-info);border-color:var(--ds-info)}
 </style>
 
 <script>

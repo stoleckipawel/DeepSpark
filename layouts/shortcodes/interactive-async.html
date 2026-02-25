@@ -1,14 +1,13 @@
 {{/* Interactive Async Compute Scheduler — richer pass set with more flexibility */}}
 <div class="interactive-widget" id="async-widget">
   <div class="widget-header">
-    <span class="widget-icon">🔬</span>
-    <span class="widget-title">Interactive: Async Compute Scheduling</span>
-    <p class="widget-hint">Move compute-eligible passes <strong>(blue)</strong> to the Compute queue to overlap work. Yellow dashed lines = <strong>fences</strong> (cross-queue sync points).</p>
+    <span class="widget-title">Async Compute Scheduling</span>
+    <p class="widget-hint">Move compute-eligible passes to the Compute queue to overlap work. Dashed lines show cross-queue sync points.</p>
   </div>
   <div class="async-example-bar">
-    <button class="async-ex-btn async-ex-active" onclick="asyncSetExample(0)">Deferred Shading</button>
-    <button class="async-ex-btn" onclick="asyncSetExample(1)">Compute Post-FX</button>
-    <button class="async-ex-btn" onclick="asyncSetExample(2)">Hybrid Ray-Trace</button>
+    <button class="widget-btn async-ex-btn async-ex-active" onclick="asyncSetExample(0)">Deferred Shading</button>
+    <button class="widget-btn async-ex-btn" onclick="asyncSetExample(1)">Compute Post-FX</button>
+    <button class="widget-btn async-ex-btn" onclick="asyncSetExample(2)">Hybrid Ray-Trace</button>
   </div>
   <div class="widget-body">
     <svg id="async-svg" viewBox="0 0 700 290" style="width:100%;border-radius:.375rem;border:1px solid var(--color-neutral-200,#e5e5e5)"></svg>
@@ -34,10 +33,9 @@
 .async-explain{font-size:.82em;line-height:1.6;margin-top:.5em;padding:.5em .7em;border-radius:.375rem;border-left:3px solid var(--ds-info);background:var(--color-neutral-100,#f5f5f5)}
 :is(.dark,.scheme-congo) .async-explain{background:var(--color-neutral-900);border-color:var(--ds-info)}
 .async-example-bar{display:flex;gap:.5em;flex-wrap:wrap;margin-bottom:.5em}
-.async-ex-btn{padding:.35em .9em;border-radius:999px;border:1.5px solid var(--color-neutral-300,#d1d5db);background:var(--color-neutral-100,#f5f5f5);font-size:.82em;font-weight:600;cursor:pointer;color:var(--color-neutral-700,#374151);transition:all .15s}
-.async-ex-btn:hover{border-color:var(--ds-info);color:var(--ds-info)}
-.async-ex-active{background:var(--ds-info)!important;color:#fff!important;border-color:var(--ds-info)!important}
-:is(.dark,.scheme-congo) .async-ex-btn{border-color:var(--color-neutral-600);color:var(--color-neutral-300);background:var(--color-neutral-700)}
+.async-ex-btn:hover{border-color:var(--ds-info);color:var(--ds-info-light)}
+.async-ex-active{color:var(--ds-info);border-color:var(--ds-info);font-weight:600}
+:is(.dark,.scheme-congo) .async-ex-active{color:var(--ds-info);border-color:var(--ds-info)}
 </style>
 
 <script>
@@ -223,9 +221,6 @@ function render(){
         const x1=left+sc.endTime[d]*scale;
         const x2=left+sc.startTime[p.id]*scale;
         svg.append(el("line",{x1:x1,y1:fromY,x2:x2,y2:toY,stroke:"var(--ds-warn)","stroke-width":2,"stroke-dasharray":"5,3","marker-end":"url(#async-arrow)"}));
-        // Flowing charge overlay for fence lines
-        var fFlow=el("line",{x1:x1,y1:fromY,x2:x2,y2:toY,class:"flow flow-md flow-amber flow-d8"});
-        svg.append(fFlow);
         // Fence label
         const mx=(x1+x2)/2,my=(fromY+toY)/2;
         svg.append(txt(mx,my-8,"fence","var(--ds-warn)","bold 9px ui-monospace,monospace","middle"));
@@ -249,7 +244,7 @@ function render(){
   const explEl=document.getElementById("async-explain");
   if(asyncPasses===0){
     explEl.innerHTML="<strong>All passes on Graphics queue.</strong> The GPU processes them one after another. "+
-      "Click a <span style='color:var(--ds-info);font-weight:600'>blue pass</span> to offload it to the Compute queue -- "+
+      "Click a <span style='color:var(--ds-info-light);font-weight:600'>blue pass</span> to offload it to the Compute queue -- "+
       "good candidates are compute-only work like SSAO, Light Culling, Volumetrics, or Bloom.";
   }else{
     var names=passes.filter(function(p){return p.queue==="compute"}).map(function(p){return p.name}).join(", ");

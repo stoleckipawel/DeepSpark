@@ -1,9 +1,8 @@
 {{/* Interactive Full Pipeline Explorer — minimap + focus view */}}
 <div class="interactive-widget" id="pipeline-widget">
   <div class="widget-header">
-    <span class="widget-icon">🎛️</span>
-    <span class="widget-title">Interactive: Full Pipeline Explorer</span>
-    <p class="widget-hint">The minimap shows the full render graph. Click any pass to focus — the detail view shows its neighbors, resources, and how the compiler transforms it.</p>
+    <span class="widget-title">Full Pipeline Explorer</span>
+    <p class="widget-hint">Click any pass in the minimap to see its neighbors, resources, and compiler transforms.</p>
   </div>
   <div class="widget-body">
     <div class="pipe-example-bar" id="pipe-example-bar">
@@ -52,8 +51,8 @@
 <style>
 .pipe-example-bar{display:flex;align-items:center;gap:.5em;margin-bottom:.6em;flex-wrap:wrap}
 .pipe-example-label{font-size:.82em;font-weight:700;opacity:.6}
-.pipe-ex-btn{font-size:.78em!important;padding:.35em .9em!important;border-radius:999px!important;font-weight:600!important}
-.pipe-ex-active{background:var(--ds-code)!important;color:#fff!important;border-color:var(--ds-code)!important}
+.pipe-ex-active{color:var(--ds-info);border-color:var(--ds-info);font-weight:600}
+:is(.dark,.scheme-congo) .pipe-ex-active{color:var(--ds-info);border-color:var(--ds-info)}
 
 .pipe-controls{margin:.5em 0 .8em;padding:.6em .8em;border-radius:8px;background:var(--color-neutral-100,#f5f5f5);border:1px solid var(--color-neutral-200,#e5e5e5)}
 :is(.dark,.scheme-congo) .pipe-controls{background:var(--color-neutral-900);border-color:var(--color-neutral-700)}
@@ -62,7 +61,7 @@
 .pipe-toggle input{display:none}
 .pipe-toggle-slider{width:32px;height:18px;background:var(--color-neutral-300,#d1d5db);border-radius:999px;position:relative;transition:background .2s;flex-shrink:0}
 .pipe-toggle-slider::after{content:"";position:absolute;width:14px;height:14px;background:#fff;border-radius:50%;top:2px;left:2px;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.15)}
-.pipe-toggle input:checked+.pipe-toggle-slider{background:var(--ds-code)}
+.pipe-toggle input:checked+.pipe-toggle-slider{background:var(--ds-info)}
 .pipe-toggle input:checked+.pipe-toggle-slider::after{transform:translateX(14px)}
 :is(.dark,.scheme-congo) .pipe-toggle-slider{background:var(--color-neutral-600)}
 .pipe-toggle-label{font-weight:600;color:var(--color-neutral-700,#374151)}
@@ -79,9 +78,9 @@
 
 /* Focus view */
 .pipe-focus-wrap{margin:.7em 0;border:1px solid var(--color-neutral-200,#e5e5e5);border-radius:10px;overflow:hidden;background:var(--color-neutral-50,#fafafa);transition:border-color .3s}
-.pipe-focus-wrap.pipe-focus-active{border-color:rgba(var(--ds-code-rgb),.35)}
+.pipe-focus-wrap.pipe-focus-active{border-color:rgba(var(--ds-info-rgb),.35)}
 :is(.dark,.scheme-congo) .pipe-focus-wrap{background:var(--color-neutral-800);border-color:var(--color-neutral-700)}
-.pipe-focus-header{padding:.5em .9em;border-bottom:1px solid rgba(var(--ds-code-rgb),.15);display:flex;align-items:center;gap:.6em;flex-wrap:wrap}
+.pipe-focus-header{padding:.5em .9em;border-bottom:1px solid rgba(var(--ds-info-rgb),.15);display:flex;align-items:center;gap:.6em;flex-wrap:wrap}
 .pipe-focus-title{font-weight:800;font-size:1.05em}
 .pipe-focus-badge{font-size:.75em;font-weight:600;padding:.2em .6em;border-radius:999px;display:inline-block}
 .pipe-focus-body{padding:.6em}
@@ -105,8 +104,8 @@
 .pipe-stat-val{font-size:1.2em;font-weight:700;display:block;margin-bottom:.05em}
 .pipe-stat-lbl{font-size:.82em;opacity:.7;font-weight:500}
 
-.pipe-detail{font-size:.84em;line-height:1.65;margin:.5em 0;padding:.55em .8em;border-radius:.375rem;border-left:3px solid var(--ds-code);background:var(--color-neutral-100,#f5f5f5);min-height:1.4em}
-:is(.dark,.scheme-congo) .pipe-detail{background:var(--color-neutral-900);border-color:var(--ds-code)}
+.pipe-detail{font-size:.84em;line-height:1.65;margin:.5em 0;padding:.55em .8em;border-radius:.375rem;border-left:3px solid var(--ds-info);background:var(--color-neutral-100,#f5f5f5);min-height:1.4em}
+:is(.dark,.scheme-congo) .pipe-detail{background:var(--color-neutral-900);border-color:var(--ds-info)}
 
 /* Minimap node hover */
 #pipe-minimap .mm-node{cursor:pointer}

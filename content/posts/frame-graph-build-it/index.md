@@ -1,4 +1,4 @@
-﻿---
+---
 title: "Frame Graph — Build It"
 date: 2026-02-10
 lastmod: 2026-02-23
@@ -7,7 +7,6 @@ authors: ["Pawel Stolecki"]
 description: "Three iterations from blank file to working frame graph with automatic barriers and memory aliasing."
 tags: ["rendering", "frame-graph", "gpu", "architecture", "cpp"]
 categories: ["analysis"]
-series: ["Rendering Architecture"]
 summary: "Three C++ iterations — v1 scaffold, v2 dependencies and barriers, v3 lifetime analysis and memory aliasing — building a complete frame graph from scratch."
 showTableOfContents: false
 keywords: ["frame graph C++", "render graph implementation", "topological sort", "Kahn algorithm", "barrier insertion", "memory aliasing", "resource lifetime", "GPU programming"]
@@ -96,9 +95,9 @@ We start from the API you *want* to write, then build toward it — starting wit
 
 <!-- UML class diagram — API overview -->
 <div style="display:flex;justify-content:center;gap:1.8em;margin:0 0 .5em;font-size:.78em;font-weight:600;opacity:.85;">
-  <span style="display:inline-flex;align-items:center;gap:.35em;"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:transparent;border:2.5px solid #ca8a04;"></span> v1 — Scaffold</span>
+  <span style="display:inline-flex;align-items:center;gap:.35em;"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:transparent;border:2.5px solid #d97706;"></span> v1 — Scaffold</span>
   <span style="display:inline-flex;align-items:center;gap:.35em;"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:transparent;border:2.5px solid #6366f1;"></span> v2 — Dependencies</span>
-  <span style="display:inline-flex;align-items:center;gap:.35em;"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:transparent;border:2.5px solid #059669;"></span> v3 — Aliasing</span>
+  <span style="display:inline-flex;align-items:center;gap:.35em;"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:transparent;border:2.5px solid #16a34a;"></span> v3 — Aliasing</span>
 </div>
 {{< mermaid >}}
 classDiagram
@@ -202,17 +201,17 @@ ResourceDesc --> Format : pixel format
 CompiledPlan *-- Barrier : pre-pass transitions
 Barrier --> ResourceState : old/new state
 
-style ResourceHandle stroke:#ca8a04,stroke-width:2.5px
-style ResourceDesc stroke:#ca8a04,stroke-width:2.5px
-style Format stroke:#ca8a04,stroke-width:2.5px
-style RenderPass stroke:#ca8a04,stroke-width:2.5px
+style ResourceHandle stroke:#d97706,stroke-width:2.5px
+style ResourceDesc stroke:#d97706,stroke-width:2.5px
+style Format stroke:#d97706,stroke-width:2.5px
+style RenderPass stroke:#d97706,stroke-width:2.5px
 style ResourceEntry stroke:#6366f1,stroke-width:2.5px
 style ResourceVersion stroke:#6366f1,stroke-width:2.5px
 style ResourceState stroke:#6366f1,stroke-width:2.5px
 style Barrier stroke:#6366f1,stroke-width:2.5px
 style CompiledPlan stroke:#6366f1,stroke-width:2.5px
-style Lifetime stroke:#059669,stroke-width:2.5px
-style PhysicalBlock stroke:#059669,stroke-width:2.5px
+style Lifetime stroke:#16a34a,stroke-width:2.5px
+style PhysicalBlock stroke:#16a34a,stroke-width:2.5px
 {{< /mermaid >}}
 
 ### 🔀 Design choices
@@ -231,7 +230,7 @@ The three-phase model from [Part I](../frame-graph-theory/) forces eight API dec
 </tr>
 </thead>
 <tbody>
-<tr><td colspan="5" style="padding:.6em .6em .3em;font-weight:800;font-size:.85em;letter-spacing:.04em;color:var(--ds-info);border-bottom:1px solid rgba(var(--ds-info-rgb),.12);">DECLARE — how passes and resources enter the graph</td></tr>
+<tr><td colspan="5" style="padding:.6em .6em .3em;font-weight:800;font-size:.85em;letter-spacing:.04em;color:var(--ds-info-light);border-bottom:1px solid rgba(var(--ds-info-rgb),.12);">DECLARE — how passes and resources enter the graph</td></tr>
 <tr style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);">
   <td style="padding:.5em .6em;font-weight:700;">①</td>
   <td style="padding:.5em .6em;">How does setup talk to execute?</td>
@@ -253,7 +252,7 @@ The three-phase model from [Part I](../frame-graph-theory/) forces eight API dec
   <td style="padding:.5em .6em;opacity:.8;">One integer, trivially copyable — no templates, no overhead.</td>
   <td style="padding:.5em .6em;opacity:.55;font-size:.92em;">Typed wrappers — <code>FRDGTextureRef</code> / <code>FRDGBufferRef</code>. Compile-time safety for 700+ passes (UE5).</td>
 </tr>
-<tr><td colspan="5" style="padding:.6em .6em .3em;font-weight:800;font-size:.85em;letter-spacing:.04em;color:var(--ds-code);border-bottom:1px solid rgba(var(--ds-code-rgb),.12);">COMPILE — what the graph analyser decides</td></tr>
+<tr><td colspan="5" style="padding:.6em .6em .3em;font-weight:800;font-size:.85em;letter-spacing:.04em;color:var(--ds-code-light);border-bottom:1px solid rgba(var(--ds-code-rgb),.12);">COMPILE — what the graph analyser decides</td></tr>
 <tr style="border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);">
   <td style="padding:.5em .6em;font-weight:700;">④</td>
   <td style="padding:.5em .6em;">Is compile explicit?</td>
@@ -304,7 +303,7 @@ With those choices made, here's where we're headed — the final API in under 30
 
 ### 🧱 v1 — The Scaffold
 
-<div style="margin:1em 0;padding:.7em 1em;border-radius:8px;border-left:4px solid var(--ds-info);background:rgba(var(--ds-info-rgb),.04);font-size:.92em;line-height:1.6;">
+<div class="ds-callout ds-callout--info">
 🎯 <strong>Goal:</strong> Declare passes and virtual resources, execute in registration order — the skeleton that v2 and v3 build on.
 </div>
 
@@ -398,12 +397,12 @@ Full source and runnable example:
 
 Compiles and runs — the execute lambdas are stubs, but the scaffolding is real. Every piece we add in v2 and v3 goes into this same `FrameGraph` class.
 
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:.8em;margin:1em 0;">
-  <div style="padding:.7em 1em;border-radius:8px;border-left:4px solid var(--ds-success);background:rgba(var(--ds-success-rgb),.05);font-size:.9em;line-height:1.5;">
+<div class="ds-grid-2col" style="gap:.8em;margin:1em 0;">
+  <div class="ds-callout ds-callout--success" style="font-size:.9em;line-height:1.5;">
     <strong style="color:var(--ds-success);">✓ What it proves</strong><br>
     The lambda-based pass declaration pattern works. You can already compose passes without manual barrier calls (even though barriers are no-ops here).
   </div>
-  <div style="padding:.7em 1em;border-radius:8px;border-left:4px solid var(--ds-danger);background:rgba(var(--ds-danger-rgb),.05);font-size:.9em;line-height:1.5;">
+  <div class="ds-callout ds-callout--danger" style="font-size:.9em;line-height:1.5;">
     <strong style="color:var(--ds-danger);">✗ What it lacks</strong><br>
     Executes passes in declaration order, creates every resource upfront. Correct but wasteful. Version 2 adds the graph.
   </div>
@@ -413,7 +412,7 @@ Compiles and runs — the execute lambdas are stubs, but the scaffolding is real
 
 ## 🔗 MVP v2 — Dependencies & Barriers
 
-<div style="margin:1em 0;padding:.7em 1em;border-radius:8px;border-left:4px solid var(--ds-info);background:rgba(var(--ds-info-rgb),.04);font-size:.92em;line-height:1.6;">
+<div class="ds-callout ds-callout--info">
 🎯 <strong>Goal:</strong> Automatic pass ordering, dead-pass culling, and barrier insertion — the graph now drives the GPU instead of you.
 </div>
 
@@ -423,14 +422,14 @@ Four steps in strict order — each one's output is the next one's input:
   <a href="#v2-versioning" style="padding:.7em .5em .5em;background:rgba(var(--ds-info-rgb),.05);text-decoration:none;text-align:center;transition:background .15s;" onmouseover="this.style.background='rgba(var(--ds-info-rgb),.12)'" onmouseout="this.style.background='rgba(var(--ds-info-rgb),.05)'">
     <div style="font-size:.65em;font-weight:800;opacity:.45;margin-bottom:.15em;">STEP 1</div>
     <div style="font-size:1.2em;margin-bottom:.15em;">🔀</div>
-    <div style="font-weight:800;font-size:.85em;color:var(--ds-info);">Versioning</div>
+    <div style="font-weight:800;font-size:.85em;color:var(--ds-info-light);">Versioning</div>
     <div style="font-size:.72em;opacity:.6;margin-top:.15em;line-height:1.3;">reads/writes produce edges</div>
   </a>
   <div style="display:flex;align-items:center;font-size:1.1em;opacity:.35;padding:0 .1em;">→</div>
   <a href="#v2-toposort" style="padding:.7em .5em .5em;background:rgba(var(--ds-code-rgb),.05);text-decoration:none;text-align:center;transition:background .15s;" onmouseover="this.style.background='rgba(var(--ds-code-rgb),.12)'" onmouseout="this.style.background='rgba(var(--ds-code-rgb),.05)'">
     <div style="font-size:.65em;font-weight:800;opacity:.45;margin-bottom:.15em;">STEP 2</div>
     <div style="font-size:1.2em;margin-bottom:.15em;">📦</div>
-    <div style="font-weight:800;font-size:.85em;color:var(--ds-code);">Topo Sort</div>
+    <div style="font-weight:800;font-size:.85em;color:var(--ds-code-light);">Topo Sort</div>
     <div style="font-size:.72em;opacity:.6;margin-top:.15em;line-height:1.3;">edges become execution order</div>
   </a>
   <div style="display:flex;align-items:center;font-size:1.1em;opacity:.35;padding:0 .1em;">→</div>
@@ -459,7 +458,7 @@ The key data structure: each resource entry tracks its **current version** (incr
 
 Here's what changes from v1. The `ResourceDesc` array becomes `ResourceEntry` — each entry carries a version list. `RenderPass` gains dependency tracking fields. And two new methods, `Read()` and `Write()`, wire everything together:
 
-{{< code-diff title="v1 → v2 — Resource versioning & dependency tracking" >}}
+{{< code-diff title="v1 → v2 — New data types & class API" >}}
 @@ frame_graph_v2.h — PassIndex alias, ResourceVersion, ResourceEntry @@
 +using PassIndex = uint32_t;  // readable alias for pass array indices
 +
@@ -495,7 +494,11 @@ Here's what changes from v1. The `ResourceDesc` array becomes `ResourceEntry` �
 @@ frame_graph_v2.h — ResourceDesc[] becomes ResourceEntry[] @@
 -    std::vector<ResourceDesc>  resources;
 +    std::vector<ResourceEntry> entries;  // now with versioning
+{{< /code-diff >}}
 
+The implementation mirrors these declarations. `CreateResource` / `ImportResource` now build `ResourceEntry` objects, and the three access methods — `Read()`, `Write()`, `ReadWrite()` — encode producer-consumer edges automatically:
+
+{{< code-diff title="v1 → v2 — Read/Write/ReadWrite implementation" collapsed="true" >}}
 @@ frame_graph_v2.cpp — CreateResource / ImportResource now use ResourceEntry @@
  ResourceHandle FrameGraph::CreateResource(const ResourceDesc& desc) {
 -    resources.push_back(desc);
@@ -553,7 +556,7 @@ Every `Write()` pushes a new version. Every `Read()` finds the current version's
 
 With edges in place, we need an execution order that respects every dependency. Kahn’s algorithm ([theory refresher](/posts/frame-graph-theory/#sorting-and-culling)) gives us one in O(V+E). `BuildEdges()` deduplicates the raw `dependsOn` entries and builds the adjacency list; `TopoSort()` does the zero-in-degree queue drain:
 
-{{< code-diff title="v2 — Edge building + Kahn's topological sort" >}}
+{{< code-diff title="v2 — Edge deduplication (BuildEdges)" >}}
 @@ frame_graph_v2.h — RenderPass gets successors + inDegree (for Kahn's) @@
  struct RenderPass {
      ...
@@ -574,7 +577,11 @@ With edges in place, we need an execution order that respects every dependency. 
 +        }
 +    }
 +}
+{{< /code-diff >}}
 
+With the adjacency list built, `TopoSort()` implements Kahn's zero-in-degree queue drain — any pass whose dependencies are all satisfied gets dequeued next:
+
+{{< code-diff title="v2 — Kahn's topological sort" >}}
 @@ frame_graph_v2.cpp — TopoSort() @@
 +// Kahn's algorithm: dequeue zero-in-degree passes → valid execution order respecting all dependencies.
 +std::vector<PassIndex> FrameGraph::TopoSort() {
@@ -637,7 +644,7 @@ GPUs need explicit state transitions between resource usages — color attachmen
 
 The idea: walk the sorted pass list, compare each resource's tracked state to what the pass needs, and record a barrier when they differ. This is where we introduce the **compile / execute split** — `Compile()` precomputes every transition into a `CompiledPlan`, and `Execute()` replays them. No state tracking at execution time, no decisions — just playback. v3 will extend both `CompiledPlan` and `ComputeBarriers()` with aliasing context, but the architecture is established here.
 
-{{< code-diff title="v2 — Barriers, CompiledPlan & compile/execute split" >}}
+{{< code-diff title="v2 — ResourceState enum, Barrier struct & header changes" >}}
 @@ frame_graph_v2.h — ResourceState enum + Barrier struct @@
 +enum class ResourceState { Undefined, ColorAttachment, DepthAttachment,
 +                           ShaderRead, UnorderedAccess, Present };
@@ -684,7 +691,11 @@ The idea: walk the sorted pass list, compare each resource's tracked state to wh
 +    entries.push_back({ desc, {{}}, initialState, true });
      return { static_cast<ResourceIndex>(entries.size() - 1) };
  }
+{{< /code-diff >}}
 
+With the type system in place, `ComputeBarriers()` can walk the sorted pass list and compare each resource's tracked state to what each pass needs. When they differ — record a transition:
+
+{{< code-diff title="v2 — ComputeBarriers() — precompute every state transition" collapsed="true" >}}
 @@ frame_graph_v2.cpp — ComputeBarriers() @@
 +// Walk sorted passes, compare tracked state to each resource's needed state, record transitions.
 +std::vector<std::vector<Barrier>> FrameGraph::ComputeBarriers(
@@ -720,7 +731,11 @@ The idea: walk the sorted pass list, compare each resource's tracked state to wh
 +    }
 +    return result;
 +}
+{{< /code-diff >}}
 
+`EmitBarriers()` replays those transitions on the GPU. `Compile()` chains all four stages — edges, sort, cull, barriers — into a self-contained plan, and the two-signature `Execute()` supports both combined and split workflows:
+
+{{< code-diff title="v2 — EmitBarriers(), Compile() & Execute()" >}}
 @@ frame_graph_v2.cpp — EmitBarriers() (replay) @@
 +// Replay precomputed transitions — in production this calls the GPU API.
 +void FrameGraph::EmitBarriers(const std::vector<Barrier>& barriers) {
@@ -774,7 +789,7 @@ UE5's RDG follows the same pattern. When you call `FRDGBuilder::AddPass`, RDG bu
 
 ## 💾 MVP v3 — Lifetimes & Aliasing
 
-<div style="margin:1em 0;padding:.7em 1em;border-radius:8px;border-left:4px solid var(--ds-info);background:rgba(var(--ds-info-rgb),.04);font-size:.92em;line-height:1.6;">
+<div class="ds-callout ds-callout--info">
 🎯 <strong>Goal:</strong> Non-overlapping transient resources share physical memory — automatic VRAM aliasing with savings that depend on pass topology and resolution (Frostbite reported ~50% on BF1's deferred pipeline).
 </div>
 
@@ -810,7 +825,7 @@ The implementation adds two data structures — `Lifetime` (first/last sorted-pa
 
 To alias at the heap level, we also need to know sizes. `AllocSize()` computes an aligned allocation size per resource — the 64 KB alignment mirrors what real GPUs enforce for placed resources. With sizes and the structs above, `ScanLifetimes()` walks the sorted pass list and fills in each resource's `firstUse` / `lastUse`:
 
-{{< code-diff title="v3 — Allocation helpers & lifetime scan" >}}
+{{< code-diff title="v3 — Allocation helpers (AllocSize, alignment)" >}}
 @@ frame_graph_v3.h — Allocation helpers @@
 +// Minimum placement alignment for aliased heap resources (real APIs enforce similar, e.g. 64 KB).
 +static constexpr uint32_t kPlacementAlignment = 65536;  // 64 KB
@@ -834,7 +849,11 @@ To alias at the heap level, we also need to know sizes. `AllocSize()` computes a
 +    uint32_t raw = desc.width * desc.height * BytesPerPixel(desc.format);
 +    return AlignUp(raw, kPlacementAlignment);
 +}
+{{< /code-diff >}}
 
+With sizes computed, `ScanLifetimes()` walks the sorted pass list and records each resource's first and last use. Non-overlapping intervals become aliasing candidates:
+
+{{< code-diff title="v3 — ScanLifetimes()" >}}
 @@ frame_graph_v3.cpp — ScanLifetimes() @@
 +// Record each resource's first/last use in sorted order — non-overlapping intervals can share memory.
 +std::vector<Lifetime> FrameGraph::ScanLifetimes(const std::vector<PassIndex>& sorted) {
@@ -867,7 +886,7 @@ This requires **placed resources** at the API level — GPU memory allocated fro
 
 With lifetimes in hand, the greedy free-list allocator is straightforward. Sort resources by `firstUse`, walk them in order, and for each one either reuse an existing physical block whose previous occupant has finished — or allocate a new one. `CompiledPlan` gains a `mapping` vector (virtual resource → physical block), and `ComputeBarriers()` gains a Phase 1 that emits aliasing barriers whenever a block changes occupant:
 
-{{< code-diff title="v3 — Free-list allocator & header changes" >}}
+{{< code-diff title="v3 — Header changes (BlockIndex, CompiledPlan, new methods)" >}}
 @@ frame_graph_v3.h — BlockIndex typedef @@
 +using BlockIndex = uint32_t;   // index into the physical-block free list
 
@@ -885,7 +904,11 @@ With lifetimes in hand, the greedy free-list allocator is straightforward. Sort 
 -    std::vector<std::vector<Barrier>> ComputeBarriers(const std::vector<PassIndex>& sorted);
 +    std::vector<std::vector<Barrier>> ComputeBarriers(const std::vector<PassIndex>& sorted,
 +                                                       const std::vector<BlockIndex>& mapping);
+{{< /code-diff >}}
 
+The greedy free-list allocator implements the aliasing strategy. Resources are processed in `firstUse` order. For each one, the allocator scans existing physical blocks for a free-and-large-enough match — reusing it if possible, otherwise allocating a new block:
+
+{{< code-diff title="v3 — AliasResources() free-list allocator" collapsed="true" >}}
 @@ frame_graph_v3.cpp — AliasResources() @@
 +// Greedy first-fit: sort by firstUse, reuse any free block that fits, else allocate a new one.
 +std::vector<BlockIndex> FrameGraph::AliasResources(const std::vector<Lifetime>& lifetimes) {
@@ -956,7 +979,7 @@ With lifetimes in hand, the greedy free-list allocator is straightforward. Sort 
 
 Finally, `ComputeBarriers()` is where it all comes together. Before emitting state transitions (Phase 2, same as v2), the new Phase 1 checks whether each resource's physical block has changed occupant since the last pass that used it. If so — aliasing barrier. `EmitBarriers()` also grows a branch to dispatch the two barrier types to the correct API call:
 
-{{< code-diff title="v3 — ComputeBarriers() with aliasing + EmitBarriers()" >}}
+{{< code-diff title="v3 — ComputeBarriers() rewritten with aliasing" collapsed="true" >}}
 @@ frame_graph_v3.cpp — ComputeBarriers() rewritten with aliasing @@
 +// v3 ComputeBarriers: two phases per pass instead of v2's one.
 +//   Phase 1 — aliasing:  did this physical block change occupant? If so, emit an aliasing barrier.
@@ -1007,7 +1030,11 @@ Finally, `ComputeBarriers()` is where it all comes together. Before emitting sta
      }
      return result;
  }
+{{< /code-diff >}}
 
+`EmitBarriers()` grows a branch to dispatch the two barrier types — aliasing transitions go to the heap-level API, state transitions go to the per-resource API:
+
+{{< code-diff title="v3 — EmitBarriers() with aliasing dispatch" >}}
 @@ frame_graph_v3.cpp — EmitBarriers() extended with aliasing handling @@
  void FrameGraph::EmitBarriers(const std::vector<Barrier>& barriers) {
      for (auto& b : barriers) {
@@ -1025,7 +1052,7 @@ Finally, `ComputeBarriers()` is where it all comes together. Before emitting sta
 
 The aliasing barriers matter for correctness, not just bookkeeping. When a physical block changes occupant, the GPU's L2 cache may still hold stale data from the previous resource. D3D12 exposes this as `D3D12_RESOURCE_BARRIER_TYPE_ALIASING`; Vulkan uses a `VkMemoryBarrier` on the heap region covering both the outgoing and incoming resource. Omitting these leads to corruption that's timing-dependent and GPU-vendor-specific — exactly the kind of bug that only shows up in the field.
 
-<div style="margin:1.2em 0;padding:.7em 1em;border-radius:8px;border-left:4px solid var(--ds-info);background:rgba(var(--ds-info-rgb),.04);font-size:.88em;line-height:1.6;">
+<div class="ds-callout ds-callout--info" style="font-size:.88em;">
 📝 <strong>Alignment and real GPU sizing.</strong>&ensp;
 Our <code>AllocSize()</code> rounds up to a 64 KB placement alignment — the same constraint real GPUs enforce when placing resources into shared heaps. Without alignment, two resources that appear to fit in the same block would overlap at the hardware level. The raw <code>BytesPerPixel()</code> calculation is still a simplification: production allocators query the driver for actual row padding, tiling overhead, and per-format alignment. The aliasing algorithm itself is unchanged — you just swap the size input.
 </div>
@@ -1048,7 +1075,7 @@ Here's the full per-frame lifecycle — the same three-phase architecture from [
 
 <div style="margin:1.2em 0;display:grid;grid-template-columns:repeat(3,1fr);gap:.8em;">
   <div style="padding:.8em 1em;border-radius:10px;border-top:3px solid var(--ds-info);background:rgba(var(--ds-info-rgb),.04);">
-    <div style="font-weight:800;font-size:.88em;margin-bottom:.5em;color:var(--ds-info);">① Declare</div>
+    <div style="font-weight:800;font-size:.88em;margin-bottom:.5em;color:var(--ds-info-light);">① Declare</div>
     <div style="font-size:.84em;line-height:1.6;opacity:.85;">
       Each <code>AddPass</code> runs its setup lambda:<br>
       • declare reads &amp; writes<br>
@@ -1060,7 +1087,7 @@ Here's the full per-frame lifecycle — the same three-phase architecture from [
     </div>
   </div>
   <div style="padding:.8em 1em;border-radius:10px;border-top:3px solid var(--ds-code);background:rgba(var(--ds-code-rgb),.04);">
-    <div style="font-weight:800;font-size:.88em;margin-bottom:.5em;color:var(--ds-code);">② Compile</div>
+    <div style="font-weight:800;font-size:.88em;margin-bottom:.5em;color:var(--ds-code-light);">② Compile</div>
     <div style="font-size:.84em;line-height:1.6;opacity:.85;">
       All automatic, all linear-time:<br>
       • <strong>sort</strong> — topo order (Kahn's)<br>

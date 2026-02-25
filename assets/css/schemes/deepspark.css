@@ -83,7 +83,7 @@
   --ds-flow:           #93c5fd;              /* edge glow — soft blue  */
   --ds-flow-warn:      #fbbf24;              /* fence glow — amber     */
   --ds-flow-ok:        #4ade80;              /* overlap glow — green   */
-  --ds-flow-opacity:   0.55;
+  --ds-flow-opacity:   0.35;
   --ds-flow-speed:     2s;
   --ds-track-opacity:  0.12;
   --ds-chevron-opacity:0.35;
