@@ -20,54 +20,6 @@ keywords: ["frame graph", "render graph", "render pass", "DAG", "topological sor
 
 ---
 
-## 🎯 Why You Want One
-
-<div style="margin:1.5em 0;border-radius:14px;overflow:hidden;border:1.5px solid rgba(var(--ds-indigo-rgb),.18);box-shadow:0 2px 16px rgba(0,0,0,.06);">
-  <!-- Header gradient bar -->
-  <div style="height:4px;background:linear-gradient(90deg,var(--ds-danger),var(--ds-warn),var(--ds-success));"></div>
-  <!-- Rows -->
-  <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:0;">
-    <!-- Headers -->
-    <div style="padding:.6em 1em;font-size:.72em;text-transform:uppercase;letter-spacing:.06em;font-weight:700;color:var(--ds-danger);background:rgba(var(--ds-danger-rgb),.04);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.06);">❌ Manual</div>
-    <div style="padding:.6em .5em;background:rgba(var(--ds-indigo-rgb),.02);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.06);"></div>
-    <div style="padding:.6em 1em;font-size:.72em;text-transform:uppercase;letter-spacing:.06em;font-weight:700;color:var(--ds-success);background:rgba(var(--ds-success-rgb),.04);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);">✅ Frame Graph</div>
-    <!-- Row 1 — Execution order -->
-    <div style="padding:.65em 1em;font-size:.88em;opacity:.5;text-decoration:line-through;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.06);text-align:right;">
-      Passes run in whatever order you wrote them.
-    </div>
-    <div style="padding:.65em .3em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.06);display:flex;align-items:center;justify-content:center;">
-      <svg viewBox="0 0 24 16" width="20" height="13" fill="none"><path d="M4 8h12m-4-4l5 4-5 4" stroke="var(--ds-success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity=".5"/></svg>
-    </div>
-    <div style="padding:.65em 1em;font-size:.88em;font-weight:700;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);">
-      Auto-sorted — dependency order, zero ordering bugs.
-    </div>
-    <!-- Row 2 — Barriers -->
-    <div style="padding:.65em 1em;font-size:.88em;opacity:.5;text-decoration:line-through;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.06);text-align:right;">
-      Every resource transition tracked and placed by hand.
-    </div>
-    <div style="padding:.65em .3em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.06);display:flex;align-items:center;justify-content:center;">
-      <svg viewBox="0 0 24 16" width="20" height="13" fill="none"><path d="M4 8h12m-4-4l5 4-5 4" stroke="var(--ds-success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity=".5"/></svg>
-    </div>
-    <div style="padding:.65em 1em;font-size:.88em;font-weight:700;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);">
-      Barriers derived and batched from declared reads &amp; writes.
-    </div>
-    <!-- Row 3 — Memory aliasing -->
-    <div style="padding:.65em 1em;font-size:.88em;opacity:.5;text-decoration:line-through;border-right:1px solid rgba(var(--ds-indigo-rgb),.06);text-align:right;">
-      Every resource gets its own allocation for the full frame.
-    </div>
-    <div style="padding:.65em .3em;border-right:1px solid rgba(var(--ds-indigo-rgb),.06);display:flex;align-items:center;justify-content:center;">
-      <svg viewBox="0 0 24 16" width="20" height="13" fill="none"><path d="M4 8h12m-4-4l5 4-5 4" stroke="var(--ds-success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity=".5"/></svg>
-    </div>
-    <div style="padding:.65em 1em;font-size:.88em;font-weight:700;color:var(--ds-success);">
-      Non-overlapping lifetimes share memory — significant VRAM savings.
-    </div>
-  </div>
-  <!-- Footer -->
-  <div style="padding:.55em 1em;background:rgba(var(--ds-indigo-rgb),.04);border-top:1px solid rgba(var(--ds-indigo-rgb),.08);text-align:center;font-size:.88em;opacity:.65;">
-    You describe <em>what</em> each pass needs — the graph figures out the <em>how</em>.
-  </div>
-</div>
-
 Behind every smooth frame is a brutal scheduling problem — which passes can run in parallel, which buffers can reuse the same memory, and which barriers are actually necessary. Frame graphs solve it: declare what each pass reads and writes, and the graph handles the rest. This series breaks down the theory, builds a real implementation in C++, and shows how the same ideas scale to production engines like UE5's RDG.
 
 <div class="fg-reveal" style="margin:1.5em 0;border-radius:12px;overflow:hidden;border:1.5px solid rgba(var(--ds-indigo-rgb),.25);background:linear-gradient(135deg,rgba(var(--ds-indigo-rgb),.04),transparent);">
@@ -350,42 +302,7 @@ Each read or write you declare in a setup callback forms a connection in the dep
   </div>
 </div>
 
-A write always produces a new version; a read uses the latest available version. Multiple passes can read the same version, but only a write creates a new one and a new dependency.
-
-These connections define the structure the graph will use in the next phase. The details of how the graph is optimized and scheduled are handled during compilation.
-
----
-
-## ⚙ The Compile Step
-
-The declared DAG goes in; an optimized execution plan comes out — all on the CPU, in microseconds.
-
-<div style="margin:1.2em 0;border-radius:12px;overflow:hidden;border:1.5px solid rgba(var(--ds-code-rgb),.25);">
-  <!-- INPUT -->
-  <div style="padding:.7em 1.1em;background:rgba(var(--ds-code-rgb),.08);border-bottom:1px solid rgba(var(--ds-code-rgb),.15);display:flex;align-items:center;gap:.8em;">
-    <span style="font-weight:800;font-size:.85em;color:var(--ds-code-light);text-transform:uppercase;letter-spacing:.04em;">📥 In</span>
-    <span style="font-size:.88em;opacity:.8;">declared passes + virtual resources + read/write edges</span>
-  </div>
-  <!-- PIPELINE -->
-  <div style="padding:.8em 1.3em;background:rgba(var(--ds-code-rgb),.03);">
-    <div style="display:grid;grid-template-columns:auto 1fr;gap:.35em 1em;align-items:center;font-size:.88em;">
-      <span style="font-weight:700;color:var(--ds-code-light);">①</span><span><strong>Sort</strong> passes into dependency order</span>
-      <span style="font-weight:700;color:var(--ds-code);">②</span><span><strong>Cull</strong> passes whose outputs are never read</span>
-      <span style="font-weight:700;color:var(--ds-code);">③</span><span><strong>Scan lifetimes</strong> — record each transient resource's first and last use</span>
-      <span style="font-weight:700;color:var(--ds-code);">④</span><span><strong>Alias</strong> — assign non-overlapping resources to shared memory slots</span>
-      <span style="font-weight:700;color:var(--ds-code-light);">⑤</span><span><strong>Compute barriers</strong> — insert transitions at every resource state change</span>
-    </div>
-  </div>
-  <!-- OUTPUT -->
-  <div style="padding:.7em 1.1em;background:rgba(var(--ds-success-rgb),.06);border-top:1px solid rgba(var(--ds-success-rgb),.15);display:flex;align-items:center;gap:.8em;">
-    <span style="font-weight:800;font-size:.85em;color:var(--ds-success);text-transform:uppercase;letter-spacing:.04em;">📤 Out</span>
-    <span style="font-size:.88em;opacity:.8;">ordered passes · aliased memory · barrier list · physical bindings</span>
-  </div>
-</div>
-
-### 🔗 Resource versioning in practice
-
-We saw that reads and writes create edges. Here's the concrete mechanism: every time a pass writes a resource, the **version number** increments. Readers attach to whatever version existed when they were declared. This is how the graph knows *exactly* which pass depends on which, even when the same resource is written more than once per frame:
+The mechanism behind these edges is **versioning**: every time a pass writes a resource, the version number increments. Readers attach to whatever version existed when they were declared. Multiple passes can read the same version without conflict, but only a write creates a new version — and a new dependency. Here's how that plays out across a real frame:
 
 <div style="margin:1.2em 0;font-size:.85em;">
   <div style="border-radius:10px;overflow:hidden;border:1.5px solid rgba(var(--ds-indigo-rgb),.15);">
@@ -428,7 +345,36 @@ We saw that reads and writes create edges. Here's the concrete mechanism: every 
 
 These versioned edges are the raw material the compiler works with. Every step that follows — sorting, culling, barrier insertion — operates on this edge set.
 
-### 📊 Sorting
+---
+
+## ⚙ The Compile Step
+
+The declared DAG goes in; an optimized execution plan comes out — all on the CPU, in microseconds.
+
+<div style="margin:1.2em 0;border-radius:12px;overflow:hidden;border:1.5px solid rgba(var(--ds-code-rgb),.25);">
+  <!-- INPUT -->
+  <div style="padding:.7em 1.1em;background:rgba(var(--ds-code-rgb),.08);border-bottom:1px solid rgba(var(--ds-code-rgb),.15);display:flex;align-items:center;gap:.8em;">
+    <span style="font-weight:800;font-size:.85em;color:var(--ds-code-light);text-transform:uppercase;letter-spacing:.04em;">📥 In</span>
+    <span style="font-size:.88em;opacity:.8;">declared passes + virtual resources + read/write edges</span>
+  </div>
+  <!-- PIPELINE -->
+  <div style="padding:.8em 1.3em;background:rgba(var(--ds-code-rgb),.03);">
+    <div style="display:grid;grid-template-columns:auto 1fr;gap:.35em 1em;align-items:center;font-size:.88em;">
+      <span style="font-weight:700;color:var(--ds-code-light);">①</span><span><strong>Sort</strong> passes into dependency order</span>
+      <span style="font-weight:700;color:var(--ds-code);">②</span><span><strong>Cull</strong> passes whose outputs are never read</span>
+      <span style="font-weight:700;color:var(--ds-code);">③</span><span><strong>Scan lifetimes</strong> — record each transient resource's first and last use</span>
+      <span style="font-weight:700;color:var(--ds-code);">④</span><span><strong>Alias</strong> — assign non-overlapping resources to shared memory slots</span>
+      <span style="font-weight:700;color:var(--ds-code-light);">⑤</span><span><strong>Compute barriers</strong> — insert transitions at every resource state change</span>
+    </div>
+  </div>
+  <!-- OUTPUT -->
+  <div style="padding:.7em 1.1em;background:rgba(var(--ds-success-rgb),.06);border-top:1px solid rgba(var(--ds-success-rgb),.15);display:flex;align-items:center;gap:.8em;">
+    <span style="font-weight:800;font-size:.85em;color:var(--ds-success);text-transform:uppercase;letter-spacing:.04em;">📤 Out</span>
+    <span style="font-size:.88em;opacity:.8;">ordered passes · aliased memory · barrier list · physical bindings</span>
+  </div>
+</div>
+
+###  Sorting
 
 Before the GPU can execute anything, the compiler needs to turn the DAG into an ordered schedule. The rule is simple: **no pass runs before the passes it depends on**. This is called a **topological sort**.
 
@@ -446,7 +392,7 @@ The algorithm most compilers use is **Kahn's algorithm**. Think of it like a to-
 {{< interactive-toposort >}}
 
 <div class="fg-reveal" style="margin:1em 0;padding:.85em 1.1em;border-radius:10px;border:1.5px solid rgba(var(--ds-code-rgb),.18);background:linear-gradient(135deg,rgba(var(--ds-code-rgb),.04),transparent);font-size:.9em;line-height:1.65;">
-<strong>Sorting bonus — fewer GPU state switches.</strong> Every time the GPU changes which render target it's drawing to, it has to flush caches and rebind resources — that's expensive. In a hand-ordered renderer, these switches happen in whatever order you hard-coded. But Kahn's algorithm often has <strong>several passes ready at the same time</strong>, so the compiler can pick the one that uses the <em>same</em> render target as the previous pass. This simple preference groups related passes together and can cut render-target switches by 30–50% — turning a correctness tool into a performance tool.
+<strong>Sorting bonus — fewer state switches.</strong> Kahn's algorithm often has <strong>several passes ready at the same time</strong>, which gives the compiler freedom to choose among them. A sort-time heuristic can use that freedom to group passes that share GPU state, reducing the number of expensive context rolls. The exact strategy varies by engine and hardware, but the key insight is the same: a topological sort doesn't just guarantee correctness — it creates scheduling slack the compiler can exploit for performance.
 </div>
 
 ### ✂ Culling
@@ -513,13 +459,26 @@ This is deliberate. The entire point of the declare/compile split is to front-lo
   </div>
 </div>
 
-<div class="fg-reveal" style="margin:1.2em 0;padding:1em 1.2em;border-radius:10px;border:1.5px solid rgba(var(--ds-success-rgb),.2);background:rgba(var(--ds-success-rgb),.04);font-size:.92em;line-height:1.6;">
-  Each execute lambda sees a <strong>fully resolved environment</strong> — barriers already computed and stored in the plan, memory already allocated, resources ready to bind. The lambda just records draw calls, dispatches, and copies. All the intelligence lives in the compile step.
+Each execute lambda sees a fully resolved environment — barriers already computed and stored in the plan, memory already allocated, resources ready to bind. The lambda just records draw calls, dispatches, and copies. All the intelligence lives in the compile step.
+
+### 🧵 Parallel command recording
+
+The compiled plan doesn't just decide *what* runs — it reveals *what can run at the same time*. Because each lambda only touches its own declared resources and all barriers are precomputed, the engine knows exactly which passes are independent and can record them on separate CPU threads simultaneously.
+
+<div style="margin:1.2em 0;border-radius:10px;overflow:hidden;border:1.5px solid rgba(var(--ds-code-rgb),.2);">
+  <div style="padding:.55em 1em;background:rgba(var(--ds-code-rgb),.08);border-bottom:1px solid rgba(var(--ds-code-rgb),.12);font-weight:700;font-size:.85em;text-transform:uppercase;letter-spacing:.04em;color:var(--ds-code-light);">Parallel recording — conceptual flow</div>
+  <div style="padding:.8em 1em;font-size:.88em;line-height:1.7;">
+    <div style="display:grid;grid-template-columns:auto 1fr;gap:.35em .9em;align-items:start;">
+      <span style="font-weight:700;color:var(--ds-code-light);">①</span><span>The compiled plan identifies <strong>groups</strong> of passes with no dependencies between them — they appear at the same depth in the sorted order.</span>
+      <span style="font-weight:700;color:var(--ds-code);">②</span><span>Each independent pass is dispatched to a <strong>worker thread</strong>, which records GPU commands into its own secondary command buffer (Vulkan) or command list (D3D12).</span>
+      <span style="font-weight:700;color:var(--ds-code);">③</span><span>Once all threads finish, the engine <strong>merges</strong> the recorded buffers into the primary command buffer in the correct order and submits to the GPU.</span>
+    </div>
+  </div>
 </div>
 
-This isolation is what makes frame graph code so much cleaner than manual rendering. A pass author writes a self-contained lambda — bind these textures, set this pipeline state, draw these meshes — without knowing where the pass sits in the graph, what other passes exist, or how memory was aliased behind the scenes. If the graph topology changes next sprint (someone adds a new post-process pass, someone else removes bloom), no existing lambda needs to be touched. The system re-compiles a new plan, and each lambda still sees exactly the environment it expects.
+The scalability gain comes from the DAG itself: passes at the same depth in the topological order have no edges between them, so recording them in parallel requires no additional synchronization. The more independent passes a frame has, the more CPU cores stay busy — and modern frames have plenty of independence (shadow cascades, GBuffer, SSAO, and bloom often share a depth level).
 
-The isolation also enables **parallel command recording**. Because each lambda only touches its own declared resources and the barriers are already sequenced in the compiled plan, engines can record multiple passes on separate threads and merge the resulting command buffers at submission time. Vulkan's secondary command buffers and D3D12's command lists are designed for exactly this — the frame graph provides the dependency information to know which passes are safe to record concurrently.
+### 🧹 Cleanup and reset
 
 After every pass has been recorded, cleanup is trivial. The frame graph was designed around single-frame lifetimes, so there's nothing to track individually — the system just resets the transient memory pool in one shot (every GBuffer, scratch texture, and temporary buffer vanishes together). Imported resources like the swapchain, TAA history, or shadow atlas aren't touched — they belong to external systems and persist across frames. The graph object itself clears its pass list and resource table, leaving it empty and ready for the next frame's declare phase to start fresh. This reset-and-rebuild cycle is what lets engines add or remove passes freely without any teardown logic.
 
@@ -612,18 +571,30 @@ How often should the graph recompile? Three approaches, each a valid tradeoff:
     <strong>Pass culling</strong><br>Automatic — unused outputs = dead pass
   </div>
 
-  <div style="padding:.55em .8em;font-size:.88em;border-right:1.5px solid rgba(var(--ds-indigo-rgb),.15);background:rgba(var(--ds-danger-rgb),.02);">
-    <strong>Async compute</strong><br><span style="opacity:.65">Manual queue sync</span>
+  <div style="padding:.55em .8em;font-size:.88em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.1);border-right:1.5px solid rgba(var(--ds-indigo-rgb),.15);background:rgba(var(--ds-danger-rgb),.02);">
+    <strong>Context rolls</strong><br><span style="opacity:.65">Hard-coded pass order — unnecessary state switches</span>
   </div>
-  <div style="padding:.55em .8em;font-size:.88em;background:rgba(var(--ds-success-rgb),.02);">
-    <strong>Async compute</strong><br>Compiler schedules across queues
+  <div style="padding:.55em .8em;font-size:.88em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.1);background:rgba(var(--ds-success-rgb),.02);">
+    <strong>Context rolls</strong><br>Sort heuristic groups compatible passes — <strong style="color:var(--ds-success);">fewer switches</strong> <span style="font-size:.85em;opacity:.7">(gain varies by topology)</span>
   </div>
 
-  <div style="padding:.55em .8em;font-size:.88em;border-top:1px solid rgba(var(--ds-indigo-rgb),.1);border-right:1.5px solid rgba(var(--ds-indigo-rgb),.15);background:rgba(var(--ds-danger-rgb),.02);">
-    <strong>Context rolls</strong><br><span style="opacity:.65">Hard-coded pass order — frequent render-target switches</span>
+  <!-- Advanced features divider -->
+  <div style="grid-column:1/-1;padding:.4em 1em;background:rgba(var(--ds-indigo-rgb),.06);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.1);text-align:center;">
+    <span style="font-size:.75em;text-transform:uppercase;letter-spacing:.06em;font-weight:700;opacity:.5;">Advanced — covered in <a href="../frame-graph-advanced/" style="color:var(--ds-info);text-decoration:none;border-bottom:1px dashed rgba(var(--ds-info-rgb),.4);">Part III</a></span>
   </div>
-  <div style="padding:.55em .8em;font-size:.88em;border-top:1px solid rgba(var(--ds-indigo-rgb),.1);background:rgba(var(--ds-success-rgb),.02);">
-    <strong>Context rolls</strong><br>Compiler groups passes by attachment — <strong style="color:var(--ds-success);">30–50% fewer RT switches</strong>
+
+  <div style="padding:.55em .8em;font-size:.88em;border-right:1.5px solid rgba(var(--ds-indigo-rgb),.15);background:rgba(var(--ds-danger-rgb),.02);opacity:.55;">
+    <strong>Async compute</strong><br><span style="opacity:.65">Manual queue sync</span>
+  </div>
+  <div style="padding:.55em .8em;font-size:.88em;background:rgba(var(--ds-success-rgb),.02);opacity:.55;">
+    <strong>Async compute</strong><br>Compiler schedules independent passes across queues
+  </div>
+
+  <div style="padding:.55em .8em;font-size:.88em;border-right:1.5px solid rgba(var(--ds-indigo-rgb),.15);background:rgba(var(--ds-danger-rgb),.02);opacity:.55;">
+    <strong>Split barriers</strong><br><span style="opacity:.65">Manual begin/end placement</span>
+  </div>
+  <div style="padding:.55em .8em;font-size:.88em;background:rgba(var(--ds-success-rgb),.02);opacity:.55;">
+    <strong>Split barriers</strong><br>Compiler overlaps flushes with unrelated work
   </div>
 </div>
 
