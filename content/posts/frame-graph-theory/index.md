@@ -199,29 +199,36 @@ A frame graph models an entire frame as a **directed acyclic graph (DAG)**. Each
 
 The GPU never sees this graph. It exists only on the CPU, long enough for the system to inspect **every** pass and **every** resource before a single GPU command is recorded. That global view is what makes automatic scheduling, memory aliasing, and barrier insertion possible — exactly the things that break when done by hand at scale.
 
-Every frame follows a three-phase lifecycle:
+The key insight is **deferred execution**. Instead of recording GPU commands as you encounter each pass, you first build a complete description of the frame — every pass, every resource, every dependency — and only then hand it to a compiler that can see the whole picture at once. It's the difference between giving a builder one instruction at a time ("lay a brick… now another brick…") and handing them the full blueprint so they can plan the entire build before picking up a tool. The frame graph's compile step is that planning phase.
 
-<!-- 3-step lifecycle — distinct style from the DAG above -->
-<div style="margin:.8em auto 1.2em;max-width:560px;">
-  <div class="fg-lifecycle" style="display:flex;align-items:stretch;gap:0;border-radius:10px;overflow:hidden;border:1.5px solid rgba(var(--ds-indigo-rgb),.2);">
-    <a href="#-the-declare-step" aria-label="Jump to Declare section" style="flex:1;padding:.7em .6em;text-align:center;background:rgba(var(--ds-info-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.12);text-decoration:none;color:inherit;transition:background .2s ease;cursor:pointer;" onmouseover="this.style.background='rgba(var(--ds-info-rgb),.14)'" onmouseout="this.style.background='rgba(var(--ds-info-rgb),.06)'">
-      <div style="font-weight:800;font-size:.88em;letter-spacing:.04em;color:var(--ds-info-light);">①&ensp;DECLARE</div>
-      <div style="font-size:.75em;opacity:.6;margin-top:.2em;">passes &amp; dependencies</div>
-    </a>
-    <span style="display:flex;align-items:center;flex-shrink:0;"><svg viewBox="0 0 28 20" width="20" height="14" fill="none"><line x1="2" y1="10" x2="17" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity=".15"/><polyline points="15,4 24,10 15,16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity=".35"/></svg></span>
-    <a href="#-the-compile-step" aria-label="Jump to Compile section" style="flex:1;padding:.7em .6em;text-align:center;background:rgba(var(--ds-code-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.12);text-decoration:none;color:inherit;transition:background .2s ease;cursor:pointer;" onmouseover="this.style.background='rgba(var(--ds-code-rgb),.14)'" onmouseout="this.style.background='rgba(var(--ds-code-rgb),.06)'">
-      <div style="font-weight:800;font-size:.88em;letter-spacing:.04em;color:var(--ds-code-light);">&ensp;COMPILE</div>
-      <div style="font-size:.75em;opacity:.6;margin-top:.2em;">order · aliases · barriers</div>
-    </a>
-    <span style="display:flex;align-items:center;flex-shrink:0;"><svg viewBox="0 0 28 20" width="20" height="14" fill="none"><line x1="2" y1="10" x2="17" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity=".15"/><polyline points="15,4 24,10 15,16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity=".35"/></svg></span>
-    <a href="#-the-execute-step" aria-label="Jump to Execute section" style="flex:1;padding:.7em .6em;text-align:center;background:rgba(var(--ds-success-rgb),.06);text-decoration:none;color:inherit;transition:background .2s ease;cursor:pointer;" onmouseover="this.style.background='rgba(var(--ds-success-rgb),.14)'" onmouseout="this.style.background='rgba(var(--ds-success-rgb),.06)'">
-      <div style="font-weight:800;font-size:.88em;letter-spacing:.04em;color:var(--ds-success);">③&ensp;EXECUTE</div>
-      <div style="font-size:.75em;opacity:.6;margin-top:.2em;">record GPU commands</div>
-    </a>
-  </div>
+This separation has a second benefit: the graph is a **first-class data structure** you can inspect, serialize, diff, and visualize. You can dump it to a log and replay it offline. You can compare this frame's graph to last frame's to see what changed. You can feed it to a profiler that correlates GPU timings with the exact pass and resource layout that produced them. None of this is possible when commands are recorded inline — the information is scattered across dozens of call sites and evaporates the moment the frame ends.
+
+Every frame follows a three-phase lifecycle. Each phase has a single job — and the rest of this article walks through them one by one:
+
+<!-- 3-step lifecycle — vertical cards with descriptions, clickable -->
+<div style="margin:1.5em 0 2em;display:grid;grid-template-columns:1fr;gap:.6em;max-width:620px;">
+  <a href="#-the-declare-step" style="display:grid;grid-template-columns:3.2em 1fr;gap:.8em;align-items:center;padding:1em 1.2em;border-radius:10px;background:rgba(var(--ds-info-rgb),.05);border-left:4px solid var(--ds-info-light);text-decoration:none;color:inherit;transition:background .2s;">
+    <span style="font-size:1.6em;font-weight:800;color:var(--ds-info-light);text-align:center;">①</span>
+    <div>
+      <div style="font-weight:700;font-size:1.05em;color:var(--ds-info-light);letter-spacing:.03em;">DECLARE</div>
+      <div style="font-size:.88em;opacity:.7;margin-top:.15em;">Build the graph — passes, resources, edges. No GPU work yet.</div>
+    </div>
+  </a>
+  <a href="#-the-compile-step" style="display:grid;grid-template-columns:3.2em 1fr;gap:.8em;align-items:center;padding:1em 1.2em;border-radius:10px;background:rgba(var(--ds-code-rgb),.05);border-left:4px solid var(--ds-code-light);text-decoration:none;color:inherit;transition:background .2s;">
+    <span style="font-size:1.6em;font-weight:800;color:var(--ds-code-light);text-align:center;">②</span>
+    <div>
+      <div style="font-weight:700;font-size:1.05em;color:var(--ds-code-light);letter-spacing:.03em;">COMPILE</div>
+      <div style="font-size:.88em;opacity:.7;margin-top:.15em;">Analyze the graph — sort, cull, alias memory, compute barriers.</div>
+    </div>
+  </a>
+  <a href="#-the-execute-step" style="display:grid;grid-template-columns:3.2em 1fr;gap:.8em;align-items:center;padding:1em 1.2em;border-radius:10px;background:rgba(var(--ds-success-rgb),.05);border-left:4px solid var(--ds-success);text-decoration:none;color:inherit;transition:background .2s;">
+    <span style="font-size:1.6em;font-weight:800;color:var(--ds-success);text-align:center;">③</span>
+    <div>
+      <div style="font-weight:700;font-size:1.05em;color:var(--ds-success);letter-spacing:.03em;">EXECUTE</div>
+      <div style="font-size:.88em;opacity:.7;margin-top:.15em;">Walk the plan and record GPU commands. No decisions left.</div>
+    </div>
+  </a>
 </div>
-
-The three phases are distinct for a reason: declaration is lightweight and descriptive, compilation is where the graph is analyzed and optimized, and execution simply follows the plan. Let's break down what happens in each.
 
 ---
 
@@ -378,22 +385,18 @@ The declared DAG goes in; an optimized execution plan comes out — all on the C
 
 Before the GPU can execute anything, the compiler needs to turn the DAG into an ordered schedule. The rule is simple: **no pass runs before the passes it depends on**. This is called a **topological sort**.
 
+The input is the raw edge set from the declare step — every read/write dependency between passes. The output is a flat list of passes in an order that respects all of them. If pass A writes a resource that pass B reads, A will always appear before B. If two passes share no dependencies, either order is valid, and the compiler is free to pick whichever is cheaper. Crucially, this isn't a fixed ordering you design upfront — it's derived automatically from the declared edges, so adding or removing a pass never requires manual re-sequencing.
+
 The algorithm most compilers use is **Kahn's algorithm**. Think of it like a to-do list where you can only start a task once all its prerequisites are done:
 
-<div style="margin:1em 0;padding:.9em 1.1em;border-radius:10px;border:1.5px solid rgba(var(--ds-code-rgb),.18);background:linear-gradient(135deg,rgba(var(--ds-code-rgb),.04),transparent);font-size:.9em;line-height:1.7;">
-  <div style="display:grid;grid-template-columns:auto 1fr;gap:.4em .9em;align-items:start;">
-    <span style="font-weight:700;color:var(--ds-code-light);">①</span><span><strong>Find passes with no prerequisites.</strong> Look at every pass and count how many other passes feed into it. Any pass with a count of zero is ready to go — nothing is blocking it.</span>
-    <span style="font-weight:700;color:var(--ds-code);">②</span><span><strong>Run one of those ready passes</strong> and add it to the output list. It's "done" now.</span>
-    <span style="font-weight:700;color:var(--ds-code);">③</span><span><strong>Update the counts.</strong> For every pass that was waiting on the one we just ran, subtract one from its count. If that drops a pass to zero, it's now unblocked — add it to the ready queue.</span>
-    <span style="font-weight:700;color:var(--ds-code);">④</span><span><strong>Repeat</strong> until nothing is left. If some passes never reached zero, there's a circular dependency — the graph is broken.</span>
-  </div>
-</div>
+1. **Count in-edges.** For every pass, count how many predecessors feed into it. Any pass with a count of zero is ready — nothing blocks it.
+2. **Pop a ready pass.** Pick any zero-count pass and append it to the sorted output.
+3. **Decrement successors.** Subtract one from every pass that depended on it. New zeros join the ready queue.
+4. **Loop until empty.** Repeat until the queue drains. Passes left with non-zero counts mean a cycle — the graph is broken.
 
 {{< interactive-toposort >}}
 
-<div class="fg-reveal" style="margin:1em 0;padding:.85em 1.1em;border-radius:10px;border:1.5px solid rgba(var(--ds-code-rgb),.18);background:linear-gradient(135deg,rgba(var(--ds-code-rgb),.04),transparent);font-size:.9em;line-height:1.65;">
-<strong>Sorting bonus — fewer state switches.</strong> Kahn's algorithm often has <strong>several passes ready at the same time</strong>, which gives the compiler freedom to choose among them. A sort-time heuristic can use that freedom to group passes that share GPU state, reducing the number of expensive context rolls. The exact strategy varies by engine and hardware, but the key insight is the same: a topological sort doesn't just guarantee correctness — it creates scheduling slack the compiler can exploit for performance.
-</div>
+> **Sorting bonus — fewer state switches.** Kahn's algorithm often has several passes ready at the same time, which gives the compiler freedom to choose among them. A sort-time heuristic can use that freedom to group passes that share GPU state, reducing expensive context rolls. A topological sort doesn't just guarantee correctness — it creates scheduling slack the compiler can exploit for performance.
 
 ### ✂ Culling
 

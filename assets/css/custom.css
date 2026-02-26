@@ -920,9 +920,9 @@ section.prose > div.max-w-prose {
 /* ── Interactive widget chrome ── */
 /* Outer container — subtle card with hover awareness */
 .interactive-widget{position:relative;margin:1.5em 0;border-radius:.75rem;overflow:hidden;background:var(--color-neutral-50,#fafafa);border:1px solid transparent;transition:border-color .3s,box-shadow .3s}
-.interactive-widget:hover{border-color:color-mix(in srgb,var(--ds-info) 25%,transparent);box-shadow:0 2px 12px color-mix(in srgb,var(--ds-info) 6%,transparent)}
+.interactive-widget:hover{border-color:transparent;box-shadow:none}
 :is(.dark,.scheme-congo) .interactive-widget{background:var(--color-neutral-800,#262626)}
-:is(.dark,.scheme-congo) .interactive-widget:hover{border-color:color-mix(in srgb,var(--ds-info) 20%,transparent);box-shadow:0 2px 16px rgba(0,0,0,.25)}
+:is(.dark,.scheme-congo) .interactive-widget:hover{border-color:transparent;box-shadow:none}
 
 /* Tiny corner hint — signals interactivity without shouting */
 .interactive-widget::after{content:"interactive";position:absolute;top:.45em;right:.55em;font-size:.56em;font-weight:500;letter-spacing:.04em;text-transform:uppercase;color:var(--color-neutral-400,#9ca3af);opacity:.55;pointer-events:none;transition:opacity .3s}
