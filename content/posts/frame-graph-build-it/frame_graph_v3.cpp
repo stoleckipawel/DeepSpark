@@ -29,6 +29,9 @@ void FrameGraph::Read(PassIndex passIdx, ResourceHandle h) {
 }
 
 void FrameGraph::Write(PassIndex passIdx, ResourceHandle h) {
+    auto& ver = entries[h.index].versions.back();          // current version (pre-bump)
+    for (PassIndex reader : ver.readerPasses)
+        passes[passIdx].dependsOn.push_back(reader);       // WAR edge: reader must finish first
     entries[h.index].versions.push_back({});
     entries[h.index].versions.back().writerPass = passIdx;
     passes[passIdx].writes.push_back(h);
@@ -37,8 +40,10 @@ void FrameGraph::Write(PassIndex passIdx, ResourceHandle h) {
 void FrameGraph::ReadWrite(PassIndex passIdx, ResourceHandle h) {
     auto& ver = entries[h.index].versions.back();
     if (ver.HasWriter()) {
-        passes[passIdx].dependsOn.push_back(ver.writerPass);
+        passes[passIdx].dependsOn.push_back(ver.writerPass);  // RAW edge
     }
+    for (PassIndex reader : ver.readerPasses)
+        passes[passIdx].dependsOn.push_back(reader);          // WAR edge
     entries[h.index].versions.push_back({});
     entries[h.index].versions.back().writerPass = passIdx;
     passes[passIdx].reads.push_back(h);
@@ -192,31 +197,41 @@ std::vector<std::vector<Barrier>> FrameGraph::ComputeBarriers(
         PassIndex passIdx = sorted[orderIdx];
         if (!passes[passIdx].alive) continue;
 
+        // --- Collect unique handles (ReadWrite puts h in both reads & writes) ---
+        std::vector<std::pair<ResourceHandle,bool>> unique;  // {handle, isWrite}
+        std::unordered_set<ResourceIndex> seen;
+        for (auto& h : passes[passIdx].reads)
+            if (seen.insert(h.index).second) unique.push_back({h, false});
+        for (auto& h : passes[passIdx].writes) {
+            if (seen.insert(h.index).second) {
+                unique.push_back({h, true});
+            } else {
+                // already in reads — upgrade to write (UAV)
+                for (auto& [uh, w] : unique) if (uh.index == h.index) { w = true; break; }
+            }
+        }
+
         // --- Phase 1: aliasing barriers (block changes occupant) ---
-        auto emitAliasingIfNeeded = [&](ResourceHandle h) {
+        for (auto& [h, _] : unique) {
             BlockIndex block = mapping[h.index];
-            if (block == UINT32_MAX) return;
+            if (block == UINT32_MAX) continue;
             if (blockOwner[block] != UINT32_MAX && blockOwner[block] != h.index) {
                 result[orderIdx].push_back(
                     { h.index, ResourceState::Undefined, ResourceState::Undefined,
                       true, blockOwner[block] });
             }
             blockOwner[block] = h.index;
-        };
-        for (auto& h : passes[passIdx].reads)  emitAliasingIfNeeded(h);
-        for (auto& h : passes[passIdx].writes) emitAliasingIfNeeded(h);
+        }
 
         // --- Phase 2: state-transition barriers ---
-        auto recordTransition = [&](ResourceHandle h, bool isWrite) {
+        for (auto& [h, isWrite] : unique) {
             ResourceState needed = StateForUsage(passIdx, h, isWrite);
             if (entries[h.index].currentState != needed) {
                 result[orderIdx].push_back(
                     { h.index, entries[h.index].currentState, needed });
                 entries[h.index].currentState = needed;
             }
-        };
-        for (auto& h : passes[passIdx].reads)  recordTransition(h, false);
-        for (auto& h : passes[passIdx].writes) recordTransition(h, true);
+        }
     }
 
     uint32_t total = 0;

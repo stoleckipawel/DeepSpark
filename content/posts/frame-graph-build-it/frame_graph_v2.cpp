@@ -28,6 +28,9 @@ void FrameGraph::Read(PassIndex passIdx, ResourceHandle h) {
 }
 
 void FrameGraph::Write(PassIndex passIdx, ResourceHandle h) {
+    auto& ver = entries[h.index].versions.back();          // current version (pre-bump)
+    for (PassIndex reader : ver.readerPasses)
+        passes[passIdx].dependsOn.push_back(reader);       // WAR edge: reader must finish first
     entries[h.index].versions.push_back({});
     entries[h.index].versions.back().writerPass = passIdx;
     passes[passIdx].writes.push_back(h);
@@ -36,8 +39,10 @@ void FrameGraph::Write(PassIndex passIdx, ResourceHandle h) {
 void FrameGraph::ReadWrite(PassIndex passIdx, ResourceHandle h) {
     auto& ver = entries[h.index].versions.back();
     if (ver.HasWriter()) {
-        passes[passIdx].dependsOn.push_back(ver.writerPass);
+        passes[passIdx].dependsOn.push_back(ver.writerPass);  // RAW edge
     }
+    for (PassIndex reader : ver.readerPasses)
+        passes[passIdx].dependsOn.push_back(reader);          // WAR edge
     entries[h.index].versions.push_back({});
     entries[h.index].versions.back().writerPass = passIdx;
     passes[passIdx].reads.push_back(h);

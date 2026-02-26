@@ -1,13 +1,14 @@
 {{/* code-diff shortcode: shows a diff view with red/green highlighting */}}
 {{ $title := .Get "title" | default "Diff" }}
 {{ $collapsed := eq (.Get "collapsed") "true" }}
+{{ $collapsible := eq (.Get "collapsible") "true" }}
 {{ $lineCount := len (split .Inner "\n") }}
 
-{{ if $collapsed }}
-<details class="code-diff-collapsible">
+{{ if or $collapsed $collapsible }}
+<details class="code-diff-collapsible"{{ if $collapsible }} open{{ end }}>
   <summary class="code-diff-summary">
     <span class="code-diff-summary__title">{{ $title }}</span>
-    <span class="code-diff-summary__meta">{{ $lineCount }} lines — click to expand</span>
+    <span class="code-diff-summary__meta">{{ $lineCount }} lines — click to {{ if $collapsible }}collapse{{ else }}expand{{ end }}</span>
   </summary>
 {{ end }}
 <div class="code-diff">
@@ -26,6 +27,6 @@
     {{ end }}
   {{ end }}
 </div>
-{{ if $collapsed }}
+{{ if or $collapsed $collapsible }}
 </details>
 {{ end }}
