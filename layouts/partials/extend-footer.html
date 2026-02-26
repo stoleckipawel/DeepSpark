@@ -14,6 +14,80 @@
 </script>
 
 <script>
+(function(){
+  /* ── Lightweight C++ syntax highlighter for code-diff blocks ── */
+  var els = document.querySelectorAll('.code-diff .cd-code');
+  if (!els.length) return;
+
+  var KW_SET = 'if|else|for|while|do|switch|case|default|break|continue|return|class|struct|enum|namespace|using|template|typename|typedef|public|private|protected|virtual|override|const|constexpr|static|inline|explicit|noexcept|nullptr|true|false|new|delete|this|throw|try|catch|operator|sizeof|alignof|static_cast|dynamic_cast|reinterpret_cast|const_cast|assert';
+  var KW = new RegExp('\\b(' + KW_SET + ')\\b', 'g');
+  var KW_CHECK = new Set(KW_SET.split('|'));
+
+  var TY = /\b(void|int|uint32_t|uint64_t|int32_t|int64_t|size_t|bool|float|double|char|auto|string|std|vector|queue|unordered_set|unordered_map|function|pair|ResourceHandle|ResourceIndex|ResourceDesc|ResourceEntry|ResourceVersion|ResourceState|RenderPass|FrameGraph|Barrier|CompiledPlan|PassIndex|BlockIndex|PhysicalBlock|Lifetime|Format|RGBA8|RGBA16F|R8|D32F|Undefined|ColorAttachment|DepthAttachment|ShaderRead|UnorderedAccess|Present|UINT32_MAX)\b/g;
+  var NUM = /\b(0[xX][0-9a-fA-F]+|\d+\.\d*[fF]?|\d*\.\d+[fF]?|\d+[uUlLfF]?)\b/g;
+  var STR = /("[^"\\]*(?:\\.[^"\\]*)*"|'[^'\\]*(?:\\.[^'\\]*)*')/g;
+  var CMT = /(\/\/.*$|\/\*[\s\S]*?\*\/)/gm;
+  var PREP = /^(\s*#\s*(?:include|define|ifdef|ifndef|endif|pragma|if|elif|else|undef|error)\b.*)/gm;
+  var INC = /(<[^>]+>)/g;
+  var FN = /\b([a-zA-Z_]\w*)\s*(?=\()/g;
+  var MEMBER = /(?:[.])([a-zA-Z_]\w*)/g;
+  var ARROW_MEMBER = /(?:->)([a-zA-Z_]\w*)/g;
+
+  function hl(code) {
+    var t = code, slots = [], id = 0;
+
+    /* Each placeholder is a single Unicode Private-Use-Area char (U+E000+).
+       No \b, \w, \d, [a-zA-Z_] regex can ever match these, so later
+       passes cannot corrupt earlier results. */
+    function put(cls, text) {
+      var k = String.fromCharCode(0xE000 + id++);
+      slots.push({k:k, v:'<span class="'+cls+'">'+text+'</span>'});
+      return k;
+    }
+
+    /* 1. Comments — protect first */
+    t = t.replace(CMT, function(m){ return put('cd-cmt', m); });
+    /* 2. Strings */
+    t = t.replace(STR, function(m){ return put('cd-str', m); });
+    /* 3. Preprocessor (highlight <path> inside before protecting) */
+    t = t.replace(PREP, function(m){
+      var inner = m.replace(INC, function(inc){ return put('cd-str', inc); });
+      return put('cd-prep', inner);
+    });
+    /* 4. Function calls */
+    t = t.replace(FN, function(_, name){
+      if (KW_CHECK.has(name)) return name;
+      return put('cd-fn', name);
+    });
+    /* 5. Keywords */
+    t = t.replace(KW, function(_, w){ return put('cd-kw', w); });
+    /* 6. Types */
+    t = t.replace(TY, function(_, w){ return put('cd-type', w); });
+    /* 7. Numbers */
+    t = t.replace(NUM, function(_, w){ return put('cd-num', w); });
+    /* 8. Member access: .name */
+    t = t.replace(MEMBER, function(full, name){
+      return '.' + put('cd-member', name);
+    });
+    /* 9. Arrow member: ->name */
+    t = t.replace(ARROW_MEMBER, function(full, name){
+      return '->' + put('cd-member', name);
+    });
+
+    /* Restore placeholders — inner-most (last created) first */
+    for (var i = slots.length - 1; i >= 0; i--) {
+      t = t.split(slots[i].k).join(slots[i].v);
+    }
+    return t;
+  }
+
+  els.forEach(function(el){
+    el.innerHTML = hl(el.textContent);
+  });
+})();
+</script>
+
+<script>
 /* ═══ Site-wide Navigation ═══════════════════════════════════════════
    Progress bar + breadcrumbs + TOC rail for every page.
    Skips automatically when article-nav shortcode is present.

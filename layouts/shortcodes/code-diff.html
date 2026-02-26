@@ -1,4 +1,4 @@
-{{/* code-diff shortcode: shows a diff view with red/green highlighting */}}
+{{/* code-diff shortcode: diff view with gutter, syntax highlighting, red/green backgrounds */}}
 {{ $title := .Get "title" | default "Diff" }}
 {{ $collapsed := eq (.Get "collapsed") "true" }}
 {{ $collapsible := eq (.Get "collapsible") "true" }}
@@ -17,13 +17,15 @@
   {{ $lines := split $raw "\n" }}
   {{ range $lines }}
     {{ if hasPrefix . "+" }}
-      <div class="cd-line cd-add">{{ . }}</div>
+      {{ $code := slicestr . 1 }}
+      <div class="cd-line cd-add"><span class="cd-gutter">+</span><span class="cd-code">{{ $code }}</span></div>
     {{ else if hasPrefix . "-" }}
-      <div class="cd-line cd-remove">{{ . }}</div>
+      {{ $code := slicestr . 1 }}
+      <div class="cd-line cd-remove"><span class="cd-gutter">&minus;</span><span class="cd-code">{{ $code }}</span></div>
     {{ else if hasPrefix . "@" }}
-      <div class="cd-line" style="color:var(--ds-code-light);font-weight:600">{{ . }}</div>
+      <div class="cd-line" style="color:var(--ds-code-light);font-weight:600"><span class="cd-gutter"></span><span class="cd-code">{{ . }}</span></div>
     {{ else }}
-      <div class="cd-line cd-context">{{ . }}</div>
+      <div class="cd-line cd-context"><span class="cd-gutter"></span><span class="cd-code">{{ . }}</span></div>
     {{ end }}
   {{ end }}
 </div>

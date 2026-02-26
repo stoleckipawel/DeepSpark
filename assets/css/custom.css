@@ -706,21 +706,55 @@ section.prose > div.max-w-prose {
   font-size: 0.95em;
 }
 .code-diff .cd-line {
-  padding: 0.05em 1em 0.05em 0.6em;
+  display: flex;
   white-space: pre;
   border-left: 3px solid transparent;
+  padding: 0.05em 1em 0.05em 0;
+}
+.code-diff .cd-gutter {
+  flex-shrink: 0;
+  width: 2em;
+  text-align: center;
+  user-select: none;
+  opacity: .5;
+  color: inherit;
+}
+.code-diff .cd-code {
+  flex: 1;
+  min-width: 0;
+  padding-left: .4em;
 }
 .code-diff .cd-add {
-  background: rgba(var(--ds-success-rgb),.12);
+  background: rgba(var(--ds-success-rgb),.22);
   border-left-color: var(--ds-success);
 }
+.code-diff .cd-add .cd-gutter {
+  color: var(--ds-success);
+  opacity: .8;
+}
 .code-diff .cd-remove {
-  background: rgba(var(--ds-danger-rgb),.12);
+  background: rgba(var(--ds-danger-rgb),.18);
   border-left-color: var(--ds-danger);
 }
-.code-diff .cd-context {
-  opacity: 0.5;
+.code-diff .cd-remove .cd-gutter {
+  color: var(--ds-danger);
+  opacity: .8;
 }
+.code-diff .cd-context {
+  opacity: 0.35;
+}
+
+/* ── Diff syntax highlighting (Visual Studio Dark C++ palette) ── */
+.code-diff .cd-code { color: #D4D4D4; }           /* base text: light gray (VS default foreground) */
+.code-diff .cd-kw   { color: #569CD6; }           /* keywords: if, for, return, class, struct, enum */
+.code-diff .cd-type { color: #4EC9B0; }           /* types/classes: void, int, uint32_t, bool, auto */
+.code-diff .cd-str  { color: #CE9178; }           /* string literals */
+.code-diff .cd-num  { color: #B5CEA8; }           /* numeric literals */
+.code-diff .cd-cmt  { color: #6A9955; font-style: italic; }  /* comments */
+.code-diff .cd-fn   { color: #DCDCAA; }           /* function/method calls */
+.code-diff .cd-member { color: #DCDCAA; }         /* member access: .name / ->name */
+.code-diff .cd-prep { color: #C586C0; }           /* preprocessor: #include, #define */
+.code-diff .cd-op   { color: #D4D4D4; }           /* operators, punctuation, brackets */
 
 /* Collapsible code-diff wrapper */
 .code-diff-collapsible {
