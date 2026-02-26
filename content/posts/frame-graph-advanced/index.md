@@ -34,7 +34,7 @@ The algorithm is called **reachability analysis** — for each pass, the compile
 
 ### 🔗 Minimizing fences
 
-Cross-queue work needs **GPU fences** — one queue signals, the other waits. Each fence adds dead GPU time — the exact cost varies by architecture (older GCN-era GPUs could hit 10–15 µs; Ada Lovelace and RDNA 3 are often lower). Move SSAO, volumetrics, and particle sim to compute and you can create several fences, and if each costs even a few microseconds, the accumulated idle time can erase the overlap gain. The compiler applies **transitive reduction** to collapse those down:
+Cross-queue work needs **GPU fences** — one queue signals, the other waits. Each fence adds dead GPU time: NVIDIA notes that async workloads under ~0.2 ms are unlikely to show any benefit because fence resolution overhead alone eats the gain (["Advanced API Performance: Async Compute"](https://developer.nvidia.com/blog/advanced-api-performance-async-compute/)), and AMD's RDNA Performance Guide advises minimizing queue synchronization because "each fence has a CPU and GPU cost" ([GPUOpen](https://gpuopen.com/learn/rdna-performance-guide/)). Move SSAO, volumetrics, and particle sim to compute and you can create several fences — the accumulated idle time can erase the overlap gain. The compiler applies **transitive reduction** to collapse those down:
 
 <div class="fg-grid-stagger ds-grid-2col">
   <div class="fg-hoverable" style="border-radius:10px;border:1.5px solid rgba(var(--ds-danger-rgb),.25);overflow:hidden;">

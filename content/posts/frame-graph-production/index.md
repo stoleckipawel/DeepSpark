@@ -18,7 +18,11 @@ keywords: ["UE5 RDG", "Render Dependency Graph", "Frostbite frame graph", "paral
 📖 <strong>Part IV of IV.</strong>&ensp; <a href="../frame-graph-theory/">Theory</a> → <a href="../frame-graph-build-it/">Build It</a> → <a href="../frame-graph-advanced/">Beyond MVP</a> → <em>Production Engines</em>
 </div>
 
-[Part III](/posts/frame-graph-advanced/) showed how the compiler can go further — async compute and split barriers. Production engines face additional challenges we didn't cover: parallel command recording, managing thousands of passes across legacy codebases, and scaling all of these techniques simultaneously. This article examines how UE5 and Frostbite solved those problems, then maps out the path from MVP to production.
+[Part III](/posts/frame-graph-advanced/) showed how the compiler can go further — async compute and split barriers. But our MVP still lives in a vacuum: one thread, one queue, resources that vanish between frames.
+
+Production renderers operate at a different scale entirely. They run **700+ passes**, record commands across a **thread pool**, pool heaps that persist for the lifetime of the application, and integrate graph-managed code alongside rendering paths that exist outside the graph.
+
+This article cracks open **UE5's RDG** and **Frostbite's FrameGraph** to see how they bridge that gap — then maps out the concrete steps from MVP to production.
 
 ---
 
@@ -131,14 +135,14 @@ Both engines use the same core algorithm from [Part II](/posts/frame-graph-build
 <div class="diagram-ftable">
 <table>
   <tr><th>Refinement</th><th>UE5 RDG</th><th>Frostbite (GDC talk)</th></tr>
-  <tr><td><strong>Placed resources</strong></td><td><code>FRDGTransientResourceAllocator</code> binds into <code>ID3D12Heap</code> offsets</td><td>Heap sub-allocation</td></tr>
+  <tr><td><strong>Placed resources</strong></td><td>Transient allocator (<code>r.RDG.TransientAllocator</code>) binds into <code>ID3D12Heap</code> offsets</td><td>Heap sub-allocation</td></tr>
   <tr><td><strong>Size bucketing</strong></td><td>Power-of-two in transient allocator</td><td>Custom bin sizes</td></tr>
-  <tr><td><strong>Cross-frame pooling</strong></td><td>Persistent pool, peak-N-frames sizing</td><td>Pooling described in talk</td></tr>
-  <tr><td><strong>Imported aliasing</strong></td><td><span style="color:var(--ds-danger)">❌</span> transient only</td><td>Described as supported</td></tr>
+  <tr><td><strong>Cross-frame pooling</strong></td><td>Persistent pool, peak-N-frames sizing</td><td>Heaps persisted across frames; reallocated only when peak demand grew — same high-water-mark strategy most engines use</td></tr>
+  <tr><td><strong>Imported aliasing</strong></td><td><span style="color:var(--ds-danger)">❌</span> transient only</td><td>Described as supported for resources whose lifetimes are fully known within the frame</td></tr>
 </table>
 </div>
 
-Our MVP allocates fresh each frame. Production engines **pool across frames** — once a heap is allocated, it persists and gets reused. UE5's `FRDGTransientResourceAllocator` tracks peak usage over several frames and only grows the pool when needed. This amortizes allocation cost to near zero in steady state.
+Our MVP allocates fresh each frame. Production engines **pool across frames** — once a heap is allocated, it persists and gets reused. UE5's transient allocator (controlled via `r.RDG.TransientAllocator`) tracks peak usage over several frames and only grows the pool when needed. Frostbite described the same pattern at GDC 2017: heaps survive across frames, the allocator remembers the high-water mark, and unused blocks are released only after several frames of lower demand — avoiding the alloc/free churn that would otherwise dominate the CPU cost of transient resources. This amortizes allocation cost to near zero in steady state.
 
 ### ⚡ Async compute scheduling
 
@@ -155,7 +159,7 @@ Async compute lets the GPU overlap independent work on separate hardware queues 
 
 Our MVP inserts one barrier at a time. Production engines batch multiple transitions into a single API call and split barriers across pass gaps for better GPU pipelining.
 
-UE5 batches transitions via `FRDGBarrierBatchBegin`/`FRDGBarrierBatchEnd` — multiple resource transitions coalesced into one API call. Split barriers place the "begin" transition as early as possible and the "end" just before the resource is needed, giving the GPU time to pipeline the transition.
+UE5 batches multiple resource transitions into a single API call rather than issuing one barrier per resource. Split barriers place the "begin" transition as early as possible and the "end" just before the resource is needed, giving the GPU time to pipeline the transition.
 
 Diminishing returns on desktop — modern drivers hide barrier latency internally. Biggest wins on expensive layout transitions (depth → shader-read) and console GPUs with more exposed pipeline control. Add last, and only if profiling shows barrier stalls.
 
@@ -192,7 +196,7 @@ Bindless doesn't change the DAG or the compile phase — sorting, culling, alias
 The biggest practical consideration with RDG is the seam between RDG-managed passes and legacy `FRHICommandList` code. At this boundary:
 
 - Barriers must be inserted manually (RDG can't see what the legacy code does)
-- Resources must be "extracted" from RDG via `ConvertToExternalTexture()` before legacy code can use them
+- Resources must be extracted from RDG before legacy code can use them
 - Re-importing back into RDG requires `RegisterExternalTexture()` with correct state tracking
 
 This boundary is shrinking every release as Epic migrates more passes to RDG, but in practice you'll still hit it when integrating third-party plugins or older rendering features.
@@ -204,24 +208,24 @@ This boundary is shrinking every release as Epic migrates more passes to RDG, bu
   <div style="font-size:.9em;line-height:1.55"><strong>RDG Insights.</strong> Enable via the Unreal editor to visualize the full pass graph, resource lifetimes, and barrier placement. Use <code>r.RDG.Debug</code> CVars for validation: <code>r.RDG.Debug.FlushGPU</code> serializes execution for debugging, <code>r.RDG.Debug.ExtendResourceLifetimes</code> disables aliasing to isolate corruption bugs. The frame is data — export it, diff it, analyze offline.</div>
 </div>
 
-### 📂 Navigating the UE5 RDG source
+### 📂 Navigating UE5 RDG
 
 <div class="diagram-steps">
   <div class="ds-step">
     <div class="ds-num">1</div>
-    <div><code>RenderGraphBuilder.h</code> — <code>FRDGBuilder</code> is the graph object. <code>AddPass()</code>, <code>CreateTexture()</code>, <code>Execute()</code> are all here. Start reading here.</div>
+    <div><code>FRDGBuilder</code> — the graph object. <code>AddPass()</code>, <code>CreateTexture()</code>, <code>Execute()</code> are all here. Start by searching for this class in the <code>RenderCore</code> module.</div>
   </div>
   <div class="ds-step">
     <div class="ds-num">2</div>
-    <div><code>RenderGraphPass.h</code> — <code>FRDGPass</code> stores the parameter struct, execute lambda, and pass flags. The macro-generated metadata lives on the parameter struct.</div>
+    <div><code>FRDGPass</code> — stores the parameter struct, execute lambda, and pass flags (<code>ERDGPassFlags</code>). The <code>BEGIN_SHADER_PARAMETER_STRUCT</code> macro-generated metadata lives on the parameter struct.</div>
   </div>
   <div class="ds-step">
     <div class="ds-num">3</div>
-    <div><code>RenderGraphResources.h</code> — <code>FRDGTexture</code>, <code>FRDGBuffer</code>, and their SRV/UAV views. Tracks current state for barrier emission. Check <code>FRDGResource::GetRHI()</code> to see when virtual becomes physical.</div>
+    <div><code>FRDGTexture</code> / <code>FRDGBuffer</code> — the virtual resource handles, plus their SRV/UAV views. Tracks current state for barrier emission. These become physical RHI resources during execution.</div>
   </div>
   <div class="ds-step">
     <div class="ds-num">4</div>
-    <div><code>RenderGraphPrivate.h</code> — The compile phase: topological sort, pass culling, barrier batching, async compute fence insertion. The core algorithms live here.</div>
+    <div>The compile phase (topological sort, pass culling via <code>r.RDG.CullPasses</code>, barrier batching, async compute fence insertion) is internal to the builder. Enable <code>r.RDG.Debug</code> CVars to inspect it at runtime.</div>
   </div>
 </div>
 
@@ -243,7 +247,7 @@ A render graph is not always the right answer. If your project has a fixed pipel
 
 Across these four articles, we covered the full arc: [Part I](/posts/frame-graph-theory/) laid out the core theory — the declare/compile/execute lifecycle, sorting, culling, barriers, and aliasing. [Part II](/posts/frame-graph-build-it/) turned that into working C++. [Part III](/posts/frame-graph-advanced/) pushed further with async compute and split barriers. And this article mapped those ideas onto what ships in UE5 and Frostbite, showing how production engines implement the same concepts at scale.
 
-You can now open `RenderGraphBuilder.h` in UE5 and *read* it, not reverse-engineer it. You know what `FRDGBuilder::AddPass` builds, how the transient allocator aliases memory, why `ERDGPassFlags::AsyncCompute` exists, and how the RDG boundary with legacy code works in practice.
+You can now open `FRDGBuilder` in UE5 and *read* it, not reverse-engineer it. You know what `AddPass` builds, how the transient allocator aliases memory, why `ERDGPassFlags::AsyncCompute` exists, and how the RDG boundary with legacy code works in practice.
 
 The point isn't that every project needs a render graph. The point is that if you understand how they work, you'll make a better decision about whether *yours* does.
 
