@@ -687,22 +687,23 @@ section.prose > div.max-w-prose {
   margin-top: 1px;
 }
 
-/* Code-diff shortcode */
+/* Code-diff shortcode — styled to match .highlight-wrapper / Chroma */
 .code-diff {
-  margin: 1em 0;
-  border-radius: 0.5rem;
+  margin: 1.7142857em 0;      /* matches .highlight-wrapper */
+  border-radius: 0.375rem;    /* rounded-md, same as .highlight-wrapper */
   overflow: hidden;
-  font-family: ui-monospace, SFMono-Regular, monospace;
+  box-shadow: 0 1px 3px 0 rgba(0,0,0,.1), 0 1px 2px -1px rgba(0,0,0,.1); /* shadow, same as .highlight-wrapper */
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.82em;
   line-height: 1.7;
-  background: #0d1117;
-  color: #c9d1d9;
+  background: #0d1117;        /* matches .chroma bg */
+  color: #D4D4D4;
 }
 .code-diff .cd-title {
-  padding: 0.4em 1em;
+  padding: 0.5rem 1rem;
   font-weight: 600;
-  background: #161b22;
-  border-bottom: 1px solid #30363d;
+  background: #0d1117;
+  border-bottom: 1px solid #262626;
   font-size: 0.95em;
 }
 .code-diff .cd-line {
@@ -744,10 +745,10 @@ section.prose > div.max-w-prose {
   opacity: 0.35;
 }
 
-/* ── Diff syntax highlighting (Visual Studio Dark C++ palette) ── */
-.code-diff .cd-code { color: #D4D4D4; }           /* base text: light gray (VS default foreground) */
-.code-diff .cd-kw   { color: #569CD6; }           /* keywords: if, for, return, class, struct, enum */
-.code-diff .cd-type { color: #4EC9B0; }           /* types/classes: void, int, uint32_t, bool, auto */
+/* ── Diff syntax highlighting (VS Dark C++ palette) ── */
+.code-diff .cd-code { color: #D4D4D4; }           /* base text */
+.code-diff .cd-kw   { color: #569CD6; }           /* keywords: if, return, class, const */
+.code-diff .cd-type { color: #4EC9B0; }           /* types: void, int, uint32_t, bool */
 .code-diff .cd-str  { color: #CE9178; }           /* string literals */
 .code-diff .cd-num  { color: #B5CEA8; }           /* numeric literals */
 .code-diff .cd-cmt  { color: #6A9955; font-style: italic; }  /* comments */
@@ -756,12 +757,12 @@ section.prose > div.max-w-prose {
 .code-diff .cd-prep { color: #C586C0; }           /* preprocessor: #include, #define */
 .code-diff .cd-op   { color: #D4D4D4; }           /* operators, punctuation, brackets */
 
-/* Collapsible code-diff wrapper */
+/* Collapsible code-diff wrapper — matches .highlight-wrapper */
 .code-diff-collapsible {
-  margin: 1em 0;
-  border-radius: 0.5rem;
+  margin: 1.7142857em 0;
+  border-radius: 0.375rem;
   overflow: hidden;
-  border: 1px solid #30363d;
+  box-shadow: 0 1px 3px 0 rgba(0,0,0,.1), 0 1px 2px -1px rgba(0,0,0,.1);
 }
 .code-diff-collapsible > summary {
   cursor: pointer;
@@ -770,8 +771,8 @@ section.prose > div.max-w-prose {
   align-items: center;
   gap: .6em;
   padding: .55em 1em;
-  background: #161b22;
-  color: #c9d1d9;
+  background: #0d1117;
+  color: #e6edf3;
   font-family: ui-monospace, SFMono-Regular, monospace;
   font-size: .82em;
   font-weight: 600;
@@ -788,7 +789,7 @@ section.prose > div.max-w-prose {
   transform: rotate(90deg);
 }
 .code-diff-collapsible > summary:hover {
-  background: #1c2129;
+  background: #161b22;
 }
 .code-diff-summary__title { flex: 1; }
 .code-diff-summary__meta {
@@ -1051,3 +1052,110 @@ section.prose > div.max-w-prose {
 .flow-d6 { animation-duration: 2.6s }
 .flow-d7 { animation-duration: 1.5s }
 .flow-d8 { animation-duration: 1.8s }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Global VS Dark C++ palette — override Chroma github-dark so that
+   full-source blocks and code-diffs look identical.
+   ═══════════════════════════════════════════════════════════════════ */
+html.dark {
+  /* Base foreground */
+  .chroma { color: #D4D4D4; background-color: #0d1117; }
+
+  /* Keywords → blue */
+  .chroma .k,
+  .chroma .kd,
+  .chroma .kn,
+  .chroma .kr,
+  .chroma .kt { color: #569CD6; font-weight: normal; }
+
+  /* Keyword constants (true, false, nullptr) → blue */
+  .chroma .kc,
+  .chroma .kp { color: #569CD6; }
+
+  /* Types / classes → teal */
+  .chroma .nc,
+  .chroma .no { color: #4EC9B0; font-weight: normal; }
+
+  /* Functions → yellow */
+  .chroma .nf,
+  .chroma .fm { color: #DCDCAA; font-weight: normal; }
+
+  /* Decorators → purple (matches preprocessor feel) */
+  .chroma .nd { color: #C586C0; font-weight: normal; }
+
+  /* Namespace → teal */
+  .chroma .nn { color: #4EC9B0; }
+
+  /* Variables → light blue */
+  .chroma .nv,
+  .chroma .vc,
+  .chroma .vg,
+  .chroma .vi,
+  .chroma .vm { color: #9CDCFE; }
+
+  /* Entity / builtins */
+  .chroma .ni { color: #4EC9B0; }
+  .chroma .nb,
+  .chroma .bp { color: #DCDCAA; }
+
+  /* Labels */
+  .chroma .nl { color: #9CDCFE; font-weight: normal; }
+
+  /* Properties */
+  .chroma .py { color: #9CDCFE; }
+
+  /* Tags (mostly irrelevant for C++) */
+  .chroma .nt { color: #569CD6; }
+
+  /* Strings → warm orange */
+  .chroma .s,
+  .chroma .sa,
+  .chroma .sb,
+  .chroma .sc,
+  .chroma .dl,
+  .chroma .sd,
+  .chroma .s2,
+  .chroma .se,
+  .chroma .sh,
+  .chroma .si,
+  .chroma .sx,
+  .chroma .sr,
+  .chroma .s1,
+  .chroma .ss { color: #CE9178; }
+
+  /* Numbers → light green */
+  .chroma .l,
+  .chroma .ld,
+  .chroma .m,
+  .chroma .mb,
+  .chroma .mf,
+  .chroma .mh,
+  .chroma .mi,
+  .chroma .il,
+  .chroma .mo { color: #B5CEA8; }
+
+  /* Operators → light gray (not bold) */
+  .chroma .o,
+  .chroma .ow { color: #D4D4D4; font-weight: normal; }
+
+  /* Punctuation */
+  .chroma .p { color: #D4D4D4; }
+
+  /* Comments → green italic */
+  .chroma .c,
+  .chroma .ch,
+  .chroma .cm,
+  .chroma .c1,
+  .chroma .cs { color: #6A9955; font-style: italic; font-weight: normal; }
+
+  /* Preprocessor → purple */
+  .chroma .cp,
+  .chroma .cpf { color: #C586C0; font-weight: normal; font-style: normal; }
+
+  /* Error */
+  .chroma .err { color: #F44747; }
+
+  /* Generic diff (if Hugo ever renders inline diffs) */
+  .chroma .gd { color: #CE9178; background-color: rgba(244,71,71,.15); }
+  .chroma .gi { color: #B5CEA8; background-color: rgba(78,201,176,.15); }
+}
