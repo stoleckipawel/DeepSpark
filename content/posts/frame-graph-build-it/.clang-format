@@ -1,0 +1,145 @@
+# ============================================================================
+# ClangFormat configuration for Sparkle Engine
+# Target:
+#   - Game engines & real-time rendering code (C++ & HLSL)
+#   - High readability, diff-friendly formatting
+#   - Conservative, explicit, reviewer-friendly style
+# ============================================================================
+
+# ---------------------------------------------------------------------------
+# Base style for C++
+# ---------------------------------------------------------------------------
+BasedOnStyle: LLVM
+Language: Cpp
+
+# ---------------------------------------------------------------------------
+# Indentation & whitespace
+# ---------------------------------------------------------------------------
+IndentWidth: 4
+TabWidth: 4
+UseTab: ForIndentation
+
+# Indent code within namespaces:
+# namespace Foo 
+#{
+#     int x;
+# }
+NamespaceIndentation: All
+
+# Indent preprocessor directives based on nesting level (moves # with indentation).
+IndentPPDirectives: BeforeHash
+
+ContinuationIndentWidth: 4
+
+# Prefer wrapping long calls/decls (prevents huge one-liners)
+ColumnLimit: 140
+
+# ---------------------------------------------------------------------------
+# Braces & control flow
+# ---------------------------------------------------------------------------
+BreakBeforeBraces: Allman
+
+AlwaysBreakAfterDefinitionReturnType: None
+AlwaysBreakAfterReturnType: None
+
+BraceWrapping:
+  AfterClass: true
+  AfterControlStatement: true
+  AfterEnum: true
+  AfterFunction: true
+  AfterNamespace: true
+  AfterStruct: true
+  AfterUnion: true
+  BeforeCatch: true
+  BeforeElse: true
+  IndentBraces: false
+
+# Enforce explicit blocks – no ambiguity
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AllowShortBlocksOnASingleLine: Never
+
+# Keep short inline getters/setters as one-liners when they fit
+AllowShortFunctionsOnASingleLine: Inline
+
+# ---------------------------------------------------------------------------
+# Includes & headers
+# ---------------------------------------------------------------------------
+SortIncludes: false
+IncludeBlocks: Preserve
+
+# ---------------------------------------------------------------------------
+# Pointers, references, and alignment
+# ---------------------------------------------------------------------------
+PointerAlignment: Left
+ReferenceAlignment: Left
+DerivePointerAlignment: false
+
+# Prefer breaking and aligning argument lists after '('
+AlignAfterOpenBracket: AlwaysBreak
+
+AlignOperands: true
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+AlignEscapedNewlines: Left
+
+# ---------------------------------------------------------------------------
+# Function calls, parameters, and lists
+# ---------------------------------------------------------------------------
+# Once wrapped, keep one item per line (diff-friendly)
+BinPackParameters: false
+BinPackArguments: false
+
+AllowAllArgumentsOnNextLine: false
+AllowAllParametersOfDeclarationOnNextLine: false
+
+# Encourage breaking before the first argument when near limit
+PenaltyBreakBeforeFirstCallParameter: 0
+
+# C++ constructor initializer lists
+ConstructorInitializerAllOnOneLineOrOnePerLine: true
+BreakConstructorInitializers: AfterColon
+ConstructorInitializerIndentWidth: 4
+
+Cpp11BracedListStyle: true
+
+# ---------------------------------------------------------------------------
+# Spacing rules
+# ---------------------------------------------------------------------------
+SpaceBeforeParens: ControlStatements
+SpaceBeforeAssignmentOperators: true
+SpaceAfterCStyleCast: true
+
+SpacesInAngles: false
+SpacesInCStyleCastParentheses: false
+SpacesInContainerLiterals: false
+
+# ---------------------------------------------------------------------------
+# Switch / case formatting
+# ---------------------------------------------------------------------------
+IndentCaseLabels: true
+IndentCaseBlocks: false
+AllowShortCaseLabelsOnASingleLine: false
+
+# ---------------------------------------------------------------------------
+# Lambdas & modern C++
+# ---------------------------------------------------------------------------
+LambdaBodyIndentation: Signature
+AllowShortLambdasOnASingleLine: None
+
+# ---------------------------------------------------------------------------
+# Comments
+# ---------------------------------------------------------------------------
+ReflowComments: true
+AlignTrailingComments: true
+SpacesBeforeTrailingComments: 2
+
+# ---------------------------------------------------------------------------
+# Misc engine-friendly behavior
+# ---------------------------------------------------------------------------
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 2
+
+PenaltyBreakComment: 1000
+PenaltyBreakString: 1000
+PenaltyReturnTypeOnItsOwnLine: 1000

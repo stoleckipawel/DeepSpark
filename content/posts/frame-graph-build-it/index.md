@@ -311,18 +311,26 @@ Three types are all we need to start: a `ResourceDesc` (width, height, format �
 
 {{< code-diff title="v1 — Resource types (frame_graph_v1.h)" collapsible="true" >}}
 @@ frame_graph_v1.h — Format, ResourceDesc, ResourceHandle @@
-+enum class Format { RGBA8, RGBA16F, R8, D32F };
++enum class Format
++{
++    RGBA8,
++    RGBA16F,
++    R8,
++    D32F
++};
 +
-+struct ResourceDesc {
-+    uint32_t width  = 0;
++struct ResourceDesc
++{
++    uint32_t width = 0;
 +    uint32_t height = 0;
-+    Format   format = Format::RGBA8;
++    Format format = Format::RGBA8;
 +};
 +
 +using ResourceIndex = uint32_t;  // readable alias for resource array indices
 +
 +// Lightweight handle — index into FrameGraph's resource array, no GPU memory involved.
-+struct ResourceHandle {
++struct ResourceHandle
++{
 +    ResourceIndex index = UINT32_MAX;
 +    bool IsValid() const { return index != UINT32_MAX; }
 +};
@@ -333,35 +341,37 @@ A pass is two lambdas — setup (runs now, wires the DAG) and execute (stored fo
 {{< code-diff title="v1 — RenderPass struct (frame_graph_v1.h)" collapsible="true" >}}
 @@ frame_graph_v1.h — RenderPass struct @@
 +// A render pass: Setup wires the DAG (declares reads/writes), Execute records GPU commands.
-+struct RenderPass {
-+    std::string                        name;
-+    std::function<void()>              Setup;    // build the DAG (v1: unused)
-+    std::function<void(/*cmd list*/)>  Execute;  // record GPU commands
++struct RenderPass
++{
++    std::string name;
++    std::function<void()> Setup;                // build the DAG (v1: unused)
++    std::function<void(/*cmd list*/)> Execute;  // record GPU commands
 +};
 {{< /code-diff >}}
 
-The `FrameGraph` class owns two arrays (passes and resources) and three entry points. `AddPass` runs setup immediately — the DAG is built during declaration, not lazily. `Execute()` in v1 just walks passes in order:
+The `FrameGraph` class owns two arrays — passes and resources. `AddPass` runs setup immediately — the DAG is built during declaration, not lazily. `Execute()` in v1 just walks passes in order:
 
 {{< code-diff title="v1 — FrameGraph class (frame_graph_v1.h)" collapsible="true" >}}
 @@ frame_graph_v1.h — FrameGraph class @@
-+class FrameGraph {
-+public:
++class FrameGraph
++{
++  public:
 +    ResourceHandle CreateResource(const ResourceDesc& desc);  // transient — graph owns lifetime
 +    ResourceHandle ImportResource(const ResourceDesc& desc);  // external — e.g. swapchain backbuffer
 +
 +    // AddPass: runs setup immediately (wires DAG), stores execute for later.
 +    template <typename SetupFn, typename ExecFn>
-+    void AddPass(const std::string& name, SetupFn&& setup, ExecFn&& exec) {
-+        passes.push_back({ name, std::forward<SetupFn>(setup),
-+                                  std::forward<ExecFn>(exec) });
++    void AddPass(const std::string& name, SetupFn&& setup, ExecFn&& exec)
++    {
++        passes.push_back({name, std::forward<SetupFn>(setup), std::forward<ExecFn>(exec)});
 +        passes.back().Setup();  // run setup immediately — DAG is built here
 +    }
 +
 +    void Execute();  // v1: just run in declaration order
 +
-+private:
-+    std::vector<RenderPass>    passes;
-+    std::vector<ResourceDesc>  resources;
++  private:
++    std::vector<RenderPass> passes;
++    std::vector<ResourceDesc> resources;
 +};
 {{< /code-diff >}}
 
@@ -370,14 +380,16 @@ The `FrameGraph` class owns two arrays (passes and resources) and three entry po
 {{< code-diff title="v1 — CreateResource / ImportResource" collapsible="true" >}}
 @@ frame_graph_v1.cpp — CreateResource / ImportResource @@
 +// No GPU memory is allocated yet — that happens at execute time.
-+ResourceHandle FrameGraph::CreateResource(const ResourceDesc& desc) {
++ResourceHandle FrameGraph::CreateResource(const ResourceDesc& desc)
++{
 +    resources.push_back(desc);
-+    return { static_cast<ResourceIndex>(resources.size() - 1) };
++    return {static_cast<ResourceIndex>(resources.size() - 1)};
 +}
 +
-+ResourceHandle FrameGraph::ImportResource(const ResourceDesc& desc) {
++ResourceHandle FrameGraph::ImportResource(const ResourceDesc& desc)
++{
 +    resources.push_back(desc);  // v1: same as create (no aliasing yet)
-+    return { static_cast<ResourceIndex>(resources.size() - 1) };
++    return {static_cast<ResourceIndex>(resources.size() - 1)};
 +}
 {{< /code-diff >}}
 
@@ -386,13 +398,15 @@ The `FrameGraph` class owns two arrays (passes and resources) and three entry po
 {{< code-diff title="v1 — Execute()" collapsible="true" >}}
 @@ frame_graph_v1.cpp — Execute() @@
 +// v1 execute: just run passes in the order they were declared.
-+void FrameGraph::Execute() {
++void FrameGraph::Execute()
++{
 +    printf("\n[1] Executing (declaration order -- no compile step):\n");
-+    for (auto& pass : passes) {
++    for (auto& pass : passes)
++    {
 +        printf("  >> exec: %s\n", pass.name.c_str());
 +        pass.Execute(/* &cmdList */);
 +    }
-+    passes.clear();     // reset for next frame
++    passes.clear();  // reset for next frame
 +    resources.clear();
 +}
 {{< /code-diff >}}
@@ -470,17 +484,19 @@ Here's what changes from v1. The `ResourceDesc` array becomes `ResourceEntry` �
 @@ frame_graph_v2.h — PassIndex alias, ResourceVersion, ResourceEntry @@
 +using PassIndex = uint32_t;  // readable alias for pass array indices
 +
-+struct ResourceVersion {
-+    PassIndex writerPass = UINT32_MAX;   // Each Read() links to the current version's writer → automatic dependency edge.
-+    std::vector<PassIndex> readerPasses; // Each Write() to a resource creates a new version.
++struct ResourceVersion
++{
++    PassIndex writerPass = UINT32_MAX;    // Each Read() links to the current version's writer → automatic dependency edge.
++    std::vector<PassIndex> readerPasses;  // Each Write() to a resource creates a new version.
 +    bool HasWriter() const { return writerPass != UINT32_MAX; }
 +};
 +
 +// Replaces raw ResourceDesc — now tracks version history per resource.
-+struct ResourceEntry {
++struct ResourceEntry
++{
 +    ResourceDesc desc;
 +    std::vector<ResourceVersion> versions;  // version 0, 1, 2...
-+    bool imported = false;   // imported = externally owned (e.g. swapchain)
++    bool imported = false;  // imported = externally owned (e.g. swapchain)
 +};
 {{< /code-diff >}}
 
@@ -488,9 +504,10 @@ Here's what changes from v1. The `ResourceDesc` array becomes `ResourceEntry` �
 
 {{< code-diff title="v1 → v2 — RenderPass & FrameGraph API changes" collapsible="true" >}}
 @@ frame_graph_v2.h — RenderPass gets reads/writes/dependsOn @@
- struct RenderPass {
+ struct RenderPass
+ {
      std::string name;
-     std::function<void()>             Setup;
+     std::function<void()> Setup;
      std::function<void(/*cmd list*/)> Execute;
 +    std::vector<ResourceHandle> reads;
 +    std::vector<ResourceHandle> writes;
@@ -504,7 +521,7 @@ Here's what changes from v1. The `ResourceDesc` array becomes `ResourceEntry` �
 +    void ReadWrite(PassIndex passIdx, ResourceHandle h);  // UAV access
 
 @@ frame_graph_v2.h — ResourceDesc[] becomes ResourceEntry[] @@
--    std::vector<ResourceDesc>  resources;
+-    std::vector<ResourceDesc> resources;
 +    std::vector<ResourceEntry> entries;  // now with versioning
 {{< /code-diff >}}
 
@@ -512,18 +529,20 @@ Here's what changes from v1. The `ResourceDesc` array becomes `ResourceEntry` �
 
 {{< code-diff title="v1 → v2 — CreateResource / ImportResource updated" collapsible="true" >}}
 @@ frame_graph_v2.cpp — CreateResource / ImportResource now use ResourceEntry @@
- ResourceHandle FrameGraph::CreateResource(const ResourceDesc& desc) {
+ ResourceHandle FrameGraph::CreateResource(const ResourceDesc& desc)
+ {
 -    resources.push_back(desc);
--    return { static_cast<ResourceIndex>(resources.size() - 1) };
-+    entries.push_back({ desc, {{}} });
-+    return { static_cast<ResourceIndex>(entries.size() - 1) };
+-    return {static_cast<ResourceIndex>(resources.size() - 1)};
++    entries.push_back({desc, {{}}});
++    return {static_cast<ResourceIndex>(entries.size() - 1)};
  }
 
- ResourceHandle FrameGraph::ImportResource(const ResourceDesc& desc) {
+ ResourceHandle FrameGraph::ImportResource(const ResourceDesc& desc)
+ {
 -    resources.push_back(desc);
--    return { static_cast<ResourceIndex>(resources.size() - 1) };
-+    entries.push_back({ desc, {{}}, /*imported=*/true });
-+    return { static_cast<ResourceIndex>(entries.size() - 1) };
+-    return {static_cast<ResourceIndex>(resources.size() - 1)};
++    entries.push_back({desc, {{}}, /*imported=*/true});
++    return {static_cast<ResourceIndex>(entries.size() - 1)};
  }
 {{< /code-diff >}}
 
@@ -532,9 +551,11 @@ Here's what changes from v1. The `ResourceDesc` array becomes `ResourceEntry` �
 {{< code-diff title="v1 → v2 — Read()" collapsible="true" >}}
 @@ frame_graph_v2.cpp — Read() @@
 +// Read: look up who last wrote this resource → add a dependency edge from that writer to this pass.
-+void FrameGraph::Read(PassIndex passIdx, ResourceHandle h) {
-+    auto& ver = entries[h.index].versions.back();   // current version
-+    if (ver.HasWriter()) {
++void FrameGraph::Read(PassIndex passIdx, ResourceHandle h)
++{
++    auto& ver = entries[h.index].versions.back();  // current version
++    if (ver.HasWriter())
++    {
 +        passes[passIdx].dependsOn.push_back(ver.writerPass);  // RAW edge
 +    }
 +    ver.readerPasses.push_back(passIdx);  // track who reads this version
@@ -547,13 +568,14 @@ Here's what changes from v1. The `ResourceDesc` array becomes `ResourceEntry` �
 {{< code-diff title="v1 → v2 — Write()" collapsible="true" >}}
 @@ frame_graph_v2.cpp — Write() @@
 +// Write: add WAR edges from current-version readers, then bump the version.
-+void FrameGraph::Write(PassIndex passIdx, ResourceHandle h) {
-+    auto& ver = entries[h.index].versions.back();          // current version (pre-bump)
++void FrameGraph::Write(PassIndex passIdx, ResourceHandle h)
++{
++    auto& ver = entries[h.index].versions.back();  // current version (pre-bump)
 +    for (PassIndex reader : ver.readerPasses)
-+        passes[passIdx].dependsOn.push_back(reader);       // WAR edge: reader must finish first
-+    entries[h.index].versions.push_back({});               // bump version
-+    entries[h.index].versions.back().writerPass = passIdx; // this pass owns the new version
-+    passes[passIdx].writes.push_back(h);                   // record for barrier insertion
++        passes[passIdx].dependsOn.push_back(reader);  // WAR edge: reader must finish first
++    entries[h.index].versions.push_back({});           // bump version
++    entries[h.index].versions.back().writerPass = passIdx;  // this pass owns the new version
++    passes[passIdx].writes.push_back(h);  // record for barrier insertion
 +}
 {{< /code-diff >}}
 
@@ -562,18 +584,20 @@ Here's what changes from v1. The `ResourceDesc` array becomes `ResourceEntry` �
 {{< code-diff title="v1 → v2 — ReadWrite() (UAV)" collapsible="true" >}}
 @@ frame_graph_v2.cpp — ReadWrite() (UAV) @@
 +// ReadWrite (UAV): depend on previous writer + WAR edges from readers, then bump version.
-+void FrameGraph::ReadWrite(PassIndex passIdx, ResourceHandle h) {
++void FrameGraph::ReadWrite(PassIndex passIdx, ResourceHandle h)
++{
 +    auto& ver = entries[h.index].versions.back();
-+    if (ver.HasWriter()) {
++    if (ver.HasWriter())
++    {
 +        passes[passIdx].dependsOn.push_back(ver.writerPass);  // RAW edge
 +    }
 +    for (PassIndex reader : ver.readerPasses)
-+        passes[passIdx].dependsOn.push_back(reader);          // WAR edge
-+    entries[h.index].versions.push_back({});              // bump version (it's a write)
++        passes[passIdx].dependsOn.push_back(reader);  // WAR edge
++    entries[h.index].versions.push_back({});           // bump version (it's a write)
 +    entries[h.index].versions.back().writerPass = passIdx;
-+    passes[passIdx].reads.push_back(h);      // appears in both lists (for barriers + lifetimes)
++    passes[passIdx].reads.push_back(h);       // appears in both lists (for barriers + lifetimes)
 +    passes[passIdx].writes.push_back(h);
-+    passes[passIdx].readWrites.push_back(h); // marks this handle as UAV for StateForUsage
++    passes[passIdx].readWrites.push_back(h);  // marks this handle as UAV for StateForUsage
 +}
 {{< /code-diff >}}
 
@@ -589,19 +613,24 @@ With edges in place, we need an execution order that respects every dependency. 
 
 {{< code-diff title="v2 — Edge deduplication (BuildEdges)" collapsible="true" >}}
 @@ frame_graph_v2.h — RenderPass gets successors + inDegree (for Kahn's) @@
- struct RenderPass {
+ struct RenderPass
+ {
      ...
-+    std::vector<PassIndex> successors;     // passes that depend on this one
-+    uint32_t inDegree = 0;                 // incoming edge count (Kahn's)
++    std::vector<PassIndex> successors;  // passes that depend on this one
++    uint32_t inDegree = 0;              // incoming edge count (Kahn's)
  };
 
 @@ frame_graph_v2.cpp — BuildEdges() @@
 +// Deduplicate raw dependsOn edges and build forward adjacency list (successors) for Kahn's algorithm.
-+void FrameGraph::BuildEdges() {
-+    for (PassIndex i = 0; i < passes.size(); i++) {
++void FrameGraph::BuildEdges()
++{
++    for (PassIndex i = 0; i < passes.size(); i++)
++    {
 +        std::unordered_set<PassIndex> seen;
-+        for (PassIndex dep : passes[i].dependsOn) {
-+            if (seen.insert(dep).second) {       // first time seeing this edge?
++        for (PassIndex dep : passes[i].dependsOn)
++        {
++            if (seen.insert(dep).second)  // first time seeing this edge?
++            {
 +                passes[dep].successors.push_back(i);  // forward link: dep → i
 +                passes[i].inDegree++;                  // i has one more incoming edge
 +            }
@@ -615,20 +644,26 @@ With the adjacency list built, `TopoSort()` implements Kahn's zero-in-degree que
 {{< code-diff title="v2 — Kahn's topological sort" collapsible="true" >}}
 @@ frame_graph_v2.cpp — TopoSort() @@
 +// Kahn's algorithm: dequeue zero-in-degree passes → valid execution order respecting all dependencies.
-+std::vector<PassIndex> FrameGraph::TopoSort() {
++std::vector<PassIndex> FrameGraph::TopoSort()
++{
 +    std::queue<PassIndex> q;
 +    std::vector<uint32_t> inDeg(passes.size());
-+    for (PassIndex i = 0; i < passes.size(); i++) {
++    for (PassIndex i = 0; i < passes.size(); i++)
++    {
 +        inDeg[i] = passes[i].inDegree;
-+        if (inDeg[i] == 0) q.push(i);  // no dependencies → ready immediately
++        if (inDeg[i] == 0)
++            q.push(i);  // no dependencies → ready immediately
 +    }
 +    std::vector<PassIndex> order;
-+    while (!q.empty()) {
-+        PassIndex cur = q.front(); q.pop();
++    while (!q.empty())
++    {
++        PassIndex cur = q.front();
++        q.pop();
 +        order.push_back(cur);
-+        for (PassIndex succ : passes[cur].successors) {
-+            if (--inDeg[succ] == 0)     // all of succ's dependencies done?
-+                q.push(succ);           // succ is now ready
++        for (PassIndex succ : passes[cur].successors)
++        {
++            if (--inDeg[succ] == 0)  // all of succ's dependencies done?
++                q.push(succ);        // succ is now ready
 +        }
 +    }
 +    // If we didn't visit every pass, the graph has a cycle — invalid.
@@ -647,20 +682,25 @@ A sorted graph still runs passes nobody reads from. Culling is dead-code elimina
 
 {{< code-diff title="v2 — Pass culling" collapsible="true" >}}
 @@ frame_graph_v2.h — RenderPass gets alive flag @@
- struct RenderPass {
+ struct RenderPass
+ {
      ...
-+    bool alive = false;                    // survives the cull?
++    bool alive = false;  // survives the cull?
  };
 
 @@ frame_graph_v2.cpp — Cull() @@
 +// Dead-code elimination: walk backward from the final output pass, marking dependencies alive.
-+void FrameGraph::Cull(const std::vector<PassIndex>& sorted) {
-+    if (sorted.empty()) return;
-+    passes[sorted.back()].alive = true;   // last pass = the final output (e.g. Present)
-+    for (int i = static_cast<int>(sorted.size()) - 1; i >= 0; i--) {
-+        if (!passes[sorted[i]].alive) continue;         // skip dead passes
++void FrameGraph::Cull(const std::vector<PassIndex>& sorted)
++{
++    if (sorted.empty())
++        return;
++    passes[sorted.back()].alive = true;  // last pass = the final output (e.g. Present)
++    for (int i = static_cast<int>(sorted.size()) - 1; i >= 0; i--)
++    {
++        if (!passes[sorted[i]].alive)
++            continue;  // skip dead passes
 +        for (PassIndex dep : passes[sorted[i]].dependsOn)
-+            passes[dep].alive = true;   // my dependency is needed → keep it alive
++            passes[dep].alive = true;  // my dependency is needed → keep it alive
 +    }
 +}
 {{< /code-diff >}}
@@ -679,35 +719,46 @@ First, the new types. `ResourceState` is an enum with six values (Undefined, Col
 
 {{< code-diff title="v2 — ResourceState, Barrier & ResourceEntry changes" collapsible="true" >}}
 @@ frame_graph_v2.h — ResourceState enum + Barrier struct @@
-+enum class ResourceState { Undefined, ColorAttachment, DepthAttachment,
-+                           ShaderRead, UnorderedAccess, Present };
++enum class ResourceState
++{
++    Undefined,
++    ColorAttachment,
++    DepthAttachment,
++    ShaderRead,
++    UnorderedAccess,
++    Present
++};
 +
 +// A single resource-state transition.
-+struct Barrier {
-+    ResourceIndex resourceIndex;    // which resource to transition
-+    ResourceState oldState;         // state before this pass
-+    ResourceState newState;         // state this pass requires
++struct Barrier
++{
++    ResourceIndex resourceIndex;  // which resource to transition
++    ResourceState oldState;       // state before this pass
++    ResourceState newState;       // state this pass requires
 +};
 
 @@ frame_graph_v2.h — ResourceEntry gets currentState @@
- struct ResourceEntry {
+ struct ResourceEntry
+ {
      ...
 +    ResourceState currentState = ResourceState::Undefined;
  };
 
 @@ frame_graph_v2.h — ImportResource() accepts initial state @@
 -    ResourceHandle ImportResource(const ResourceDesc& desc);
-+    ResourceHandle ImportResource(const ResourceDesc& desc,
-+                                  ResourceState initialState = ResourceState::Undefined);
++    ResourceHandle ImportResource(
++        const ResourceDesc& desc,
++        ResourceState initialState = ResourceState::Undefined);
 {{< /code-diff >}}
 
 With those types in place, we introduce the **compile / execute split**. `CompiledPlan` holds the topological order and a 2D barrier array (`barriers[orderIdx]` = transitions before that pass). `Compile()` returns a plan; `Execute()` replays it. `CreateResource` / `ImportResource` gain a fourth field for initial state:
 
 {{< code-diff title="v2 — CompiledPlan, Compile/Execute split & updated constructors" collapsible="true" >}}
 @@ frame_graph_v2.h — CompiledPlan + Compile/Execute split @@
-+    struct CompiledPlan {
-+        std::vector<PassIndex> sorted;                    // topological execution order
-+        std::vector<std::vector<Barrier>> barriers;       // barriers[orderIdx] → pre-pass transitions
++    struct CompiledPlan
++    {
++        std::vector<PassIndex> sorted;               // topological execution order
++        std::vector<std::vector<Barrier>> barriers;  // barriers[orderIdx] → pre-pass transitions
 +    };
 +
 +    CompiledPlan Compile();
@@ -715,18 +766,19 @@ With those types in place, we introduce the **compile / execute split**. `Compil
      void Execute();  // convenience: compile + execute in one call
 
 @@ frame_graph_v2.cpp — CreateResource / ImportResource updated for ResourceState @@
- ResourceHandle FrameGraph::CreateResource(const ResourceDesc& desc) {
--    entries.push_back({ desc, {{}} });
-+    entries.push_back({ desc, {{}}, ResourceState::Undefined, false });
-     return { static_cast<ResourceIndex>(entries.size() - 1) };
+ ResourceHandle FrameGraph::CreateResource(const ResourceDesc& desc)
+ {
+-    entries.push_back({desc, {{}}});
++    entries.push_back({desc, {{}}, ResourceState::Undefined, false});
+     return {static_cast<ResourceIndex>(entries.size() - 1)};
  }
 
--ResourceHandle FrameGraph::ImportResource(const ResourceDesc& desc) {
--    entries.push_back({ desc, {{}}, /*imported=*/true });
-+ResourceHandle FrameGraph::ImportResource(const ResourceDesc& desc,
-+                                          ResourceState initialState) {
-+    entries.push_back({ desc, {{}}, initialState, true });
-     return { static_cast<ResourceIndex>(entries.size() - 1) };
+-ResourceHandle FrameGraph::ImportResource(const ResourceDesc& desc)
++ResourceHandle FrameGraph::ImportResource(const ResourceDesc& desc, ResourceState initialState)
+ {
+-    entries.push_back({desc, {{}}, /*imported=*/true});
++    entries.push_back({desc, {{}}, initialState, true});
+     return {static_cast<ResourceIndex>(entries.size() - 1)};
  }
 {{< /code-diff >}}
 
@@ -735,23 +787,29 @@ With the type system in place, `ComputeBarriers()` walks the sorted pass list. F
 {{< code-diff title="v2 — ComputeBarriers() — state inference helpers" collapsible="true" >}}
 @@ frame_graph_v2.cpp — ComputeBarriers() state inference @@
 +// Walk sorted passes, compare tracked state to each resource's needed state, record transitions.
-+std::vector<std::vector<Barrier>> FrameGraph::ComputeBarriers(
-+        const std::vector<PassIndex>& sorted) {
++std::vector<std::vector<Barrier>> FrameGraph::ComputeBarriers(const std::vector<PassIndex>& sorted)
++{
 +    std::vector<std::vector<Barrier>> result(sorted.size());
-+    for (PassIndex orderIdx = 0; orderIdx < sorted.size(); orderIdx++) {
++    for (PassIndex orderIdx = 0; orderIdx < sorted.size(); orderIdx++)
++    {
 +        PassIndex passIdx = sorted[orderIdx];
-+        if (!passes[passIdx].alive) continue;
++        if (!passes[passIdx].alive)
++            continue;
 +
-+        auto IsUAV = [&](ResourceHandle h) {
++        auto IsUAV = [&](ResourceHandle h)
++        {
 +            for (auto& rw : passes[passIdx].readWrites)
-+                if (rw.index == h.index) return true;
++                if (rw.index == h.index)
++                    return true;
 +            return false;
 +        };
-+        auto StateForUsage = [&](ResourceHandle h, bool isWrite) {
-+            if (IsUAV(h)) return ResourceState::UnorderedAccess;
++        auto StateForUsage = [&](ResourceHandle h, bool isWrite)
++        {
++            if (IsUAV(h))
++                return ResourceState::UnorderedAccess;
 +            if (isWrite)
-+                return (entries[h.index].desc.format == Format::D32F)
-+                    ? ResourceState::DepthAttachment : ResourceState::ColorAttachment;
++                return (entries[h.index].desc.format == Format::D32F) ? ResourceState::DepthAttachment
++                                                                     : ResourceState::ColorAttachment;
 +            return ResourceState::ShaderRead;
 +        };
 {{< /code-diff >}}
@@ -760,16 +818,19 @@ With the required state known, `recordTransition` compares it to the resource's 
 
 {{< code-diff title="v2 — ComputeBarriers() — record transitions" collapsible="true" >}}
 @@ frame_graph_v2.cpp — ComputeBarriers() transition recording @@
-+        auto recordTransition = [&](ResourceHandle h, bool isWrite) {
++        auto recordTransition = [&](ResourceHandle h, bool isWrite)
++        {
 +            ResourceState needed = StateForUsage(h, isWrite);
-+            if (entries[h.index].currentState != needed) {
-+                result[orderIdx].push_back(
-+                    { h.index, entries[h.index].currentState, needed });
++            if (entries[h.index].currentState != needed)
++            {
++                result[orderIdx].push_back({h.index, entries[h.index].currentState, needed});
 +                entries[h.index].currentState = needed;
 +            }
 +        };
-+        for (auto& h : passes[passIdx].reads)  recordTransition(h, false);
-+        for (auto& h : passes[passIdx].writes) recordTransition(h, true);
++        for (auto& h : passes[passIdx].reads)
++            recordTransition(h, false);
++        for (auto& h : passes[passIdx].writes)
++            recordTransition(h, true);
 +    }
 +    return result;
 +}
@@ -780,8 +841,12 @@ With the required state known, `recordTransition` compares it to the resource's 
 {{< code-diff title="v2 — EmitBarriers()" collapsible="true" >}}
 @@ frame_graph_v2.cpp — EmitBarriers() (replay) @@
 +// Replay precomputed transitions — in production this calls the GPU API.
-+void FrameGraph::EmitBarriers(const std::vector<Barrier>& barriers) {
-+    for (auto& b : barriers) { /* vkCmdPipelineBarrier / ResourceBarrier */ }
++void FrameGraph::EmitBarriers(const std::vector<Barrier>& barriers)
++{
++    for (auto& b : barriers)
++    {
++        // vkCmdPipelineBarrier / ResourceBarrier
++    }
 +}
 {{< /code-diff >}}
 
@@ -790,19 +855,23 @@ With the required state known, `recordTransition` compares it to the resource's 
 {{< code-diff title="v2 — Compile() & Execute()" collapsible="true" >}}
 @@ frame_graph_v2.cpp — Compile() + Execute() @@
 +// Full compile pipeline: sort → cull → precompute barriers. Returns a self-contained plan.
-+FrameGraph::CompiledPlan FrameGraph::Compile() {
++FrameGraph::CompiledPlan FrameGraph::Compile()
++{
 +    BuildEdges();
-+    auto sorted  = TopoSort();
++    auto sorted = TopoSort();
 +    Cull(sorted);
 +    auto barriers = ComputeBarriers(sorted);
-+    return { std::move(sorted), std::move(barriers) };
++    return {std::move(sorted), std::move(barriers)};
 +}
 +
 +// Pure playback — emit precomputed barriers, call execute lambdas. No analysis.
-+void FrameGraph::Execute(const CompiledPlan& plan) {
-+    for (PassIndex orderIdx = 0; orderIdx < plan.sorted.size(); orderIdx++) {
++void FrameGraph::Execute(const CompiledPlan& plan)
++{
++    for (PassIndex orderIdx = 0; orderIdx < plan.sorted.size(); orderIdx++)
++    {
 +        PassIndex passIdx = plan.sorted[orderIdx];
-+        if (!passes[passIdx].alive) continue;
++        if (!passes[passIdx].alive)
++            continue;
 +        EmitBarriers(plan.barriers[orderIdx]);
 +        passes[passIdx].Execute(/* &cmdList */);
 +    }
@@ -810,7 +879,10 @@ With the required state known, `recordTransition` compares it to the resource's 
 +    entries.clear();
 +}
 +
-+void FrameGraph::Execute() { Execute(Compile()); }
++void FrameGraph::Execute()
++{
++    Execute(Compile());
++}
 {{< /code-diff >}}
 
 All four pieces — versioning, sorting, culling, barriers — compose into `Compile()`. Each step feeds the next: versioning creates edges, edges feed the sort, the sort enables culling, and the surviving sorted passes get precomputed barriers. `Execute()` is pure playback.
@@ -846,26 +918,29 @@ The implementation adds two data structures — `Lifetime` (first/last sorted-pa
 {{< code-diff title="v3 — New data structures: lifetime tracking & aliasing barriers" collapsible="true" >}}
 @@ frame_graph_v3.h — PhysicalBlock, Lifetime structs @@
 +// A physical memory slot — multiple virtual resources can reuse it if their lifetimes don't overlap.
-+struct PhysicalBlock {
-+    uint32_t sizeBytes  = 0;        // block size (aligned)
-+    PassIndex availAfter = 0;       // free after this sorted pass
++struct PhysicalBlock
++{
++    uint32_t sizeBytes = 0;        // block size (aligned)
++    PassIndex availAfter = 0;      // free after this sorted pass
 +};
 +
 +// Per-resource lifetime in sorted-pass indices — drives aliasing decisions.
-+struct Lifetime {
-+    PassIndex firstUse = UINT32_MAX; // first sorted pass that touches this resource
-+    PassIndex lastUse  = 0;          // last sorted pass that touches this resource
-+    bool      isTransient = true;    // false for imported resources (externally owned)
++struct Lifetime
++{
++    PassIndex firstUse = UINT32_MAX;  // first sorted pass that touches this resource
++    PassIndex lastUse = 0;            // last sorted pass that touches this resource
++    bool isTransient = true;          // false for imported resources (externally owned)
 +};
 +
 @@ frame_graph_v3.h — Barrier extended with aliasing fields @@
  // Base Barrier already defined in v2 — v3 adds aliasing context.
- struct Barrier {
+ struct Barrier
+ {
      ResourceIndex resourceIndex;
      ResourceState oldState;
      ResourceState newState;
-+    bool          isAliasing   = false;     // aliasing barrier (block changes occupant)
-+    ResourceIndex aliasBefore  = UINT32_MAX; // resource being evicted
++    bool isAliasing = false;                 // aliasing barrier (block changes occupant)
++    ResourceIndex aliasBefore = UINT32_MAX;  // resource being evicted
  };
 {{< /code-diff >}}
 
@@ -876,22 +951,31 @@ To alias at the heap level, we need to know sizes. `AllocSize()` computes an ali
 +// Minimum placement alignment for aliased heap resources (real APIs enforce similar, e.g. 64 KB).
 +static constexpr uint32_t kPlacementAlignment = 65536;  // 64 KB
 +
-+inline uint32_t AlignUp(uint32_t value, uint32_t alignment) {
++inline uint32_t AlignUp(uint32_t value, uint32_t alignment)
++{
 +    return (value + alignment - 1) & ~(alignment - 1);
 +}
 +
-+inline uint32_t BytesPerPixel(Format fmt) {
-+    switch (fmt) {
-+        case Format::R8:      return 1;
-+        case Format::RGBA8:   return 4;
-+        case Format::D32F:    return 4;
-+        case Format::RGBA16F: return 8;
-+        default:              return 4;
++inline uint32_t BytesPerPixel(Format fmt)
++{
++    switch (fmt)
++    {
++        case Format::R8:
++            return 1;
++        case Format::RGBA8:
++            return 4;
++        case Format::D32F:
++            return 4;
++        case Format::RGBA16F:
++            return 8;
++        default:
++            return 4;
 +    }
 +}
 +
 +// Aligned allocation size — real drivers add row padding/tiling; we approximate with a round-up.
-+inline uint32_t AllocSize(const ResourceDesc& desc) {
++inline uint32_t AllocSize(const ResourceDesc& desc)
++{
 +    uint32_t raw = desc.width * desc.height * BytesPerPixel(desc.format);
 +    return AlignUp(raw, kPlacementAlignment);
 +}
@@ -902,24 +986,31 @@ To alias at the heap level, we need to know sizes. `AllocSize()` computes an ali
 {{< code-diff title="v3 — ScanLifetimes()" collapsible="true" >}}
 @@ frame_graph_v3.cpp — ScanLifetimes() @@
 +// Record each resource's first/last use in sorted order — non-overlapping intervals can share memory.
-+std::vector<Lifetime> FrameGraph::ScanLifetimes(const std::vector<PassIndex>& sorted) {
++std::vector<Lifetime> FrameGraph::ScanLifetimes(const std::vector<PassIndex>& sorted)
++{
 +    std::vector<Lifetime> life(entries.size());
 +
 +    // Imported resources (e.g. swapchain) are externally owned — exclude from aliasing.
-+    for (ResourceIndex i = 0; i < entries.size(); i++) {
-+        if (entries[i].imported) life[i].isTransient = false;
++    for (ResourceIndex i = 0; i < entries.size(); i++)
++    {
++        if (entries[i].imported)
++            life[i].isTransient = false;
 +    }
 +
 +    // Update first/last use for every resource each surviving pass touches.
-+    for (PassIndex order = 0; order < sorted.size(); order++) {
++    for (PassIndex order = 0; order < sorted.size(); order++)
++    {
 +        PassIndex passIdx = sorted[order];
-+        if (!passes[passIdx].alive) continue;
++        if (!passes[passIdx].alive)
++            continue;
 +
-+        for (auto& h : passes[passIdx].reads) {
++        for (auto& h : passes[passIdx].reads)
++        {
 +            life[h.index].firstUse = std::min(life[h.index].firstUse, order);
 +            life[h.index].lastUse  = std::max(life[h.index].lastUse,  order);
 +        }
-+        for (auto& h : passes[passIdx].writes) {
++        for (auto& h : passes[passIdx].writes)
++        {
 +            life[h.index].firstUse = std::min(life[h.index].firstUse, order);
 +            life[h.index].lastUse  = std::max(life[h.index].lastUse,  order);
 +        }
@@ -937,7 +1028,8 @@ With lifetimes in hand, the greedy free-list allocator is straightforward. Sort 
 +using BlockIndex = uint32_t;   // index into the physical-block free list
 
 @@ frame_graph_v3.h — CompiledPlan extended with mapping @@
- struct CompiledPlan {
+ struct CompiledPlan
+ {
      std::vector<PassIndex> sorted;
 +    std::vector<BlockIndex> mapping;               // mapping[ResourceIndex] → physical block
      std::vector<std::vector<Barrier>> barriers;
@@ -957,33 +1049,43 @@ The greedy free-list allocator implements the aliasing strategy. First it builds
 {{< code-diff title="v3 — AliasResources() setup & sorting" collapsible="true" >}}
 @@ frame_graph_v3.cpp — AliasResources() setup @@
 +// Greedy first-fit: sort by firstUse, reuse any free block that fits, else allocate a new one.
-+std::vector<BlockIndex> FrameGraph::AliasResources(const std::vector<Lifetime>& lifetimes) {
++std::vector<BlockIndex> FrameGraph::AliasResources(const std::vector<Lifetime>& lifetimes)
++{
 +    std::vector<PhysicalBlock> freeList;
 +    std::vector<BlockIndex> mapping(entries.size(), UINT32_MAX);
 +
 +    // Process resources in the order they're first used.
 +    std::vector<ResourceIndex> indices(entries.size());
 +    std::iota(indices.begin(), indices.end(), 0);
-+    std::sort(indices.begin(), indices.end(), [&](ResourceIndex a, ResourceIndex b) {
-+        return lifetimes[a].firstUse < lifetimes[b].firstUse;
-+    });
++    std::sort(
++        indices.begin(),
++        indices.end(),
++        [&](ResourceIndex a, ResourceIndex b)
++        {
++            return lifetimes[a].firstUse < lifetimes[b].firstUse;
++        });
 {{< /code-diff >}}
 
 For each transient resource, scan existing physical blocks for one that is both free (previous occupant's `lastUse` < this resource's `firstUse`) and large enough. If found, reuse it; otherwise allocate a new block. The result is a `mapping` vector — `mapping[ResourceIndex]` → physical block index:
 
 {{< code-diff title="v3 — AliasResources() allocation loop" collapsible="true" >}}
 @@ frame_graph_v3.cpp — AliasResources() allocation loop @@
-+    for (ResourceIndex resIdx : indices) {
-+        if (!lifetimes[resIdx].isTransient) continue;      // skip imported resources
-+        if (lifetimes[resIdx].firstUse == UINT32_MAX) continue;  // never used
++    for (ResourceIndex resIdx : indices)
++    {
++        if (!lifetimes[resIdx].isTransient)
++            continue;      // skip imported resources
++        if (lifetimes[resIdx].firstUse == UINT32_MAX)
++            continue;  // never used
 +
 +        uint32_t needed = AllocSize(entries[resIdx].desc);
 +        bool reused = false;
 +
 +        // Scan existing blocks — can we reuse one that's now free?
-+        for (BlockIndex b = 0; b < freeList.size(); b++) {
-+            if (freeList[b].availAfter < lifetimes[resIdx].firstUse  // block is free
-+                && freeList[b].sizeBytes >= needed) {                 // and large enough
++        for (BlockIndex b = 0; b < freeList.size(); b++)
++        {
++            if (freeList[b].availAfter < lifetimes[resIdx].firstUse
++                && freeList[b].sizeBytes >= needed)
++            {
 +                mapping[resIdx] = b;         // reuse this block
 +                freeList[b].availAfter = lifetimes[resIdx].lastUse;  // extend occupancy
 +                reused = true;
@@ -991,9 +1093,10 @@ For each transient resource, scan existing physical blocks for one that is both 
 +            }
 +        }
 +
-+        if (!reused) {  // no fit found → allocate a new physical block
++        if (!reused)
++        {  // no fit found → allocate a new physical block
 +            mapping[resIdx] = static_cast<BlockIndex>(freeList.size());
-+            freeList.push_back({ needed, lifetimes[resIdx].lastUse });
++            freeList.push_back({needed, lifetimes[resIdx].lastUse});
 +        }
 +    }
 +    return mapping;
@@ -1004,7 +1107,8 @@ For each transient resource, scan existing physical blocks for one that is both 
 
 {{< code-diff title="v3 — Updated Compile() & state inference" collapsible="true" >}}
 @@ frame_graph_v3.cpp — Compile() extended with lifetime analysis + aliasing @@
- FrameGraph::CompiledPlan FrameGraph::Compile() {
+ FrameGraph::CompiledPlan FrameGraph::Compile()
+ {
      BuildEdges();
      auto sorted   = TopoSort();
      Cull(sorted);
@@ -1018,9 +1122,11 @@ For each transient resource, scan existing physical blocks for one that is both 
 
 @@ frame_graph_v3.cpp — StateForUsage() extracted as class method @@
 +// Infer the ResourceState a pass needs for a given resource handle.
-+ResourceState FrameGraph::StateForUsage(PassIndex passIdx, ResourceHandle h, bool isWrite) const {
++ResourceState FrameGraph::StateForUsage(PassIndex passIdx, ResourceHandle h, bool isWrite) const
++{
 +    for (auto& rw : passes[passIdx].readWrites)
-+        if (rw.index == h.index) return ResourceState::UnorderedAccess;
++        if (rw.index == h.index)
++            return ResourceState::UnorderedAccess;
 +    if (isWrite)
 +        return (entries[h.index].desc.format == Format::D32F)
 +            ? ResourceState::DepthAttachment : ResourceState::ColorAttachment;
@@ -1038,24 +1144,49 @@ For each transient resource, scan existing physical blocks for one that is both 
 
  std::vector<std::vector<Barrier>> FrameGraph::ComputeBarriers(
          const std::vector<PassIndex>& sorted,
-         const std::vector<BlockIndex>& mapping) {
-
+         const std::vector<BlockIndex>& mapping)
+ {
      std::vector<std::vector<Barrier>> result(sorted.size());
-+    std::vector<ResourceIndex> blockOwner(mapping.size(), UINT32_MAX);
 
-     for (PassIndex orderIdx = 0; orderIdx < sorted.size(); orderIdx++) {
++    // blockOwner[block] = which virtual resource currently occupies it.
++    std::vector<ResourceIndex> blockOwner;
++    {
++        BlockIndex maxBlock = 0;
++        for (auto m : mapping)
++            if (m != UINT32_MAX)
++                maxBlock = std::max(maxBlock, m + 1);
++        blockOwner.assign(maxBlock, UINT32_MAX);
++    }
+
+     for (PassIndex orderIdx = 0; orderIdx < sorted.size(); orderIdx++)
+     {
          PassIndex passIdx = sorted[orderIdx];
-         if (!passes[passIdx].alive) continue;
+         if (!passes[passIdx].alive)
+             continue;
 
 +        // ── Collect unique handles (ReadWrite puts h in both reads & writes) ──
-+        std::vector<std::pair<ResourceHandle,bool>> unique;  // {handle, isWrite}
++        std::vector<std::pair<ResourceHandle, bool>> unique;  // {handle, isWrite}
 +        std::unordered_set<ResourceIndex> seen;
 +        for (auto& h : passes[passIdx].reads)
-+            if (seen.insert(h.index).second) unique.push_back({h, false});
++            if (seen.insert(h.index).second)
++                unique.push_back({h, false});
 +        for (auto& h : passes[passIdx].writes)
-+            if (seen.insert(h.index).second) unique.push_back({h, true});
-+            else // already in reads — upgrade to write (UAV)
-+                for (auto& [uh, w] : unique) if (uh.index == h.index) { w = true; break; }
++        {
++            if (seen.insert(h.index).second)
++            {
++                unique.push_back({h, true});
++            }
++            else
++            {
++                // already in reads — upgrade to write (UAV)
++                for (auto& [uh, w] : unique)
++                    if (uh.index == h.index)
++                    {
++                        w = true;
++                        break;
++                    }
++            }
++        }
 {{< /code-diff >}}
 
 **Phase 1 (aliasing):** for each unique handle, check if its physical block was previously occupied by a different resource — if so, emit an aliasing barrier so the GPU flushes caches. **Phase 2 (state transitions):** same as v2 — compare tracked state to needed state, emit a transition when they differ:
@@ -1063,23 +1194,27 @@ For each transient resource, scan existing physical blocks for one that is both 
 {{< code-diff title="v3 — ComputeBarriers() Phase 1 & 2" collapsible="true" >}}
 @@ frame_graph_v3.cpp — Phase 1 (aliasing) + Phase 2 (state transitions) @@
 +        // ── Phase 1: aliasing barriers ──────────────────────────
-+        for (auto& [h, _] : unique) {
++        for (auto& [h, _] : unique)
++        {
 +            BlockIndex block = mapping[h.index];
-+            if (block == UINT32_MAX) continue;           // imported — no aliasing
-+            if (blockOwner[block] != UINT32_MAX &&
-+                blockOwner[block] != h.index) {          // different occupant?
++            if (block == UINT32_MAX)
++                continue;  // imported — no aliasing
++            if (blockOwner[block] != UINT32_MAX && blockOwner[block] != h.index)
++            {
 +                result[orderIdx].push_back(
-+                    { h.index, ResourceState::Undefined, ResourceState::Undefined,
-+                      /*isAliasing=*/true, blockOwner[block] });
++                    {h.index, ResourceState::Undefined, ResourceState::Undefined, true, blockOwner[block]});
 +            }
-+            blockOwner[block] = h.index;                 // update current occupant
++            blockOwner[block] = h.index;  // update current occupant
 +        }
 +
 +        // ── Phase 2: state-transition barriers (same as v2) ────
-+        for (auto& [h, isWrite] : unique) {
++        for (auto& [h, isWrite] : unique)
++        {
 +            ResourceState needed = StateForUsage(passIdx, h, isWrite);
-+            if (entries[h.index].currentState != needed) {
-+                result[orderIdx].push_back({ h.index, entries[h.index].currentState, needed });
++            if (entries[h.index].currentState != needed)
++            {
++                result[orderIdx].push_back(
++                    {h.index, entries[h.index].currentState, needed});
 +                entries[h.index].currentState = needed;
 +            }
 +        }
@@ -1092,12 +1227,17 @@ For each transient resource, scan existing physical blocks for one that is both 
 
 {{< code-diff title="v3 — EmitBarriers() with aliasing dispatch" collapsible="true" >}}
 @@ frame_graph_v3.cpp — EmitBarriers() extended with aliasing handling @@
- void FrameGraph::EmitBarriers(const std::vector<Barrier>& barriers) {
-     for (auto& b : barriers) {
+ void FrameGraph::EmitBarriers(const std::vector<Barrier>& barriers)
+ {
+     for (auto& b : barriers)
+     {
 -        // (v2: only state transitions)
-+        if (b.isAliasing) {
++        if (b.isAliasing)
++        {
 +            // D3D12: D3D12_RESOURCE_BARRIER_TYPE_ALIASING / Vulkan: memory barrier on the shared heap region.
-+        } else {
++        }
++        else
++        {
              // D3D12: ResourceBarrier(StateBefore→StateAfter) / Vulkan: vkCmdPipelineBarrier(oldLayout→newLayout).
 +        }
      }

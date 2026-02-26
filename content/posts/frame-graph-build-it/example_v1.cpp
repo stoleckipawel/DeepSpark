@@ -4,36 +4,53 @@
 #include "frame_graph_v1.cpp"  // single-TU build (Godbolt)
 #include <cstdio>
 
-int main() {
-    printf("=== Frame Graph v1: Declare & Execute ===\n");
+int main()
+{
+	printf("=== Frame Graph v1: Declare & Execute ===\n");
 
-    FrameGraph fg;
+	FrameGraph fg;
 
-    // Import the swapchain backbuffer — the graph tracks barriers
-    // but does not own its memory (it lives outside the frame).
-    auto backbuffer = fg.ImportResource({1920, 1080, Format::RGBA8});
+	// Import the swapchain backbuffer — the graph tracks barriers
+	// but does not own its memory (it lives outside the frame).
+	auto backbuffer = fg.ImportResource({1920, 1080, Format::RGBA8});
 
-    auto depth = fg.CreateResource({1920, 1080, Format::D32F});
-    auto gbufA = fg.CreateResource({1920, 1080, Format::RGBA8});
-    auto gbufN = fg.CreateResource({1920, 1080, Format::RGBA8});
-    auto hdr   = fg.CreateResource({1920, 1080, Format::RGBA16F});
+	auto depth = fg.CreateResource({1920, 1080, Format::D32F});
+	auto gbufA = fg.CreateResource({1920, 1080, Format::RGBA8});
+	auto gbufN = fg.CreateResource({1920, 1080, Format::RGBA8});
+	auto hdr = fg.CreateResource({1920, 1080, Format::RGBA16F});
 
-    fg.AddPass("DepthPrepass",
-        [&]() { /* setup — v1 doesn't use this */ },
-        [&](/*cmd*/) { printf("     draw scene depth-only\n"); });
+	fg.AddPass(
+	    "DepthPrepass",
+	    [&]() { /* setup — v1 doesn't use this */ },
+	    [&](/*cmd*/)
+	    {
+		    printf("     draw scene depth-only\n");
+	    });
 
-    fg.AddPass("GBuffer",
-        [&]() { /* setup */ },
-        [&](/*cmd*/) { printf("     draw scene -> GBuffer MRTs\n"); });
+	fg.AddPass(
+	    "GBuffer",
+	    [&]() { /* setup */ },
+	    [&](/*cmd*/)
+	    {
+		    printf("     draw scene -> GBuffer MRTs\n");
+	    });
 
-    fg.AddPass("Lighting",
-        [&]() { /* setup */ },
-        [&](/*cmd*/) { printf("     fullscreen lighting pass\n"); });
+	fg.AddPass(
+	    "Lighting",
+	    [&]() { /* setup */ },
+	    [&](/*cmd*/)
+	    {
+		    printf("     fullscreen lighting pass\n");
+	    });
 
-    fg.AddPass("Present",
-        [&]() { /* setup */ },
-        [&](/*cmd*/) { printf("     copy HDR -> backbuffer\n"); });
+	fg.AddPass(
+	    "Present",
+	    [&]() { /* setup */ },
+	    [&](/*cmd*/)
+	    {
+		    printf("     copy HDR -> backbuffer\n");
+	    });
 
-    fg.Execute();
-    return 0;
+	fg.Execute();
+	return 0;
 }

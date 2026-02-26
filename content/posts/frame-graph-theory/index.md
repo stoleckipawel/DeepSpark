@@ -201,9 +201,9 @@ The GPU never sees this graph. It exists only on the CPU, long enough for the sy
 
 The key insight is **deferred execution**. Instead of recording GPU commands as you encounter each pass, you first build a complete description of the frame — every pass, every resource, every dependency — and only then hand it to a compiler that can see the whole picture at once. It's the difference between giving a builder one instruction at a time ("lay a brick… now another brick…") and handing them the full blueprint so they can plan the entire build before picking up a tool. The frame graph's compile step is that planning phase.
 
-This separation has a second benefit: the graph is a **first-class data structure** you can inspect, serialize, diff, and visualize. You can dump it to a log and replay it offline. You can compare this frame's graph to last frame's to see what changed. You can feed it to a profiler that correlates GPU timings with the exact pass and resource layout that produced them. None of this is possible when commands are recorded inline — the information is scattered across dozens of call sites and evaporates the moment the frame ends.
+This separation has a second benefit: the graph is a **first-class data structure** you can inspect, serialize, diff, and visualize. You can dump it to a log and replay it offline. You can compare this frame's graph to last frame's to see what changed. None of this is possible when commands are recorded inline — the information is scattered across dozens of call sites and evaporates the moment the frame ends.
 
-Every frame follows a three-phase lifecycle. Each phase has a single job — and the rest of this article walks through them one by one:
+Every frame follows a three-phase lifecycle:
 
 <!-- 3-step lifecycle — vertical cards with descriptions, clickable -->
 <div style="margin:1.5em 0 2em;display:grid;grid-template-columns:1fr;gap:.6em;max-width:620px;">
@@ -356,7 +356,7 @@ These versioned edges are the raw material the compiler works with. Every step t
 
 ## ⚙ The Compile Step
 
-The declared DAG goes in; an optimized execution plan comes out — all on the CPU, in microseconds.
+Once every pass has declared its resources and dependencies, the compiler takes over. It receives the raw DAG — passes, virtual resources, read/write edges — and transforms it into a concrete execution plan: a sorted pass order, aliased memory layout, and a complete barrier schedule. This entire analysis happens on the CPU, over plain integers and small arrays.
 
 <div style="margin:1.2em 0;border-radius:12px;overflow:hidden;border:1.5px solid rgba(var(--ds-code-rgb),.25);">
   <!-- INPUT -->
@@ -423,7 +423,15 @@ Without aliasing, every transient texture gets its own allocation for the entire
 
 The allocator works in two passes: first, walk the sorted pass list and record each transient resource's first write and last read. Then scan resources in order of first-use — for each one, check if an existing heap block is free (its previous occupant has finished). If so, reuse it. If not, allocate a new block.
 
-**A few things to watch out for:** aliased memory contains stale data, so the first use of any aliased resource must be a full clear or overwrite. Only transient (single-frame) resources qualify — imported resources that persist across frames can't be aliased. Placed resources must respect the GPU's alignment requirements (typically 64 KB), and the previous occupant must have finished all GPU access before new work touches the same memory.
+**Correctness constraints.** Aliasing introduces four hard requirements — violating any of them causes GPU corruption or driver-level undefined behaviour:
+
+1. **First access must be a full clear or discard-then-overwrite.** The physical block still holds the previous occupant's texels. Both D3D12 and Vulkan require the incoming resource to start with a `RENDER_TARGET`/`DEPTH_STENCIL` clear (load-op `CLEAR` in Vulkan, or `DiscardResource` + clear in D3D12) before any read. Without this the GPU may sample stale L2 lines from the evicted resource. ([D3D12 `CreatePlacedResource` docs](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device-createplacedresource), [Vulkan memory aliasing spec](https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#resources-memory-aliasing))
+
+2. **Only transient (single-frame) resources qualify.** Imported resources that persist across frames — swapchain images, temporal history buffers — must keep their data intact, so they can't share a heap slot. Our code enforces this: `ScanLifetimes` sets `isTransient = false` for any entry with `imported == true`, and the allocator skips them.
+
+3. **Placed-resource alignment is non-negotiable.** D3D12 requires 64 KB (`D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT`) for most textures, or 4 MB for MSAA. Vulkan surfaces the requirement via `VkMemoryRequirements::alignment`. Our `AllocSize()` rounds up to 64 KB, matching the common-case constraint. ([D3D12 heap alignment](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_resource_desc), [Vulkan `VkMemoryRequirements`](https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#VkMemoryRequirements))
+
+4. **An aliasing barrier must separate occupants.** Before the GPU begins writing the new resource, it must flush caches and invalidate metadata belonging to the old one. D3D12 exposes `D3D12_RESOURCE_BARRIER_TYPE_ALIASING`; Vulkan uses a `VkMemoryBarrier` covering the shared heap region. Omitting this barrier causes timing-dependent corruption — AMD and NVIDIA GPUs cache metadata differently, so the bug may only reproduce on one vendor. The frame graph's `ComputeBarriers` Phase 1 emits these automatically whenever `blockOwner` changes.
 
 {{< interactive-aliasing >}}
 
@@ -543,7 +551,7 @@ How often should the graph recompile? Three approaches, each a valid tradeoff:
     <strong>Memory aliasing</strong><br><span style="opacity:.65">Opt-in, fragile, rarely done</span>
   </div>
   <div style="padding:.55em .8em;font-size:.88em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.1);background:rgba(var(--ds-success-rgb),.02);">
-    <strong>Memory aliasing</strong><br>Automatic — compiler sees all lifetimes. <strong style="color:var(--ds-success);">Significant VRAM savings</strong> <span style="font-size:.85em;opacity:.7">(topology-dependent)</span>
+    <strong>Memory aliasing</strong><br>Automatic — compiler sees all lifetimes. <strong style="color:var(--ds-success);">~50% transient VRAM savings</strong> <span style="font-size:.85em;opacity:.7">(Frostbite reported this on BF1's deferred pipeline — <a href="https://www.gdcvault.com/play/1024612/FrameGraph-Extensible-Rendering-Architecture-in" style="opacity:.7;">GDC 2017</a>)</span>
   </div>
 
   <div style="padding:.55em .8em;font-size:.88em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.1);border-right:1.5px solid rgba(var(--ds-indigo-rgb),.15);background:rgba(var(--ds-danger-rgb),.02);">

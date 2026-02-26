@@ -3,26 +3,30 @@
 
 // == FrameGraph implementation =================================
 
-ResourceHandle FrameGraph::CreateResource(const ResourceDesc& desc) {
-    resources.push_back(desc);
-    return { static_cast<ResourceIndex>(resources.size() - 1) };
+ResourceHandle FrameGraph::CreateResource(const ResourceDesc& desc)
+{
+	resources.push_back(desc);
+	return {static_cast<ResourceIndex>(resources.size() - 1)};
 }
 
-ResourceHandle FrameGraph::ImportResource(const ResourceDesc& desc) {
-    resources.push_back(desc);  // v1: same as create (no aliasing yet)
-    return { static_cast<ResourceIndex>(resources.size() - 1) };
+ResourceHandle FrameGraph::ImportResource(const ResourceDesc& desc)
+{
+	resources.push_back(desc);  // v1: same as create (no aliasing yet)
+	return {static_cast<ResourceIndex>(resources.size() - 1)};
 }
 
-void FrameGraph::Execute() {
-    // v1: no compile step -- no sorting, no culling, no barriers.
-    // Just run every pass in the order it was added.
-    printf("\n[1] Executing (declaration order -- no compile step):\n");
-    for (auto& pass : passes) {
-        printf("  >> exec: %s\n", pass.name.c_str());
-        pass.Execute(/* &cmdList */);
-    }
+void FrameGraph::Execute()
+{
+	// v1: no compile step -- no sorting, no culling, no barriers.
+	// Just run every pass in the order it was added.
+	printf("\n[1] Executing (declaration order -- no compile step):\n");
+	for (auto& pass : passes)
+	{
+		printf("  >> exec: %s\n", pass.name.c_str());
+		pass.Execute(/* &cmdList */);
+	}
 
-    // Frame over -- clear everything for next frame.
-    passes.clear();
-    resources.clear();
+	// Frame over -- clear everything for next frame.
+	passes.clear();
+	resources.clear();
 }
