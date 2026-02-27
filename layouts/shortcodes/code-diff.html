@@ -13,21 +13,23 @@
 {{ end }}
 <div class="code-diff">
   <div class="cd-title">{{ $title }}</div>
-  {{ $raw := .Inner }}
-  {{ $lines := split $raw "\n" }}
-  {{ range $lines }}
-    {{ if hasPrefix . "+" }}
-      {{ $code := strings.TrimPrefix "+" . }}
-      <div class="cd-line cd-add"><span class="cd-gutter">+</span><span class="cd-code">{{ $code }}</span></div>
-    {{ else if hasPrefix . "-" }}
-      {{ $code := strings.TrimPrefix "-" . }}
-      <div class="cd-line cd-remove"><span class="cd-gutter">&minus;</span><span class="cd-code">{{ $code }}</span></div>
-    {{ else if hasPrefix . "@" }}
-      <div class="cd-line" style="color:var(--ds-code-light);font-weight:600"><span class="cd-gutter"></span><span class="cd-code">{{ . }}</span></div>
-    {{ else }}
-      <div class="cd-line cd-context"><span class="cd-gutter"></span><span class="cd-code">{{ . }}</span></div>
-    {{ end }}
-  {{ end }}
+  {{- $raw := .Inner -}}
+  {{- $lines := split $raw "\n" -}}
+  <pre class="cd-pre">
+    {{- range $lines -}}
+      {{- if hasPrefix . "+" -}}
+        {{- $code := strings.TrimPrefix "+" . -}}
+        <div class="cd-line cd-add"><span class="cd-gutter">+</span><span class="cd-code">{{ $code }}</span></div>
+      {{- else if hasPrefix . "-" -}}
+        {{- $code := strings.TrimPrefix "-" . -}}
+        <div class="cd-line cd-remove"><span class="cd-gutter">&minus;</span><span class="cd-code">{{ $code }}</span></div>
+      {{- else if hasPrefix . "@" -}}
+        <div class="cd-line" style="color:var(--ds-code-light);font-weight:600"><span class="cd-gutter"></span><span class="cd-code">{{ . }}</span></div>
+      {{- else -}}
+        <div class="cd-line cd-context"><span class="cd-gutter"></span><span class="cd-code">{{ . }}</span></div>
+      {{- end -}}
+    {{- end -}}
+  </pre>
 </div>
 {{ if or $collapsed $collapsible }}
 </details>

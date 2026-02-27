@@ -706,6 +706,16 @@ section.prose > div.max-w-prose {
   border-bottom: 1px solid #262626;
   font-size: 0.95em;
 }
+.code-diff .cd-pre {
+  margin: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: none;
+  white-space: pre;
+  overflow: visible;
+}
 .code-diff .cd-line {
   display: flex;
   white-space: pre;
