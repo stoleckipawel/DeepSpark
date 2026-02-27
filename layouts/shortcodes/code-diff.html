@@ -17,10 +17,10 @@
   {{ $lines := split $raw "\n" }}
   {{ range $lines }}
     {{ if hasPrefix . "+" }}
-      {{ $code := slicestr . 1 }}
+      {{ $code := strings.TrimPrefix "+" . }}
       <div class="cd-line cd-add"><span class="cd-gutter">+</span><span class="cd-code">{{ $code }}</span></div>
     {{ else if hasPrefix . "-" }}
-      {{ $code := slicestr . 1 }}
+      {{ $code := strings.TrimPrefix "-" . }}
       <div class="cd-line cd-remove"><span class="cd-gutter">&minus;</span><span class="cd-code">{{ $code }}</span></div>
     {{ else if hasPrefix . "@" }}
       <div class="cd-line" style="color:var(--ds-code-light);font-weight:600"><span class="cd-gutter"></span><span class="cd-code">{{ . }}</span></div>
