@@ -34,17 +34,30 @@ GA4 is eliminated by priority #1 (cookies, consent banner, blocked by ad blocker
 
 ---
 
-## Decision 2 — Self-hosted vs. SaaS? → **YOUR CALL**
+## Decision 2 — Self-hosted vs. SaaS? → **Umami Cloud — Free Hobby tier**
 
-| Option | Pros | Cons |
-|---|---|---|
-| **Umami Cloud ($9/mo)** | Zero maintenance, 5-min setup, automatic updates, always online | Monthly cost, data on Umami's servers (still privacy-respecting) |
-| **Self-hosted (free)** | Completely free, full data ownership, custom domain | Need a VPS (~$5/mo anyway), PostgreSQL setup, maintenance, backups |
+| Option | Events/month | Cost | Fits? |
+|---|---|---|---|
+| **Umami Cloud Hobby** | 10,000 | **Free** | ✅ Yes |
+| Umami Cloud Growth | 100,000 | $9/mo | ❌ Not free |
+| Self-hosted | Unlimited | Free (but need a VPS) | ❌ Don't want to host |
+| Seline free tier | Limited | Free | ⚠️ Backup option |
 
-**My lean:** Start with **Umami Cloud** to get data flowing immediately. Migrate to self-hosted later if cost matters — the tracking script stays the same, only the `domain` in config changes.
+### Event budget math
+- 1 page view = 1 event
+- Scroll milestones (25%, 50%, 75%, 100%) = up to 4 events per read
+- Code-copy click = 1 event (rare)
+- Worst case per visitor: ~5-6 events
 
-### 👉 YOUR DECISION:
-> `[ ] Umami Cloud` · `[ ] Self-hosted`
+**10,000 events ÷ 6 = ~1,600 full article reads/month.** For a growing tech blog, this is comfortably enough. If you outgrow it, that's a great problem to have — upgrade to Growth ($9/mo) when traffic justifies it.
+
+### Smart budgeting we'll implement
+- Only fire scroll events on article pages (not homepage/about)
+- Combine 25%+50% into just 50% (halves scroll events) → **3 milestones: 50%, 75%, 100%**
+- Debounce to prevent duplicates
+- Result: ~4 events per full read → supports **~2,500 reads/month** on free tier
+
+### ✅ DECIDED: Umami Cloud Hobby (free, no hosting, no maintenance)
 
 ---
 
@@ -74,8 +87,8 @@ Based on your goals ("understand where readers stop, what gets read, improve my 
 ### Layer 2 — Custom events (requires a small JS script we'll add)
 | Event | What it tells you | How |
 |---|---|---|
-| **Scroll milestones** (25%, 50%, 75%, 100%) | Where readers stop — do they finish? Drop off at the midpoint? | IntersectionObserver on sentinel elements |
-| **Reading completion** | % of articles fully read | Fire event when footer enters viewport |
+| **Scroll milestones** (50%, 75%, 100%) | Where readers stop — do they finish? Drop off at the midpoint? | IntersectionObserver on sentinel elements (3 events, budget-optimized) |
+| **Reading completion** | % of articles fully read | Included in the 100% milestone above |
 | **Section engagement** | Which H2 sections are actually reached | Track heading visibility |
 | **Time-to-milestone** | How long to reach 50%, 75%, 100% — indicates engagement speed | Timestamp deltas |
 | **Code-copy clicks** | Which code blocks are useful enough to copy | Hook the existing copy button |
@@ -92,17 +105,11 @@ Based on your goals ("understand where readers stop, what gets read, improve my 
 
 ---
 
-## Decision 5 — When to go live? → **YOUR CALL**
+## Decision 5 — When to go live? → **Now**
 
-| Option | Pros | Cons |
-|---|---|---|
-| **Immediate** | Start collecting data today; every day without analytics is data lost | Scroll tracking needs testing |
-| **After testing** | Verify everything works on preview before pushing to prod | Delays by a few days |
+Every day without analytics is lost data. We'll test locally with `hugo server`, verify the script loads and events fire, then push.
 
-**My lean:** Wire it up now, test locally with `hugo server`, then push. Effectively immediate.
-
-### 👉 YOUR DECISION:
-> `[ ] Wire it up now` · `[ ] Wait`
+### ✅ DECIDED: Wire it up now
 
 ---
 
@@ -145,12 +152,16 @@ Commit and push. GitHub Actions builds and deploys. Done.
 
 ---
 
-## Remaining decisions for you
+## All decisions locked ✅
 
-| # | Question | Options |
+| # | Decision | Answer |
 |---|---|---|
-| 2 | Hosting model | `Umami Cloud` / `Self-hosted` |
-| 5 | Timing | `Now` / `Wait` |
-| — | Provide Website ID | (after creating Umami account) |
+| 1 | Provider | **Umami** (privacy-first, custom events, Blowfish built-in) |
+| 2 | Hosting | **Umami Cloud Hobby** (free, no self-hosting) |
+| 3 | Consent banner | **None needed** (no cookies) |
+| 4 | Tracking | **Layer 1 + Layer 2** (page views + scroll/reading behavior) |
+| 5 | Timing | **Now** |
 
-Once you give me the Website ID, I'll wire up Steps 2–3 in under a minute.
+### Next step
+1. Go to [cloud.umami.is](https://cloud.umami.is) → sign up (free) → add site `stoleckipawel.dev` → copy your **Website ID**
+2. Give me the Website ID and I'll wire up everything in ~1 minute
