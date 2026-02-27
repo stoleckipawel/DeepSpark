@@ -16,32 +16,24 @@
 
 ## Decision 1 — Which analytics provider? → **Umami**
 
-GA4 is eliminated by priority #1 (cookies, consent banner, blocked by ad blockers on ~30-40% of your dev audience). Fathom, Seline, and GoatCounter are eliminated by priority #2 (no scroll depth / limited custom events). That leaves two real contenders:
+Eliminated options:
+- **GA4** — cookies, consent banner, blocked by ~30-40% of dev audience
+- **Fathom** — no free tier ($14/mo)
+- **Plausible** — no free cloud tier (€9/mo), self-hosted needs a VPS
+- **Simple Analytics** — no free tier (€9/mo)
+- **Seline / GoatCounter** — no scroll depth / limited custom events
 
-| | Umami | Plausible |
-|---|---|---|
-| Privacy (no cookies) | ✅ | ✅ |
-| Custom events (scroll depth, reading milestones) | ✅ `umami.track()` | ✅ `plausible()` |
-| Blowfish built-in | ✅ **Yes** — just fill `params.toml` | ❌ Manual script tag |
-| Cost (cloud) | $9/mo (free self-host) | €9/mo (free self-host) |
-| Dashboard | Functional, improving fast | More polished |
-| Data export / API | ✅ Full API | ✅ Full API |
-| Event properties (e.g. which article, which section) | ✅ Key-value pairs | ✅ Key-value pairs |
-
-**Winner: Umami** — same privacy and event capabilities as Plausible, but zero-friction setup since Blowfish has it built in. If you later want to switch to Plausible, the custom scroll-tracking script works with either.
+**Winner: Umami Cloud Hobby** — free tier (10K events/mo), no cookies, custom events for scroll tracking, Blowfish built-in support (just fill `params.toml`).
 
 ### ✅ DECIDED: Umami
 
 ---
 
-## Decision 2 — Self-hosted vs. SaaS? → **Umami Cloud — Free Hobby tier**
+## Decision 2 — Hosting? → **Umami Cloud — Free Hobby tier**
 
 | Option | Events/month | Cost | Fits? |
 |---|---|---|---|
 | **Umami Cloud Hobby** | 10,000 | **Free** | ✅ Yes |
-| Umami Cloud Growth | 100,000 | $9/mo | ❌ Not free |
-| Self-hosted | Unlimited | Free (but need a VPS) | ❌ Don't want to host |
-| Seline free tier | Limited | Free | ⚠️ Backup option |
 
 ### Event budget math
 - 1 page view = 1 event
@@ -244,14 +236,7 @@ Commit and push. GitHub Actions builds and deploys. Done.
   - Indie project (one developer) — longevity risk
   - Free tier is extremely limited
 
-### 2d. Simple Analytics
-
-- **URL:** https://www.simpleanalytics.com
-- **Cost:** Free tier was discontinued — now starts at €9/month. Has a "Starter" plan. **Not free.**
-- **What it provides:** Page views, referrers, UTM, device info, goals/events, public dashboard
-- **Privacy impact:** No cookies, GDPR compliant
-- **Setup:** Script tag injection
-- **Gotchas:** No longer has a meaningful free tier — eliminated for this use case
+### ~~2d. Simple Analytics~~ — REMOVED (no free tier, starts €9/mo)
 
 ### 2e. Cabin
 
@@ -315,25 +300,9 @@ Commit and push. GitHub Actions builds and deploys. Done.
   - Limited integrations
   - Small team
 
-### 2j. Plausible Analytics (self-hosted)
+### ~~2j. Plausible Analytics~~ — REMOVED (no free cloud tier, self-hosted needs VPS)
 
-- **URL:** https://plausible.io / https://github.com/plausible/analytics
-- **Cost:** Cloud: €9/month (no free tier). Self-hosted: free (needs a VPS)
-- **What it provides:** Page views, visitors, referrers, UTM, goals, custom events, country/device, revenue tracking, funnel analysis
-- **Privacy impact:** No cookies, GDPR compliant
-- **Setup:** Script tag. No Blowfish built-in support (manual).
-- **Gotchas:**
-  - No free cloud tier — self-host or pay
-  - Self-hosting needs Docker + PostgreSQL + ClickHouse
-
-### 2k. Fathom Analytics
-
-- **URL:** https://usefathom.com
-- **Cost:** From $14/month. **No free tier.**
-- **What it provides:** Page views, referrers, UTM, events, EU-isolated processing
-- **Privacy impact:** No cookies, GDPR compliant
-- **Setup:** Blowfish has native support via `[fathomAnalytics]` in params.toml
-- **Gotchas:** No free tier — eliminated for this use case. Blowfish support is nice but irrelevant without budget.
+### ~~2k. Fathom Analytics~~ — REMOVED (no free tier, starts $14/mo)
 
 ### 2l. Seline Analytics
 
@@ -603,30 +572,9 @@ Commit and push. GitHub Actions builds and deploys. Done.
   - Adds ~15-20KB to page load
   - Session replay data retained 30 days
 
-### 8b. Hotjar (free tier)
+### ~~8b. Hotjar~~ — REMOVED (Clarity is strictly better on free tier, 35 sessions/day is useless)
 
-- **URL:** https://www.hotjar.com
-- **Cost:** Free: 35 daily sessions, heatmaps for a limited number of pages
-- **What it provides:** Heatmaps (click, scroll, move), session recordings, feedback polls, surveys
-- **Privacy impact:** **Uses cookies**, consent required. More invasive than Clarity.
-- **Setup:** Script tag injection
-- **Gotchas:**
-  - 35 sessions/day is very limiting
-  - Free tier has reduced features vs Clarity's unlimited free tier
-  - **Clarity is strictly better** for a free static site
-
-### 8c. FullStory (free tier)
-
-- **URL:** https://www.fullstory.com
-- **Cost:** Free tier: 1,000 sessions/month
-- **What it provides:** Session replay, heatmaps, funnel analysis, frustration signals
-- **Privacy impact:** Uses cookies, heavier tracking. Consent needed.
-- **Setup:** Script injection
-- **Gotchas:**
-  - Enterprise-focused product — overkill for a blog
-  - Free tier is restrictive
-  - Heavy script (~70KB+)
-  - **Not recommended** for a personal blog
+### ~~8c. FullStory~~ — REMOVED (enterprise overkill, heavy 70KB+ script, restrictive free tier)
 
 ---
 
@@ -636,13 +584,7 @@ Commit and push. GitHub Actions builds and deploys. Done.
 
 No longer available.
 
-### 9b. Cloudflare Workers (manual A/B)
-
-- **URL:** https://developers.cloudflare.com/workers/
-- **Cost:** Free tier: 100,000 requests/day
-- **What it provides:** Edge-based A/B testing — rewrite HTML at the CDN level before it reaches the user
-- **Setup:** Requires Cloudflare proxy (orange-cloud) — possible with GitHub Pages + custom domain + CF
-- **Gotchas:** Requires writing Worker code. Complex for a blog. GitHub Pages already serves the site.
+### ~~9b. Cloudflare Workers (manual A/B)~~ — REMOVED (complex, requires Cloudflare proxy setup)
 
 ### 9c. Client-Side A/B with JavaScript
 
@@ -666,15 +608,9 @@ No longer available.
   - 1M events free is very generous
   - Cookie-free mode available but less accurate
 
-### 9e. Growthbook
+### ~~9e. Growthbook~~ — REMOVED (overkill for a blog)
 
-- **URL:** https://www.growthbook.io
-- **Cost:** Free (open source, free cloud tier)
-- **What it provides:** Feature flags, A/B testing, experiment analysis
-- **Setup:** SDK integration
-- **Gotchas:** Overkill for a blog. Better suited for product teams.
-
-**Bottom line on A/B testing:** For a blog, the practical approach is client-side JS + Umami custom events. Formal A/B platforms are overkill. Test one thing at a time (article title, layout, CTA) and compare in Umami.
+**Bottom line on A/B testing:** For a blog, the practical approach is client-side JS + Umami custom events. Formal A/B platforms are overkill.
 
 ---
 
@@ -901,17 +837,19 @@ No longer available.
 | **Lighthouse score tracking** | Perf trending | Track scores over time in CI artifacts. |
 | **Newsletter** (Buttondown/etc.) | Engagement | High-signal metric but requires commitment to write. |
 
-### Tier 4 — Skip (not worth the effort or conflict with goals)
+### Tier 4 — Eliminated (paid, self-hosted, or conflicts with goals)
 
-| Tool | Why skip |
+| Tool | Why removed |
 |---|---|
 | Google Analytics (GA4) | Cookies, consent banner, blocked by ad blockers |
-| Hotjar / FullStory | Cookies, consent required, Clarity is strictly better if you go this route |
-| Disqus | Privacy nightmare |
-| Fathom / Plausible Cloud | No free tier |
-| Simple Analytics | No free tier |
+| Fathom | No free tier ($14/mo) |
+| Plausible Cloud | No free tier (€9/mo), self-hosted needs always-on VPS |
+| Simple Analytics | No free tier (€9/mo) |
+| Hotjar / FullStory | Clarity is strictly better for free; all need cookies |
+| Disqus | Privacy nightmare, ads, heavy tracking |
 | Yandex Webmaster | Not relevant unless targeting CIS audience |
-| A/B testing platforms | Overkill for a blog — use Umami events if needed |
+| Growthbook / A/B platforms | Overkill for a blog |
+| Any self-hosted option | Requires always-on server/VPS |
 
 ---
 
@@ -936,13 +874,13 @@ No longer available.
 
 Your theme natively supports these analytics (just fill in config values):
 
-| Provider | Config key | Free tier? |
-|---|---|---|
-| Google Analytics | `hugo.toml → googleAnalytics` | Yes (but cookies) |
-| Fathom | `params.toml → [fathomAnalytics]` | No |
-| Umami | `params.toml → [umamiAnalytics]` | Yes (10K events) |
-| Seline | `params.toml → [selineAnalytics]` | Yes (limited) |
-| Firebase views/likes | `params.toml → [firebase]` | Yes (Spark plan) |
-| Site verification | `params.toml → [verification]` | Yes (GSC, Bing, Pinterest, Yandex, Fediverse) |
+| Provider | Config key | Free? | Viable? |
+|---|---|---|---|
+| **Umami** | `params.toml → [umamiAnalytics]` | ✅ 10K events | ✅ **SELECTED** |
+| Seline | `params.toml → [selineAnalytics]` | ✅ Limited | ⚠️ Backup |
+| Firebase views/likes | `params.toml → [firebase]` | ✅ Spark plan | ⚠️ Cookies |
+| Site verification | `params.toml → [verification]` | ✅ Free | ✅ Use for GSC/Bing |
+| ~~Google Analytics~~ | ~~`hugo.toml → googleAnalytics`~~ | ~~Yes~~ | ❌ Cookies |
+| ~~Fathom~~ | ~~`params.toml → [fathomAnalytics]`~~ | ~~No~~ | ❌ Paid |
 
 Everything else requires manual script injection via `layouts/partials/extend-head.html` or `extend-footer.html`.
