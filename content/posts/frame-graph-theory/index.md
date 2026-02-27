@@ -133,7 +133,7 @@ The pattern is always the same: manual resource management works at small scale 
 
 ## 💡 The Core Idea
 
-A frame graph models an entire frame as a **directed acyclic graph (DAG)**. Each node is a render pass; each edge carries a resource — a texture, a buffer, an attachment — from the pass that writes it to every pass that reads it. Here's what a typical deferred-rendering frame looks like:
+A frame graph models an entire frame as a **directed acyclic graph (DAG)**. Each node is a render pass; each edge carries a resource — a texture, a buffer, an attachment — from the pass that writes it to every pass that reads it. Here's what an example deferred-rendering frame looks like:
 
 <!-- DAG flow diagram -->
 <div style="margin:1.6em 0 .5em;text-align:center;">
@@ -425,13 +425,13 @@ The allocator works in two passes: first, walk the sorted pass list and record e
 
 **Correctness constraints.** Aliasing introduces four hard requirements — violating any of them causes GPU corruption or driver-level undefined behaviour:
 
-1. **First access must be a full clear or discard-then-overwrite.** The physical block still holds the previous occupant's texels. Both D3D12 and Vulkan require the incoming resource to start with a `RENDER_TARGET`/`DEPTH_STENCIL` clear (load-op `CLEAR` in Vulkan, or `DiscardResource` + clear in D3D12) before any read. Without this the GPU may sample stale L2 lines from the evicted resource. ([D3D12 `CreatePlacedResource` docs](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device-createplacedresource), [Vulkan memory aliasing spec](https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#resources-memory-aliasing))
+1. **First access must initialise the resource.** The physical block still holds the previous occupant's texels. For resources with render-target or depth-stencil flags, D3D12 requires one of three operations before any other access: a Clear, a `DiscardResource`, or a full-subresource Copy. Vulkan equivalently requires load-op `CLEAR` or `DONT_CARE` (which acts as a discard). Without this the GPU reads undefined contents from the evicted resource. ([D3D12 `CreatePlacedResource` docs](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device-createplacedresource), [Vulkan memory aliasing spec](https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#resources-memory-aliasing))
 
 2. **Only transient (single-frame) resources qualify.** Imported resources that persist across frames — swapchain images, temporal history buffers — must keep their data intact, so they can't share a heap slot. Our code enforces this: `ScanLifetimes` sets `isTransient = false` for any entry with `imported == true`, and the allocator skips them.
 
 3. **Placed-resource alignment is non-negotiable.** D3D12 requires 64 KB (`D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT`) for most textures, or 4 MB for MSAA. Vulkan surfaces the requirement via `VkMemoryRequirements::alignment`. Our `AllocSize()` rounds up to 64 KB, matching the common-case constraint. ([D3D12 heap alignment](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_resource_desc), [Vulkan `VkMemoryRequirements`](https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#VkMemoryRequirements))
 
-4. **An aliasing barrier must separate occupants.** Before the GPU begins writing the new resource, it must flush caches and invalidate metadata belonging to the old one. D3D12 exposes `D3D12_RESOURCE_BARRIER_TYPE_ALIASING`; Vulkan uses a `VkMemoryBarrier` covering the shared heap region. Omitting this barrier causes timing-dependent corruption — AMD and NVIDIA GPUs cache metadata differently, so the bug may only reproduce on one vendor. The frame graph's `ComputeBarriers` Phase 1 emits these automatically whenever `blockOwner` changes.
+4. **An aliasing barrier must separate occupants.** Before the GPU begins writing the new resource, it must flush caches and invalidate metadata belonging to the old one. D3D12 exposes `D3D12_RESOURCE_BARRIER_TYPE_ALIASING`; Vulkan handles this via a `VkImageMemoryBarrier` transitioning the incoming resource from `VK_IMAGE_LAYOUT_UNDEFINED`, which implicitly invalidates caches and metadata for the shared memory region. Omitting this barrier causes timing-dependent corruption — AMD and NVIDIA GPUs cache metadata differently, so the bug may only reproduce on one vendor. The frame graph's `ComputeBarriers` Phase 1 emits these automatically whenever `blockOwner` changes.
 
 {{< interactive-aliasing >}}
 
