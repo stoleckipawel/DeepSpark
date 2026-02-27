@@ -341,4 +341,86 @@
 })();
 </script>
 
+<!-- ── Umami: scroll depth + behavior tracking ─────────────────────── -->
+<script>
+(function(){
+  /* Only run on article pages under /posts/ */
+  var article = document.querySelector('.article-content');
+  if (!article) return;
+  if (!/\/posts\/[^/]+/.test(location.pathname)) return;
+
+  /* Slug from URL path (last non-empty segment) */
+  var parts = location.pathname.replace(/\/+$/,'').split('/');
+  var slug  = parts[parts.length - 1] || 'unknown';
+
+  /* Dev-mode guard: log instead of sending on localhost */
+  var isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+  function track(name, props) {
+    if (isDev) { console.log('[umami-track]', name, props); return; }
+    if (typeof umami !== 'undefined' && umami.track) umami.track(name, props);
+  }
+
+  /* ── 1. Scroll milestones (50%, 75%, 100%) ── */
+  var fired = {};
+  var milestones = [0.50, 0.75, 1.00];
+
+  function createSentinel(ratio) {
+    var el = document.createElement('div');
+    el.style.cssText = 'position:absolute;left:0;width:1px;height:1px;pointer-events:none;';
+    el.style.top = (ratio * 100) + '%';
+    el.dataset.milestone = Math.round(ratio * 100);
+    return el;
+  }
+
+  /* article-content needs position:relative for absolute sentinels */
+  if (getComputedStyle(article).position === 'static') {
+    article.style.position = 'relative';
+  }
+
+  var scrollIO = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) {
+      if (!e.isIntersecting) return;
+      var pct = e.target.dataset.milestone;
+      if (fired[pct]) return;
+      fired[pct] = true;
+      track('scroll-' + pct, { article: slug });
+    });
+  }, { threshold: 0 });
+
+  milestones.forEach(function(r) {
+    var s = createSentinel(r);
+    article.appendChild(s);
+    scrollIO.observe(s);
+  });
+
+  /* ── 2. Code-copy clicks ── */
+  document.addEventListener('click', function(e) {
+    if (e.target.closest && e.target.closest('.copy-button')) {
+      track('code-copy', { article: slug });
+    }
+  });
+
+  /* ── 3. Collapsible code-diff opens ── */
+  document.querySelectorAll('details.code-diff-collapsible').forEach(function(det) {
+    det.addEventListener('toggle', function() {
+      if (det.open) track('details-open', { article: slug });
+    });
+  });
+
+  /* ── 4. Section tracking (disabled by default — uncomment to enable) ── */
+  /*
+  var sectionFired = {};
+  var sectionIO = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) {
+      if (!e.isIntersecting) return;
+      var txt = e.target.textContent.trim().substring(0, 60);
+      if (sectionFired[txt]) return;
+      sectionFired[txt] = true;
+      track('section', { article: slug, name: txt });
+    });
+  }, { threshold: 0 });
+  article.querySelectorAll('h2').forEach(function(h) { sectionIO.observe(h); });
+  */
+})();
+</script>
 
