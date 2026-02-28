@@ -136,9 +136,57 @@ main { flex-grow: 0 !important; }
   aspect-ratio: 16 / 10;
   object-fit: cover;
   display: block;
-  transition: transform .4s ease;
 }
-.portfolio-card:hover img { transform: scale(1.04); }
+/* ── Slideshow container ─────────────────────────────────────── */
+.pf-slides {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  background: #0d0d0d;
+  display: block;
+}
+.pf-slide {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  animation: pf-fade 7.5s linear infinite;
+  animation-fill-mode: both;
+}
+.portfolio-card:hover .pf-slide { animation-play-state: paused; }
+/*
+  7.5s cycle = 3 slides × 2.5s each.
+  Each slide: fade-in 0.75s, hold 3.5s, fade-out 0.75s, idle 2.5s.
+  Slides overlap during transitions so there is never a dark gap.
+  Each card gets a unique time offset so they never all cross-fade
+  at the same moment.
+  Base delays (offset 0): -0.75s, 1.75s, 4.25s
+*/
+@keyframes pf-fade {
+  0%      { opacity: 0; }
+  10%     { opacity: 1; }
+  56.67%  { opacity: 1; }
+  66.67%  { opacity: 0; }
+  100%    { opacity: 0; }
+}
+/* GIF placeholder badge */
+.gif-badge {
+  position: absolute;
+  top: .6em;
+  right: .6em;
+  z-index: 5;
+  font-size: .65em;
+  font-weight: 700;
+  color: rgba(255,255,255,.6);
+  background: rgba(0,0,0,.55);
+  border: 1px dashed rgba(255,255,255,.28);
+  border-radius: 4px;
+  padding: .2em .55em;
+  letter-spacing: .05em;
+}
 .portfolio-card .overlay {
   position: absolute;
   inset: 0;
@@ -304,15 +352,13 @@ main { flex-grow: 0 !important; }
     <div class="about-hero-text">
       <p>
         I'm Pawel Stolecki, a rendering engineer focused on real-time graphics and performance-critical systems,
-        building scalable rendering architectures that fully utilize modern GPU hardware under strict frame budgets.
+        building scalable rendering systems that deliver production value while fully utilizing modern hardware under strict frame budgets.
       </p>
       <p>
-        My work spans physically based rendering, real-time ray tracing, low-level graphics programming
-        (DirectX 12, Vulkan, UE RHI, Render Graph), and GPU/CPU/memory profiling across PC and console platforms.
+        My work spans physically based rendering, real-time ray tracing, low-level graphics programming across PC and console platforms.
       </p>
       <p>
-        I enjoy working close to the metal, analyzing wave behavior, occupancy, cache utilization,
-        and submission pipelines to ensure every millisecond is accounted for.
+        I enjoy working close to the metal: analyzing hardware utilization, data structures &amp; algorithms ensuring every fraction of a millisecond is accounted for.
       </p>
     </div>
   </div>
@@ -368,15 +414,25 @@ main { flex-grow: 0 !important; }
 <div class="portfolio-grid">
 
   <div class="featured">
+    <!-- Volumetric Fog — 3-image left→right wipe slideshow -->
     <a class="portfolio-card" href="https://www.artstation.com/artwork/OGER3g" target="_blank" rel="noopener">
-      <img src="https://cdnb.artstation.com/p/assets/images/images/062/270/817/medium/pawel-stolecki-1.jpg?1682718299" alt="Volumetric Fog" loading="lazy" />
+      <div class="pf-slides">
+        <img class="pf-slide" src="https://cdnb.artstation.com/p/assets/images/images/062/270/817/medium/pawel-stolecki-1.jpg?1682718299"   alt="Volumetric Fog 1" loading="lazy" style="animation-delay:-0.75s" />
+        <img class="pf-slide" src="https://cdnb.artstation.com/p/assets/images/images/062/270/829/medium/pawel-stolecki-5.jpg?1682718331"   alt="Volumetric Fog 2" loading="lazy" style="animation-delay:1.75s" />
+        <img class="pf-slide" src="https://cdna.artstation.com/p/assets/images/images/062/270/844/medium/pawel-stolecki-9.jpg?1682718362"   alt="Volumetric Fog 3" loading="lazy" style="animation-delay:4.25s" />
+      </div>
       <div class="overlay">
         <div class="title">Volumetric Fog</div>
         <div class="tag">Dying Light 2 · Techland</div>
       </div>
     </a>
+    <!-- Water Rendering — 3-image left→right wipe slideshow -->
     <a class="portfolio-card" href="https://www.artstation.com/artwork/8bmLQQ" target="_blank" rel="noopener">
-      <img src="https://cdna.artstation.com/p/assets/images/images/062/269/266/medium/pawel-stolecki-1.jpg?1682714949" alt="Water Rendering" loading="lazy" />
+      <div class="pf-slides">
+        <img class="pf-slide" src="https://cdna.artstation.com/p/assets/images/images/062/269/266/medium/pawel-stolecki-1.jpg?1682714949"  alt="Water Rendering 1" loading="lazy" style="animation-delay:1.45s" />
+        <img class="pf-slide" src="https://cdna.artstation.com/p/assets/images/images/062/269/286/medium/pawel-stolecki-4.jpg?1682714973"  alt="Water Rendering 2" loading="lazy" style="animation-delay:3.95s" />
+        <img class="pf-slide" src="https://cdna.artstation.com/p/assets/images/images/062/269/308/medium/pawel-stolecki-7.jpg?1682715005"  alt="Water Rendering 3" loading="lazy" style="animation-delay:6.45s" />
+      </div>
       <div class="overlay">
         <div class="title">Water Rendering</div>
         <div class="tag">Dying Light 2 · Techland</div>
@@ -384,32 +440,48 @@ main { flex-grow: 0 !important; }
     </a>
   </div>
 
+  <!-- SSAO — 3-image left→right wipe slideshow -->
   <a class="portfolio-card" href="https://www.artstation.com/artwork/PXOBQy" target="_blank" rel="noopener">
-    <img src="https://cdnb.artstation.com/p/assets/images/images/062/268/265/medium/pawel-stolecki-1.jpg?1682713064" alt="SSAO" loading="lazy" />
+    <div class="pf-slides">
+      <img class="pf-slide" src="https://cdnb.artstation.com/p/assets/images/images/062/268/265/medium/pawel-stolecki-1.jpg?1682713064"  alt="SSAO 1" loading="lazy" style="animation-delay:4.05s" />
+      <img class="pf-slide" src="https://cdna.artstation.com/p/assets/images/images/062/268/810/medium/pawel-stolecki-222.jpg?1682714090" alt="SSAO compare" loading="lazy" style="animation-delay:6.55s" />
+      <img class="pf-slide" src="https://cdnb.artstation.com/p/assets/images/images/062/268/621/medium/pawel-stolecki-2.jpg?1682713769"  alt="SSAO 3" loading="lazy" style="animation-delay:9.05s" />
+    </div>
     <div class="overlay">
       <div class="title">Screen Space Ambient Occlusion</div>
       <div class="tag">Dying Light 2 · Techland</div>
     </div>
   </a>
 
+  <!-- Motion Blur — 3-image left→right wipe slideshow -->
   <a class="portfolio-card" href="https://www.artstation.com/artwork/m83KDd" target="_blank" rel="noopener">
-    <img src="https://cdnb.artstation.com/p/assets/images/images/062/270/439/medium/pawel-stolecki-1.jpg?1682717446" alt="Motion Blur" loading="lazy" />
+    <div class="pf-slides">
+      <img class="pf-slide" src="https://cdnb.artstation.com/p/assets/images/images/062/270/439/medium/pawel-stolecki-1.jpg?1682717446"  alt="Motion Blur 1" loading="lazy" style="animation-delay:0.35s" />
+      <img class="pf-slide" src="https://cdnb.artstation.com/p/assets/images/images/062/270/447/medium/pawel-stolecki-3.jpg?1682717455"  alt="Motion Blur 2" loading="lazy" style="animation-delay:2.85s" />
+      <img class="pf-slide" src="https://cdna.artstation.com/p/assets/images/images/062/270/454/medium/pawel-stolecki-5.jpg?1682717470"  alt="Motion Blur 3" loading="lazy" style="animation-delay:5.35s" />
+    </div>
     <div class="overlay">
       <div class="title">Motion Blur</div>
       <div class="tag">Dying Light 2 · Techland</div>
     </div>
   </a>
 
+  <!-- Ocean R&D — static + GIF spot -->
   <a class="portfolio-card" href="https://www.artstation.com/artwork/N5K5qb" target="_blank" rel="noopener">
+    <!-- GIF ready: swap img src for /images/contributions/ocean.gif -->
     <img src="https://cdna.artstation.com/p/assets/images/images/017/927/150/medium/pawel-stolecki-ocean2.jpg?1557873130" alt="Gerstner Ocean R&amp;D" loading="lazy" />
+    <div class="gif-badge">▶ GIF spot</div>
     <div class="overlay">
       <div class="title">Gerstner Ocean R&amp;D</div>
       <div class="tag">World War 3 · The Farm 51</div>
     </div>
   </a>
 
+  <!-- Wind Simulation — static + GIF spot -->
   <a class="portfolio-card" href="https://www.artstation.com/artwork/4XJLvn" target="_blank" rel="noopener">
+    <!-- GIF ready: swap img src for /images/contributions/wind-curtains.gif -->
     <img src="https://cdnb.artstation.com/p/assets/images/images/056/812/167/medium/pawel-stolecki-curtaain.jpg?1670166783" alt="Wind Simulation" loading="lazy" />
+    <div class="gif-badge">▶ GIF spot</div>
     <div class="overlay">
       <div class="title">Wind Simulation on Curtains</div>
       <div class="tag">World War 3 · The Farm 51</div>
