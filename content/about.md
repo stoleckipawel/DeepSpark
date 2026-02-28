@@ -379,7 +379,7 @@ main { flex-grow: 0 !important; }
     <img src="https://img.youtube.com/vi/Nthv4xF_zHU/maxresdefault.jpg" alt="The Witcher 4" loading="lazy" />
     <div class="game-overlay">
       <div class="game-title">The Witcher 4: Tech Demo</div>
-      <div class="game-role">GPU Optimization · CD PROJEKT RED<br>Delivered 60 fps on PS5: Lumen performance &amp; general GPU optimization</div>
+      <div class="game-role">CD PROJEKT RED · Lumen performance &amp; GPU optimization</div>
     </div>
     <div class="game-play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
   </a>
@@ -388,7 +388,7 @@ main { flex-grow: 0 !important; }
     <img src="https://img.youtube.com/vi/km7pc3P6PE8/maxresdefault.jpg" alt="Dying Light 2" loading="lazy" />
     <div class="game-overlay">
       <div class="game-title">Dying Light 2: Stay Human</div>
-      <div class="game-role">Rendering Engineer · Techland<br>Contributed to internal engine renderloop, improving GBuffer &amp; lighting rendering</div>
+      <div class="game-role">Techland · GBuffer &amp; lighting rendering improvements</div>
     </div>
     <div class="game-play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
   </a>
@@ -397,7 +397,7 @@ main { flex-grow: 0 !important; }
     <img src="https://img.youtube.com/vi/ysgzR2jMwNE/maxresdefault.jpg" alt="World War 3" loading="lazy" />
     <div class="game-overlay">
       <div class="game-title">World War 3</div>
-      <div class="game-role">Rendering Engineer · The Farm 51<br>Environmental shaders &amp; rendering tooling</div>
+      <div class="game-role">The Farm 51 · Environmental shaders &amp; rendering tooling</div>
     </div>
     <div class="game-play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
   </a>
@@ -426,16 +426,12 @@ main { flex-grow: 0 !important; }
         <div class="tag">Dying Light 2 · Techland</div>
       </div>
     </a>
-    <!-- Water Rendering — 3-image left→right wipe slideshow -->
-    <a class="portfolio-card" href="https://www.artstation.com/artwork/8bmLQQ" target="_blank" rel="noopener">
-      <div class="pf-slides">
-        <img class="pf-slide" src="https://cdna.artstation.com/p/assets/images/images/062/269/266/medium/pawel-stolecki-1.jpg?1682714949"  alt="Water Rendering 1" loading="lazy" style="animation-delay:1.45s" />
-        <img class="pf-slide" src="https://cdna.artstation.com/p/assets/images/images/062/269/286/medium/pawel-stolecki-4.jpg?1682714973"  alt="Water Rendering 2" loading="lazy" style="animation-delay:3.95s" />
-        <img class="pf-slide" src="https://cdna.artstation.com/p/assets/images/images/062/269/308/medium/pawel-stolecki-7.jpg?1682715005"  alt="Water Rendering 3" loading="lazy" style="animation-delay:6.45s" />
-      </div>
+    <!-- Ocean R&D — animated GIF -->
+    <a class="portfolio-card" href="https://www.artstation.com/artwork/N5K5qb" target="_blank" rel="noopener">
+      <img src="/images/water.gif" alt="Gerstner Ocean R&amp;D" />
       <div class="overlay">
-        <div class="title">Water Rendering</div>
-        <div class="tag">Dying Light 2 · Techland</div>
+        <div class="title">Gerstner Ocean</div>
+        <div class="tag">World War 3 · The Farm 51</div>
       </div>
     </a>
   </div>
@@ -453,6 +449,19 @@ main { flex-grow: 0 !important; }
     </div>
   </a>
 
+  <!-- Water Rendering — 3-image slideshow -->
+  <a class="portfolio-card" href="https://www.artstation.com/artwork/8bmLQQ" target="_blank" rel="noopener">
+    <div class="pf-slides">
+      <img class="pf-slide" src="https://cdna.artstation.com/p/assets/images/images/062/269/266/medium/pawel-stolecki-1.jpg?1682714949"  alt="Water Rendering 1" loading="lazy" style="animation-delay:1.45s" />
+      <img class="pf-slide" src="https://cdna.artstation.com/p/assets/images/images/062/269/286/medium/pawel-stolecki-4.jpg?1682714973"  alt="Water Rendering 2" loading="lazy" style="animation-delay:3.95s" />
+      <img class="pf-slide" src="https://cdna.artstation.com/p/assets/images/images/062/269/308/medium/pawel-stolecki-7.jpg?1682715005"  alt="Water Rendering 3" loading="lazy" style="animation-delay:6.45s" />
+    </div>
+    <div class="overlay">
+      <div class="title">Water Rendering</div>
+      <div class="tag">Dying Light 2 · Techland</div>
+    </div>
+  </a>
+
   <!-- Motion Blur — 3-image left→right wipe slideshow -->
   <a class="portfolio-card" href="https://www.artstation.com/artwork/m83KDd" target="_blank" rel="noopener">
     <div class="pf-slides">
@@ -466,24 +475,11 @@ main { flex-grow: 0 !important; }
     </div>
   </a>
 
-  <!-- Ocean R&D — static + GIF spot -->
-  <a class="portfolio-card" href="https://www.artstation.com/artwork/N5K5qb" target="_blank" rel="noopener">
-    <!-- GIF ready: swap img src for /images/contributions/ocean.gif -->
-    <img src="https://cdna.artstation.com/p/assets/images/images/017/927/150/medium/pawel-stolecki-ocean2.jpg?1557873130" alt="Gerstner Ocean R&amp;D" loading="lazy" />
-    <div class="gif-badge">▶ GIF spot</div>
-    <div class="overlay">
-      <div class="title">Gerstner Ocean R&amp;D</div>
-      <div class="tag">World War 3 · The Farm 51</div>
-    </div>
-  </a>
-
-  <!-- Wind Simulation — static + GIF spot -->
+  <!-- Wind Simulation — animated GIF -->
   <a class="portfolio-card" href="https://www.artstation.com/artwork/4XJLvn" target="_blank" rel="noopener">
-    <!-- GIF ready: swap img src for /images/contributions/wind-curtains.gif -->
-    <img src="https://cdnb.artstation.com/p/assets/images/images/056/812/167/medium/pawel-stolecki-curtaain.jpg?1670166783" alt="Wind Simulation" loading="lazy" />
-    <div class="gif-badge">▶ GIF spot</div>
+    <img src="/images/simulation.gif" alt="Wind Simulation" />
     <div class="overlay">
-      <div class="title">Wind Simulation on Curtains</div>
+      <div class="title">Wind Simulation</div>
       <div class="tag">World War 3 · The Farm 51</div>
     </div>
   </a>
