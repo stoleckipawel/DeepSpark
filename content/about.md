@@ -303,7 +303,7 @@ main { flex-grow: 0 !important; }
     <h1 style="font-size:2.3em;font-weight:800;margin:0 0 .35em;line-height:1.1;">About me</h1>
     <div class="about-hero-text">
       <p>
-        I'm Pawel Stolecki, a rendering engineer focused on real-time graphics and performance-critical systems —
+        I'm Pawel Stolecki, a rendering engineer focused on real-time graphics and performance-critical systems,
         building scalable rendering architectures that fully utilize modern GPU hardware under strict frame budgets.
       </p>
       <p>
@@ -311,7 +311,7 @@ main { flex-grow: 0 !important; }
         (DirectX 12, Vulkan, UE RHI, Render Graph), and GPU/CPU/memory profiling across PC and console platforms.
       </p>
       <p>
-        I enjoy working close to the metal — analyzing wave behavior, occupancy, cache utilization,
+        I enjoy working close to the metal, analyzing wave behavior, occupancy, cache utilization,
         and submission pipelines to ensure every millisecond is accounted for.
       </p>
     </div>
@@ -332,8 +332,8 @@ main { flex-grow: 0 !important; }
   <a class="game-card" href="https://www.youtube.com/watch?v=Nthv4xF_zHU" target="_blank" rel="noopener">
     <img src="https://img.youtube.com/vi/Nthv4xF_zHU/maxresdefault.jpg" alt="The Witcher 4" loading="lazy" />
     <div class="game-overlay">
-      <div class="game-title">The Witcher 4 — Tech Demo</div>
-      <div class="game-role">GPU Optimization · CD PROJEKT RED<br>Delivered 60 fps on PS5 — Lumen performance &amp; general GPU optimization</div>
+      <div class="game-title">The Witcher 4: Tech Demo</div>
+      <div class="game-role">GPU Optimization · CD PROJEKT RED<br>Delivered 60 fps on PS5: Lumen performance &amp; general GPU optimization</div>
     </div>
     <div class="game-play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
   </a>
@@ -342,7 +342,7 @@ main { flex-grow: 0 !important; }
     <img src="https://img.youtube.com/vi/km7pc3P6PE8/maxresdefault.jpg" alt="Dying Light 2" loading="lazy" />
     <div class="game-overlay">
       <div class="game-title">Dying Light 2: Stay Human</div>
-      <div class="game-role">Rendering Engineer · Techland<br>Contributed to internal engine renderloop — improving GBuffer &amp; lighting rendering</div>
+      <div class="game-role">Rendering Engineer · Techland<br>Contributed to internal engine renderloop, improving GBuffer &amp; lighting rendering</div>
     </div>
     <div class="game-play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
   </a>

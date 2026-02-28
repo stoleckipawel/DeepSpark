@@ -1,5 +1,5 @@
 ---title: ""
-description: "Graphics software engineering — real-time rendering notes, GPU experiments, and performance analysis."
+description: "Graphics software engineering: real-time rendering notes, GPU experiments, and performance analysis."
 keywords: ["real-time rendering", "GPU programming", "frame graph", "rendering architecture", "Vulkan", "D3D12", "UE5 RDG"]
 ---
 
@@ -77,7 +77,7 @@ keywords: ["real-time rendering", "GPU programming", "frame graph", "rendering a
 <div class="part-num" style="width:2em;height:2em;border-radius:50%;background:var(--ds-accent);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:.85em;flex-shrink:0;">I</div>
 <div style="flex:1;min-width:0;">
 <div class="part-title" style="font-weight:700;font-size:.95em;transition:color .18s ease;">Theory</div>
-<div style="font-size:.82em;opacity:.6;line-height:1.5;margin-top:.1em;">The theory behind frame graphs — how a DAG of passes and resources automates scheduling, barriers, and memory aliasing.</div>
+<div style="font-size:.82em;opacity:.6;line-height:1.5;margin-top:.1em;">The theory behind frame graphs: how a DAG of passes and resources automates scheduling, barriers, and memory aliasing.</div>
 </div>
 <div style="font-size:.78em;opacity:.4;flex-shrink:0;">12 min read</div>
 </div>
@@ -93,7 +93,7 @@ keywords: ["real-time rendering", "GPU programming", "frame graph", "rendering a
 <div class="part-num" style="width:2em;height:2em;border-radius:50%;background:var(--ds-info);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:.85em;flex-shrink:0;">III</div>
 <div style="flex:1;min-width:0;">
 <div class="part-title" style="font-weight:700;font-size:.95em;transition:color .18s ease;">Beyond MVP</div>
-<div style="font-size:.82em;opacity:.6;line-height:1.5;margin-top:.1em;">Async compute and split barriers — how the compiler squeezes more performance from the same DAG.</div>
+<div style="font-size:.82em;opacity:.6;line-height:1.5;margin-top:.1em;">Async compute and split barriers: how the compiler squeezes more performance from the same DAG.</div>
 </div>
 <div style="font-size:.78em;opacity:.4;flex-shrink:0;">10 min read</div>
 </div>

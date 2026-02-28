@@ -1,10 +1,10 @@
----
-title: "Frame Graph — Theory"
+﻿---
+title: "Frame Graph: Theory"
 date: 2026-02-09
 lastmod: 2026-02-23
 draft: false
 authors: ["Pawel Stolecki"]
-description: "The theory behind frame graphs — how a DAG of passes and resources gives the compiler enough information to automate scheduling, barriers, and memory aliasing."
+description: "The theory behind frame graphs: how a DAG of passes and resources gives the compiler enough information to automate scheduling, barriers, and memory aliasing."
 tags: ["rendering", "frame-graph", "gpu", "architecture"]
 categories: ["analysis"]
 summary: "Declare → Compile → Execute. How a directed acyclic graph of render passes and virtual resources lets an engine automate topological sorting, barrier insertion, pass culling, and VRAM aliasing."
@@ -20,7 +20,7 @@ keywords: ["frame graph", "render graph", "render pass", "DAG", "topological sor
 
 ---
 
-Behind every smooth frame is a brutal scheduling problem — which passes can run in parallel, which buffers can reuse the same memory, and which barriers are actually necessary. Frame graphs solve it: declare what each pass reads and writes, and the graph handles the rest. This series breaks down the theory, builds a real implementation in C++, and shows how the same ideas scale to production engines like UE5's RDG.
+Behind every smooth frame is a brutal scheduling problem: which passes can run in parallel, which buffers can reuse the same memory, and which barriers are actually necessary. Frame graphs solve it: declare what each pass reads and writes, and the graph handles the rest. This series breaks down the theory, builds a real implementation in C++, and shows how the same ideas scale to production engines like UE5's RDG.
 
 <div class="fg-reveal" style="margin:1.5em 0;border-radius:12px;overflow:hidden;border:1.5px solid rgba(var(--ds-indigo-rgb),.25);background:linear-gradient(135deg,rgba(var(--ds-indigo-rgb),.04),transparent);">
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0;">
@@ -37,7 +37,7 @@ Behind every smooth frame is a brutal scheduling problem — which passes can ru
     <div style="padding:1em;text-align:center;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.12);">
       <div style="font-size:1.6em;margin-bottom:.15em;">🗺</div>
       <div style="font-weight:800;font-size:.95em;">Map to UE5</div>
-      <div style="font-size:.82em;opacity:.7;line-height:1.4;margin-top:.2em;">Every piece maps to RDG — read the source with confidence</div>
+      <div style="font-size:.82em;opacity:.7;line-height:1.4;margin-top:.2em;">Every piece maps to RDG. Read the source with confidence.</div>
     </div>
   </div>
 </div>
@@ -49,7 +49,7 @@ Behind every smooth frame is a brutal scheduling problem — which passes can ru
 <div class="fg-reveal" style="position:relative;margin:1.4em 0;">
 
   <div style="margin-bottom:1.6em;">
-    <div style="font-weight:800;font-size:1.05em;color:var(--ds-success);margin-bottom:.3em;">Month 1 — 3 passes, everything's fine</div>
+    <div style="font-weight:800;font-size:1.05em;color:var(--ds-success);margin-bottom:.3em;">Month 1: 3 passes, everything's fine</div>
     <div style="font-size:.92em;line-height:1.6;">
       Depth prepass → GBuffer → lighting. Two barriers, hand-placed. Two textures, both allocated at init. Code is clean, readable, correct.
     </div>
@@ -59,19 +59,19 @@ Behind every smooth frame is a brutal scheduling problem — which passes can ru
   </div>
 
   <div style="margin-bottom:1.6em;">
-    <div style="font-weight:800;font-size:1.05em;color:var(--ds-warn);margin-bottom:.3em;">Month 6 — 12 passes, cracks appear</div>
+    <div style="font-weight:800;font-size:1.05em;color:var(--ds-warn);margin-bottom:.3em;">Month 6: 12 passes, cracks appear</div>
     <div style="font-size:.92em;line-height:1.6;">
       Same renderer, now with SSAO, SSR, bloom, TAA, shadow cascades. Three things going wrong simultaneously:
     </div>
     <div style="margin-top:.5em;display:grid;gap:.4em;">
       <div style="padding:.5em .8em;border-radius:6px;border:1px solid rgba(var(--ds-warn-rgb),.2);background:rgba(var(--ds-warn-rgb),.04);font-size:.88em;line-height:1.5;">
-        <strong>Invisible dependencies</strong> — someone adds SSAO but doesn't realize GBuffer needs an updated barrier. Visual artifacts on fresh build.
+        <strong>Invisible dependencies:</strong> someone adds SSAO but doesn't realize GBuffer needs an updated barrier. Visual artifacts on fresh build.
       </div>
       <div style="padding:.5em .8em;border-radius:6px;border:1px solid rgba(var(--ds-warn-rgb),.2);background:rgba(var(--ds-warn-rgb),.04);font-size:.88em;line-height:1.5;">
-        <strong>Wasted memory</strong> — SSAO and bloom textures never overlap, but aliasing them means auditing every pass that might touch them. Nobody does it.
+        <strong>Wasted memory:</strong> SSAO and bloom textures never overlap, but aliasing them means auditing every pass that might touch them. Nobody does it.
       </div>
       <div style="padding:.5em .8em;border-radius:6px;border:1px solid rgba(var(--ds-warn-rgb),.2);background:rgba(var(--ds-warn-rgb),.04);font-size:.88em;line-height:1.5;">
-        <strong>Silent reordering</strong> — two branches touch the render loop. Git merges cleanly, but the shadow pass ends up after lighting. Subtly wrong output ships unnoticed.
+        <strong>Silent reordering:</strong> two branches touch the render loop. Git merges cleanly, but the shadow pass ends up after lighting. Subtly wrong output ships unnoticed.
       </div>
     </div>
     <div class="ds-callout ds-callout--warn" style="margin-top:.5em;padding:.4em .8em;font-size:.88em;font-style:italic;">
@@ -80,11 +80,11 @@ Behind every smooth frame is a brutal scheduling problem — which passes can ru
   </div>
 
   <div>
-    <div style="font-weight:800;font-size:1.05em;color:var(--ds-danger);margin-bottom:.3em;">Month 18 — 25 passes, nobody touches it</div>
+    <div style="font-weight:800;font-size:1.05em;color:var(--ds-danger);margin-bottom:.3em;">Month 18: 25 passes, nobody touches it</div>
     <div style="font-size:.92em;line-height:1.6;margin-bottom:.5em;">The renderer works, but:</div>
     <div style="display:grid;gap:.4em;">
       <div style="padding:.5em .8em;border-radius:6px;border:1px solid rgba(var(--ds-danger-rgb),.2);background:rgba(var(--ds-danger-rgb),.04);font-size:.88em;line-height:1.5;">
-        <strong>900 MB VRAM.</strong> Profiling shows 400 MB is aliasable — but the lifetime analysis would take a week and break the next time anyone adds a pass.
+        <strong>900 MB VRAM.</strong> Profiling shows 400 MB is aliasable, but the lifetime analysis would take a week and break the next time anyone adds a pass.
       </div>
       <div style="padding:.5em .8em;border-radius:6px;border:1px solid rgba(var(--ds-danger-rgb),.2);background:rgba(var(--ds-danger-rgb),.04);font-size:.88em;line-height:1.5;">
         <strong>47 barrier calls.</strong> Three are redundant, two are missing, one is in the wrong queue. Nobody knows which.
@@ -127,13 +127,13 @@ Behind every smooth frame is a brutal scheduling problem — which passes can ru
   <div style="color:var(--ds-danger);font-weight:700">✗ untouchable</div>
 </div>
 
-The pattern is always the same: manual resource management works at small scale and fails at compound scale. Not because engineers are sloppy — because *no human tracks 25 lifetimes and 47 transitions in their head every sprint*. You need a system that sees the whole frame at once.
+The pattern is always the same: manual resource management works at small scale and fails at compound scale. Not because engineers are sloppy. Because *no human tracks 25 lifetimes and 47 transitions in their head every sprint*. You need a system that sees the whole frame at once.
 
 ---
 
 ## 💡 The Core Idea
 
-A frame graph models an entire frame as a **directed acyclic graph (DAG)**. Each node is a render pass; each edge carries a resource — a texture, a buffer, an attachment — from the pass that writes it to every pass that reads it. Here's what an example deferred-rendering frame looks like:
+A frame graph models an entire frame as a **directed acyclic graph (DAG)**. Each node is a render pass. Each edge carries a resource: a texture, a buffer, or an attachment, from the pass that writes it to every pass that reads it. Here's what an example deferred-rendering frame looks like:
 
 <!-- DAG flow diagram -->
 <div style="margin:1.6em 0 .5em;text-align:center;">
@@ -158,7 +158,7 @@ A frame graph models an entire frame as a **directed acyclic graph (DAG)**. Each
   <path d="M300,176 C370,205 480,205 548,125" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="2" stroke-linecap="round" marker-end="url(#ah)"/>
   <path d="M650,106 L720,106" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="2" stroke-linecap="round" marker-end="url(#ah)"/>
   <path d="M830,106 L910,106" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="2" stroke-linecap="round" marker-end="url(#ah)"/>
-  <!-- flow particles (CSS animated — classes from custom.css flow system) -->
+  <!-- flow particles (CSS animated, classes from custom.css flow system) -->
   <path class="flow flow-lg flow-d1" d="M115,100 L155,100 L155,42 L195,42"/>
   <path class="flow flow-lg flow-d2" d="M115,120 L155,120 L155,160 L200,160"/>
   <path class="flow flow-lg flow-d3" d="M300,160 L380,160"/>
@@ -197,28 +197,28 @@ A frame graph models an entire frame as a **directed acyclic graph (DAG)**. Each
 </div>
 </div>
 
-The GPU never sees this graph. It exists only on the CPU, long enough for the system to inspect **every** pass and **every** resource before a single GPU command is recorded. That global view is what makes automatic scheduling, memory aliasing, and barrier insertion possible — exactly the things that break when done by hand at scale.
+The GPU never sees this graph. It exists only on the CPU, long enough for the system to inspect **every** pass and **every** resource before a single GPU command is recorded. That global view is what makes automatic scheduling, memory aliasing, and barrier insertion possible. These are exactly the things that break when done by hand at scale.
 
-The key insight is **deferred execution**. Instead of recording GPU commands as you encounter each pass, you first build a complete description of the frame — every pass, every resource, every dependency — and only then hand it to a compiler that can see the whole picture at once. It's the difference between giving a builder one instruction at a time ("lay a brick… now another brick…") and handing them the full blueprint so they can plan the entire build before picking up a tool. The frame graph's compile step is that planning phase.
+The key insight is **deferred execution**. Instead of recording GPU commands as you encounter each pass, you first build a complete description of the frame: every pass, every resource, every dependency, and only then hand it to a compiler that can see the whole picture at once. It's the difference between giving a builder one instruction at a time ("lay a brick… now another brick…") and handing them the full blueprint so they can plan the entire build before picking up a tool. The frame graph's compile step is that planning phase.
 
-This separation has a second benefit: the graph is a **first-class data structure** you can inspect, serialize, diff, and visualize. You can dump it to a log and replay it offline. You can compare this frame's graph to last frame's to see what changed. None of this is possible when commands are recorded inline — the information is scattered across dozens of call sites and evaporates the moment the frame ends.
+This separation has a second benefit: the graph is a **first-class data structure** you can inspect, serialize, diff, and visualize. You can dump it to a log and replay it offline. You can compare this frame's graph to last frame's to see what changed. None of this is possible when commands are recorded inline, since the information is scattered across dozens of call sites and evaporates the moment the frame ends.
 
 Every frame follows a three-phase lifecycle:
 
-<!-- 3-step lifecycle — vertical cards with descriptions, clickable -->
+<!-- 3-step lifecycle, vertical cards with descriptions, clickable -->
 <div style="margin:1.5em 0 2em;display:grid;grid-template-columns:1fr;gap:.6em;max-width:620px;">
   <a href="#-the-declare-step" style="display:grid;grid-template-columns:3.2em 1fr;gap:.8em;align-items:center;padding:1em 1.2em;border-radius:10px;background:rgba(var(--ds-info-rgb),.05);border-left:4px solid var(--ds-info-light);text-decoration:none;color:inherit;transition:background .2s;">
     <span style="font-size:1.6em;font-weight:800;color:var(--ds-info-light);text-align:center;">①</span>
     <div>
       <div style="font-weight:700;font-size:1.05em;color:var(--ds-info-light);letter-spacing:.03em;">DECLARE</div>
-      <div style="font-size:.88em;opacity:.7;margin-top:.15em;">Build the graph — passes, resources, edges. No GPU work yet.</div>
+      <div style="font-size:.88em;opacity:.7;margin-top:.15em;">Build the graph: passes, resources, edges. No GPU work yet.</div>
     </div>
   </a>
   <a href="#-the-compile-step" style="display:grid;grid-template-columns:3.2em 1fr;gap:.8em;align-items:center;padding:1em 1.2em;border-radius:10px;background:rgba(var(--ds-code-rgb),.05);border-left:4px solid var(--ds-code-light);text-decoration:none;color:inherit;transition:background .2s;">
     <span style="font-size:1.6em;font-weight:800;color:var(--ds-code-light);text-align:center;">②</span>
     <div>
       <div style="font-weight:700;font-size:1.05em;color:var(--ds-code-light);letter-spacing:.03em;">COMPILE</div>
-      <div style="font-size:.88em;opacity:.7;margin-top:.15em;">Analyze the graph — sort, cull, alias memory, compute barriers.</div>
+      <div style="font-size:.88em;opacity:.7;margin-top:.15em;">Analyze the graph: sort, cull, alias memory, compute barriers.</div>
     </div>
   </a>
   <a href="#-the-execute-step" style="display:grid;grid-template-columns:3.2em 1fr;gap:.8em;align-items:center;padding:1em 1.2em;border-radius:10px;background:rgba(var(--ds-success-rgb),.05);border-left:4px solid var(--ds-success);text-decoration:none;color:inherit;transition:background .2s;">
@@ -234,11 +234,11 @@ Every frame follows a three-phase lifecycle:
 
 ## 📋 The Declare Step
 
-The declare step is pure CPU work — you're building a **description** of what this frame needs, not executing it. The key principle: separate *what to do* from *doing it*, because the compiler needs to see everything before it can optimize anything.
+The declare step is pure CPU work: you're building a **description** of what this frame needs, not executing it. The key principle: separate *what to do* from *doing it*, because the compiler needs to see everything before it can optimize anything.
 
 ### 🔧 Registering a pass
 
-A pass is a logical unit of GPU work — it might contain a single compute dispatch or hundreds of draw calls. To add one you give the graph two things:
+A pass is a logical unit of GPU work. It might contain a single compute dispatch or hundreds of draw calls. To add one you give the graph two things:
 
 <div style="margin:1em 0 1.2em;border-radius:10px;border:1px solid rgba(var(--ds-info-rgb),.12);background:rgba(var(--ds-info-rgb),.02);overflow:hidden;">
 
@@ -251,26 +251,26 @@ A pass is a logical unit of GPU work — it might contain a single compute dispa
   <div style="border-top:1px solid rgba(var(--ds-info-rgb),.08);display:grid;grid-template-columns:2.2em 1fr;gap:0 .8em;padding:.75em 1em;">
     <div style="grid-row:1/3;font-size:1em;color:var(--ds-info);opacity:.35;text-align:center;padding-top:.2em;">②</div>
     <div><span style="font-weight:700;color:var(--ds-info);font-size:.88em;letter-spacing:.02em;">EXECUTE CALLBACK</span></div>
-    <div style="font-size:.84em;line-height:1.55;opacity:.6;">Stored for <strong>later</strong>. Records actual GPU commands (draw calls, dispatches, copies) into a command list — only invoked during the execute phase, potentially on a worker thread.</div>
+    <div style="font-size:.84em;line-height:1.55;opacity:.6;">Stored for <strong>later</strong>. Records actual GPU commands (draw calls, dispatches, copies) into a command list. Only invoked during the execute phase, potentially on a worker thread.</div>
   </div>
 
 </div>
 
-The setup callback is where everything that matters for the compiler happens — read, write, and create declarations build the edges and resource descriptors that drive sorting, barriers, and aliasing. The execute callback is opaque to the compiler; it just gets invoked at the right time with the right resources bound.
+The setup callback is where everything that matters for the compiler happens: read, write, and create declarations build the edges and resource descriptors that drive sorting, barriers, and aliasing. The execute callback is opaque to the compiler. It just gets invoked at the right time with the right resources bound.
 
 ### 📦 Virtual resources
 
-When a pass creates a resource, the graph stores only a **descriptor** — dimensions, format, usage flags. No GPU memory is allocated. The resource is *virtual*: an opaque handle the compiler tracks, backed by nothing until the compile step decides where it lives in physical memory.
+When a pass creates a resource, the graph stores only a **descriptor**: dimensions, format, usage flags. No GPU memory is allocated. The resource is *virtual*: an opaque handle the compiler tracks, backed by nothing until the compile step decides where it lives in physical memory.
 
 <div style="margin:.6em 0 1em;padding:.65em 1em;border-radius:8px;border:1px dashed rgba(var(--ds-indigo-rgb),.14);background:rgba(var(--ds-indigo-rgb),.02);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5em;">
   <div>
     <span style="font-weight:700;font-size:.88em;">Handle #3</span>
     <span style="font-size:.78em;opacity:.45;margin-left:.5em;">1920×1080 · RGBA8 · render target</span>
   </div>
-  <span style="font-size:.75em;color:var(--ds-warn);opacity:.7;font-weight:600;">description only — no GPU memory yet</span>
+  <span style="font-size:.75em;color:var(--ds-warn);opacity:.7;font-weight:600;">description only (no GPU memory yet)</span>
 </div>
 
-This is deliberate — the compiler needs to see **every** resource across the entire frame before it can decide which ones can share physical memory.
+This is deliberate: the compiler needs to see **every** resource across the entire frame before it can decide which ones can share physical memory.
 
 Virtual resources fall into two categories:
 
@@ -278,20 +278,20 @@ Virtual resources fall into two categories:
   <div class="fg-hoverable ds-card ds-card--info">
     <div class="ds-card-header ds-card-header--info">🔀 Transient</div>
     <div class="ds-card-body">
-      <strong>Lifetime:</strong> single frame — created and destroyed within the graph<br>
+      <strong>Lifetime:</strong> single frame, created and destroyed within the graph<br>
       <strong>Declared as:</strong> descriptor (size, format, usage flags)<br>
       <strong>GPU memory:</strong> allocated at compile, freed at frame end<br>
-      <strong>Aliasable:</strong> <span style="color:var(--ds-success);font-weight:700;">Yes</span> — non-overlapping lifetimes share physical memory<br>
+      <strong>Aliasable:</strong> <span style="color:var(--ds-success);font-weight:700;">Yes</span>. Non-overlapping lifetimes share physical memory.<br>
       <strong>Examples:</strong> GBuffer MRTs, SSAO scratch, bloom scratch
     </div>
   </div>
   <div class="fg-hoverable ds-card ds-card--code">
     <div class="ds-card-header ds-card-header--code">📌 Imported (external)</div>
     <div class="ds-card-body">
-      <strong>Lifetime:</strong> spans multiple frames — owned by an external system<br>
+      <strong>Lifetime:</strong> spans multiple frames, owned by an external system<br>
       <strong>Declared as:</strong> existing GPU handle registered into the graph<br>
-      <strong>GPU memory:</strong> already allocated; the graph only tracks state<br>
-      <strong>Aliasable:</strong> <span style="color:var(--ds-danger);font-weight:700;">No</span> — lifetime extends beyond the frame<br>
+      <strong>GPU memory:</strong> already allocated. The graph only tracks state.<br>
+      <strong>Aliasable:</strong> <span style="color:var(--ds-danger);font-weight:700;">No</span>. Lifetime extends beyond the frame.<br>
       <strong>Examples:</strong> backbuffer, TAA history, shadow atlas, blue noise LUT
     </div>
   </div>
@@ -309,54 +309,54 @@ Each read or write you declare in a setup callback forms a connection in the dep
   </div>
 </div>
 
-The mechanism behind these edges is **versioning**: every time a pass writes a resource, the version number increments. Readers attach to whatever version existed when they were declared. Multiple passes can read the same version without conflict, but only a write creates a new version — and a new dependency. Here's how that plays out across a real frame:
+The mechanism behind these edges is **versioning**: every time a pass writes a resource, the version number increments. Readers attach to whatever version existed when they were declared. Multiple passes can read the same version without conflict, but only a write creates a new version and a new dependency. Here's how that plays out across a real frame:
 
 <div style="margin:1.2em 0;font-size:.85em;">
   <div style="border-radius:10px;overflow:hidden;border:1.5px solid rgba(var(--ds-indigo-rgb),.15);">
-    <div style="padding:.5em .8em;background:rgba(var(--ds-indigo-rgb),.06);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.1);font-weight:700;font-size:.9em;text-align:center;">Resource versioning — HDR target through the frame</div>
+    <div style="padding:.5em .8em;background:rgba(var(--ds-indigo-rgb),.06);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.1);font-weight:700;font-size:.9em;text-align:center;">Resource versioning: HDR target through the frame</div>
     <div style="display:grid;grid-template-columns:auto auto 1fr;gap:0;">
       <div style="padding:.45em .6em;background:rgba(var(--ds-info-rgb),.06);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-weight:700;text-align:center;color:var(--ds-info-light);font-size:.82em;">v1</div>
       <div style="padding:.45em .6em;background:rgba(var(--ds-info-rgb),.12);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-weight:700;text-align:center;color:var(--ds-info-light);font-size:.75em;">WRITE</div>
       <div style="padding:.45em .8em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);font-size:.86em;">
-        <span style="font-weight:700;">Lighting</span> — renders lit color into HDR target
+        <span style="font-weight:700;">Lighting</span>: renders lit color into HDR target
       </div>
       <div style="padding:.35em .6em;background:rgba(var(--ds-info-rgb),.03);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-size:.7em;opacity:.4;text-align:center;">v1</div>
       <div style="padding:.35em .6em;background:rgba(var(--ds-code-rgb),.08);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-weight:600;text-align:center;color:var(--ds-code-light);font-size:.75em;">read</div>
       <div style="padding:.35em .8em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);font-size:.84em;opacity:.85;">
-        <span style="font-weight:600;">Bloom</span> — samples bright pixels <span style="opacity:.4;font-size:.88em;">(still v1)</span>
+        <span style="font-weight:600;">Bloom</span>: samples bright pixels <span style="opacity:.4;font-size:.88em;">(still v1)</span>
       </div>
       <div style="padding:.35em .6em;background:rgba(var(--ds-info-rgb),.03);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-size:.7em;opacity:.4;text-align:center;">v1</div>
       <div style="padding:.35em .6em;background:rgba(var(--ds-code-rgb),.08);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-weight:600;text-align:center;color:var(--ds-code-light);font-size:.75em;">read</div>
       <div style="padding:.35em .8em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.06);font-size:.84em;opacity:.85;">
-        <span style="font-weight:600;">Reflections</span> — samples for SSR <span style="opacity:.4;font-size:.88em;">(still v1)</span>
+        <span style="font-weight:600;">Reflections</span>: samples for SSR <span style="opacity:.4;font-size:.88em;">(still v1)</span>
       </div>
       <div style="padding:.35em .6em;background:rgba(var(--ds-info-rgb),.03);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-size:.7em;opacity:.4;text-align:center;">v1</div>
       <div style="padding:.35em .6em;background:rgba(var(--ds-code-rgb),.08);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-weight:600;text-align:center;color:var(--ds-code-light);font-size:.75em;">read</div>
       <div style="padding:.35em .8em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);font-size:.84em;opacity:.85;">
-        <span style="font-weight:600;">Fog</span> — reads scene color for aerial blending <span style="opacity:.4;font-size:.88em;">(still v1)</span>
+        <span style="font-weight:600;">Fog</span>: reads scene color for aerial blending <span style="opacity:.4;font-size:.88em;">(still v1)</span>
       </div>
       <div style="padding:.45em .6em;background:rgba(var(--ds-success-rgb),.06);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-weight:700;text-align:center;color:var(--ds-success);font-size:.82em;">v2</div>
       <div style="padding:.45em .6em;background:rgba(var(--ds-success-rgb),.12);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-weight:700;text-align:center;color:var(--ds-success);font-size:.75em;">WRITE</div>
       <div style="padding:.45em .8em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);font-size:.86em;">
-        <span style="font-weight:700;">Composite</span> — overwrites with final blended result <span style="opacity:.4;font-size:.88em;">(bumps to v2)</span>
+        <span style="font-weight:700;">Composite</span>: overwrites with final blended result <span style="opacity:.4;font-size:.88em;">(bumps to v2)</span>
       </div>
       <div style="padding:.35em .6em;background:rgba(var(--ds-success-rgb),.03);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-size:.7em;opacity:.4;text-align:center;">v2</div>
       <div style="padding:.35em .6em;background:rgba(var(--ds-code-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-weight:600;text-align:center;color:var(--ds-code-light);font-size:.75em;">read</div>
       <div style="padding:.35em .8em;font-size:.84em;opacity:.85;">
-        <span style="font-weight:600;">Tonemap</span> — maps HDR → SDR for display <span style="opacity:.4;font-size:.88em;">(reads v2, not v1)</span>
+        <span style="font-weight:600;">Tonemap</span>: maps HDR → SDR for display <span style="opacity:.4;font-size:.88em;">(reads v2, not v1)</span>
       </div>
     </div>
   </div>
-  <div style="margin-top:.4em;font-size:.82em;opacity:.6;">Reads never bump the version — three passes read v1 without conflict. Only a write creates v2. Tonemap depends on Composite (the v2 writer), with <strong>no edge</strong> to Lighting or any v1 reader.</div>
+  <div style="margin-top:.4em;font-size:.82em;opacity:.6;">Reads never bump the version: three passes read v1 without conflict. Only a write creates v2. Tonemap depends on Composite (the v2 writer), with <strong>no edge</strong> to Lighting or any v1 reader.</div>
 </div>
 
-These versioned edges are the raw material the compiler works with. Every step that follows — sorting, culling, barrier insertion — operates on this edge set.
+These versioned edges are the raw material the compiler works with. Every step that follows (sorting, culling, barrier insertion) operates on this edge set.
 
 ---
 
 ## ⚙ The Compile Step
 
-Once every pass has declared its resources and dependencies, the compiler takes over. It receives the raw DAG — passes, virtual resources, read/write edges — and transforms it into a concrete execution plan: a sorted pass order, aliased memory layout, and a complete barrier schedule. This entire analysis happens on the CPU, over plain integers and small arrays.
+Once every pass has declared its resources and dependencies, the compiler takes over. It receives the raw DAG (passes, virtual resources, read/write edges) and transforms it into a concrete execution plan: a sorted pass order, aliased memory layout, and a complete barrier schedule. This entire analysis happens on the CPU, over plain integers and small arrays.
 
 <div style="margin:1.2em 0;border-radius:12px;overflow:hidden;border:1.5px solid rgba(var(--ds-code-rgb),.25);">
   <!-- INPUT -->
@@ -369,9 +369,9 @@ Once every pass has declared its resources and dependencies, the compiler takes 
     <div style="display:grid;grid-template-columns:auto 1fr;gap:.35em 1em;align-items:center;font-size:.88em;">
       <span style="font-weight:700;color:var(--ds-code-light);">①</span><span><strong>Sort</strong> passes into dependency order</span>
       <span style="font-weight:700;color:var(--ds-code);">②</span><span><strong>Cull</strong> passes whose outputs are never read</span>
-      <span style="font-weight:700;color:var(--ds-code);">③</span><span><strong>Scan lifetimes</strong> — record each transient resource's first and last use</span>
-      <span style="font-weight:700;color:var(--ds-code);">④</span><span><strong>Alias</strong> — assign non-overlapping resources to shared memory slots</span>
-      <span style="font-weight:700;color:var(--ds-code-light);">⑤</span><span><strong>Compute barriers</strong> — insert transitions at every resource state change</span>
+      <span style="font-weight:700;color:var(--ds-code);">③</span><span><strong>Scan lifetimes</strong>: record each transient resource's first and last use</span>
+      <span style="font-weight:700;color:var(--ds-code);">④</span><span><strong>Alias</strong>: assign non-overlapping resources to shared memory slots</span>
+      <span style="font-weight:700;color:var(--ds-code-light);">⑤</span><span><strong>Compute barriers</strong>: insert transitions at every resource state change</span>
     </div>
   </div>
   <!-- OUTPUT -->
@@ -385,67 +385,67 @@ Once every pass has declared its resources and dependencies, the compiler takes 
 
 Before the GPU can execute anything, the compiler needs to turn the DAG into an ordered schedule. The rule is simple: **no pass runs before the passes it depends on**. This is called a **topological sort**.
 
-The input is the raw edge set from the declare step — every read/write dependency between passes. The output is a flat list of passes in an order that respects all of them. If pass A writes a resource that pass B reads, A will always appear before B. If two passes share no dependencies, either order is valid, and the compiler is free to pick whichever is cheaper. Crucially, this isn't a fixed ordering you design upfront — it's derived automatically from the declared edges, so adding or removing a pass never requires manual re-sequencing.
+The input is the raw edge set from the declare step: every read/write dependency between passes. The output is a flat list of passes in an order that respects all of them. If pass A writes a resource that pass B reads, A will always appear before B. If two passes share no dependencies, either order is valid, and the compiler is free to pick whichever is cheaper. Crucially, this isn't a fixed ordering you design upfront. It's derived automatically from the declared edges, so adding or removing a pass never requires manual re-sequencing.
 
 The algorithm most compilers use is **Kahn's algorithm**. Think of it like a to-do list where you can only start a task once all its prerequisites are done:
 
-1. **Count in-edges.** For every pass, count how many predecessors feed into it. Any pass with a count of zero is ready — nothing blocks it.
+1. **Count in-edges.** For every pass, count how many predecessors feed into it. Any pass with a count of zero is ready: nothing blocks it.
 2. **Pop a ready pass.** Pick any zero-count pass and append it to the sorted output.
 3. **Decrement successors.** Subtract one from every pass that depended on it. New zeros join the ready queue.
-4. **Loop until empty.** Repeat until the queue drains. Passes left with non-zero counts mean a cycle — the graph is broken.
+4. **Loop until empty.** Repeat until the queue drains. Passes left with non-zero counts mean a cycle: the graph is broken.
 
 {{< interactive-toposort >}}
 
-> **Sorting bonus — fewer state switches.** Kahn's algorithm often has several passes ready at the same time, which gives the compiler freedom to choose among them. A sort-time heuristic can use that freedom to group passes that share GPU state, reducing expensive context rolls. A topological sort doesn't just guarantee correctness — it creates scheduling slack the compiler can exploit for performance.
+> **Sorting bonus: fewer state switches.** Kahn's algorithm often has several passes ready at the same time, which gives the compiler freedom to choose among them. A sort-time heuristic can use that freedom to group passes that share GPU state, reducing expensive context rolls. A topological sort doesn't just guarantee correctness. It creates scheduling slack the compiler can exploit for performance.
 
 ### ✂ Culling
 
 Once the sort gives us a valid execution order, the compiler can ask a powerful question: **does every pass actually contribute to the final image?**
 
-In a hand-built renderer, you'd need to manually toggle passes with feature flags or `#ifdef` blocks. Miss one, and the GPU silently burns cycles on work nobody sees. The frame graph compiler does this automatically — it walks the DAG **backward** from the final output (usually the swapchain image) and marks every pass that contributes to it, directly or indirectly. Any pass that *isn't* on a path to the output gets removed.
+In a hand-built renderer, you'd need to manually toggle passes with feature flags or `#ifdef` blocks. Miss one, and the GPU silently burns cycles on work nobody sees. The frame graph compiler does this automatically. It walks the DAG **backward** from the final output (usually the swapchain image) and marks every pass that contributes to it, directly or indirectly. Any pass that *isn't* on a path to the output gets removed.
 
-This is the same idea as dead-code elimination in a regular compiler: if a function's return value is never used, the compiler strips it out. Here, if a render pass writes to a texture that no downstream pass ever reads, the entire pass — and its resource allocations — disappear.
+This is the same idea as dead-code elimination in a regular compiler: if a function's return value is never used, the compiler strips it out. Here, if a render pass writes to a texture that no downstream pass ever reads, the entire pass (and its resource allocations) disappear.
 
 **Why this matters in practice:**
-- **Feature toggling is free.** Disable bloom by not reading its output, and the bloom pass plus its textures vanish automatically — no `if (bloomEnabled)` checks scattered through your code.
+- **Feature toggling is free.** Disable bloom by not reading its output, and the bloom pass plus its textures vanish automatically. No `if (bloomEnabled)` checks scattered through your code.
 - **Debug passes cost nothing in release.** A visualization pass that only feeds a debug overlay gets culled the moment the overlay is turned off.
 - **Artists and designers can experiment** with pass configurations without worrying about leftover GPU cost from unused passes.
 
-The algorithm is simple: start from every output the frame needs (typically just the final composite), walk backward along edges, and flag each pass you visit as "alive." Anything not flagged is dead — skip it entirely.
+The algorithm is simple: start from every output the frame needs (typically just the final composite), walk backward along edges, and flag each pass you visit as "alive." Anything not flagged is dead. Skip it entirely.
 
 {{< interactive-dag >}}
 
 ### 💾 Allocation and aliasing
 
-The sorted order tells the compiler exactly when each resource is first written and last read — its **lifetime**. Two resources whose lifetimes don't overlap can share the same physical memory, even if they're completely different formats or sizes. The GPU allocates one large heap and places multiple resources at different offsets within it.
+The sorted order tells the compiler exactly when each resource is first written and last read: its **lifetime**. Two resources whose lifetimes don't overlap can share the same physical memory, even if they're completely different formats or sizes. The GPU allocates one large heap and places multiple resources at different offsets within it.
 
-Without aliasing, every transient texture gets its own allocation for the entire frame — even if it's only alive for 2–3 passes. With aliasing, a GBuffer that's done by pass 3 and a bloom buffer that starts at pass 4 can sit in the same memory. Real-world deferred pipelines commonly see **40–50% transient VRAM reduction** once aliasing is enabled.
+Without aliasing, every transient texture gets its own allocation for the entire frame, even if it's only alive for 2–3 passes. With aliasing, a GBuffer that's done by pass 3 and a bloom buffer that starts at pass 4 can sit in the same memory. Real-world deferred pipelines commonly see **40–50% transient VRAM reduction** once aliasing is enabled.
 
-The allocator works in two passes: first, walk the sorted pass list and record each transient resource's first write and last read. Then scan resources in order of first-use — for each one, check if an existing heap block is free (its previous occupant has finished). If so, reuse it. If not, allocate a new block.
+The allocator works in two passes: first, walk the sorted pass list and record each transient resource's first write and last read. Then scan resources in order of first-use. For each one, check if an existing heap block is free (its previous occupant has finished). If so, reuse it. If not, allocate a new block.
 
-**Correctness constraints.** Aliasing introduces four hard requirements — violating any of them causes GPU corruption or driver-level undefined behaviour:
+**Correctness constraints.** Aliasing introduces four hard requirements. Violating any of them causes GPU corruption or driver-level undefined behaviour:
 
 1. **First access must initialise the resource.** The physical block still holds the previous occupant's texels. For resources with render-target or depth-stencil flags, D3D12 requires one of three operations before any other access: a Clear, a `DiscardResource`, or a full-subresource Copy. Vulkan equivalently requires load-op `CLEAR` or `DONT_CARE` (which acts as a discard). Without this the GPU reads undefined contents from the evicted resource. ([D3D12 `CreatePlacedResource` docs](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device-createplacedresource), [Vulkan memory aliasing spec](https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#resources-memory-aliasing))
 
-2. **Only transient (single-frame) resources qualify.** Imported resources that persist across frames — swapchain images, temporal history buffers — must keep their data intact, so they can't share a heap slot. Our code enforces this: `ScanLifetimes` sets `isTransient = false` for any entry with `imported == true`, and the allocator skips them.
+2. **Only transient (single-frame) resources qualify.** Imported resources that persist across frames (swapchain images, temporal history buffers) must keep their data intact, so they can't share a heap slot. Our code enforces this: `ScanLifetimes` sets `isTransient = false` for any entry with `imported == true`, and the allocator skips them.
 
 3. **Placed-resource alignment is non-negotiable.** D3D12 requires 64 KB (`D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT`) for most textures, or 4 MB for MSAA. Vulkan surfaces the requirement via `VkMemoryRequirements::alignment`. Our `AllocSize()` rounds up to 64 KB, matching the common-case constraint. ([D3D12 heap alignment](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_resource_desc), [Vulkan `VkMemoryRequirements`](https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#VkMemoryRequirements))
 
-4. **An aliasing barrier must separate occupants.** Before the GPU begins writing the new resource, it must flush caches and invalidate metadata belonging to the old one. D3D12 exposes `D3D12_RESOURCE_BARRIER_TYPE_ALIASING`; Vulkan handles this via a `VkImageMemoryBarrier` transitioning the incoming resource from `VK_IMAGE_LAYOUT_UNDEFINED`, which implicitly invalidates caches and metadata for the shared memory region. Omitting this barrier causes timing-dependent corruption — AMD and NVIDIA GPUs cache metadata differently, so the bug may only reproduce on one vendor. The frame graph's `ComputeBarriers` Phase 1 emits these automatically whenever `blockOwner` changes.
+4. **An aliasing barrier must separate occupants.** Before the GPU begins writing the new resource, it must flush caches and invalidate metadata belonging to the old one. D3D12 exposes `D3D12_RESOURCE_BARRIER_TYPE_ALIASING`. Vulkan handles this via a `VkImageMemoryBarrier` transitioning the incoming resource from `VK_IMAGE_LAYOUT_UNDEFINED`, which implicitly invalidates caches and metadata for the shared memory region. Omitting this barrier causes timing-dependent corruption. AMD and NVIDIA GPUs cache metadata differently, so the bug may only reproduce on one vendor. The frame graph's `ComputeBarriers` Phase 1 emits these automatically whenever `blockOwner` changes.
 
 {{< interactive-aliasing >}}
 
 ### 🚧 Barriers
 
-A GPU resource can't be a render target and a shader input at the same time — the hardware needs to flush caches, change memory layout, and switch access modes between those uses. That transition is a **barrier**. Miss one and you get rendering corruption or a GPU crash; add an unnecessary one and the GPU stalls waiting for nothing.
+A GPU resource can't be a render target and a shader input at the same time. The hardware needs to flush caches, change memory layout, and switch access modes between those uses. That transition is a **barrier**. Miss one and you get rendering corruption or a GPU crash. Add an unnecessary one and the GPU stalls waiting for nothing.
 
 Barriers follow the same rule as everything else in a frame graph: **compile analyzes and decides, execute submits and runs.** The compile stage is static analysis, the execute stage is command playback.
 
-During compile, the compiler walks every pass in topological order and builds a per-resource usage timeline — which passes touch which resource, and in what state (color attachment, shader read, transfer destination, etc.). For each resource it tracks a `currentState`, starting at `Undefined`. Whenever a pass needs the resource in a different state, the compiler records a transition — say, `ColorAttachment → ShaderRead` when GBuffer's output becomes Lighting's input — and updates the current state. No GPU work happens; this is purely analysis over the declared reads and writes.
+During compile, the compiler walks every pass in topological order and builds a per-resource usage timeline: which passes touch which resource, and in what state (color attachment, shader read, transfer destination, etc.). For each resource it tracks a `currentState`, starting at `Undefined`. Whenever a pass needs the resource in a different state, the compiler records a transition (say, `ColorAttachment → ShaderRead` when GBuffer's output becomes Lighting's input) and updates the current state. No GPU work happens. This is purely analysis over the declared reads and writes.
 
-A concrete example: suppose GBuffer writes Albedo as a color attachment, then Lighting and PostProcess both read it as a shader resource. The compiler emits one barrier after GBuffer (`ColorAttachment → ShaderRead`) and nothing between Lighting and PostProcess — consecutive reads in the same state don't need a transition. A production compiler goes further: it merges multiple transitions into a single barrier call per pass, removes redundant transitions, and eliminates barriers for resources that are about to be aliased anyway.
+A concrete example: suppose GBuffer writes Albedo as a color attachment, then Lighting and PostProcess both read it as a shader resource. The compiler emits one barrier after GBuffer (`ColorAttachment → ShaderRead`) and nothing between Lighting and PostProcess, since consecutive reads in the same state don't need a transition. A production compiler goes further: it merges multiple transitions into a single barrier call per pass, removes redundant transitions, and eliminates barriers for resources that are about to be aliased anyway.
 
-The result is a `CompiledPlan` where each pass carries a list of pre-barriers alongside its execute callback. At execution time the loop is trivial — for each pass, submit its precomputed barriers (`vkCmdPipelineBarrier` / `ResourceBarrier`), begin the render pass, call the execute lambda, end the render pass. No graph walking, no state comparison, no decisions. The GPU receives exactly what was precomputed.
+The result is a `CompiledPlan` where each pass carries a list of pre-barriers alongside its execute callback. At execution time the loop is trivial: for each pass, submit its precomputed barriers (`vkCmdPipelineBarrier` / `ResourceBarrier`), begin the render pass, call the execute lambda, end the render pass. No graph walking, no state comparison, no decisions. The GPU receives exactly what was precomputed.
 
 {{< interactive-barriers >}}
 
@@ -453,45 +453,45 @@ The result is a `CompiledPlan` where each pass carries a list of pre-barriers al
 
 ## ▶ The Execute Step
 
-The plan is ready — now the GPU gets involved. Every decision has already been made during compile: pass order, memory layout, barriers, physical resource bindings. Execute just walks the plan.
+The plan is ready. Now the GPU gets involved. Every decision has already been made during compile: pass order, memory layout, barriers, physical resource bindings. Execute just walks the plan.
 
-This is deliberate. The entire point of the declare/compile split is to front-load all the analysis so that execution becomes a trivial loop — no graph traversal, no state comparisons, no dependency checks. The system iterates through the compiled pass list, submits the precomputed barriers for each pass (`vkCmdPipelineBarrier` in Vulkan, `ResourceBarrier` in D3D12), begins the render pass, invokes the execute lambda, and ends the render pass. That pattern repeats until every pass has been recorded into the command buffer.
+This is deliberate. The entire point of the declare/compile split is to front-load all the analysis so that execution becomes a trivial loop. No graph traversal, no state comparisons, no dependency checks. The system iterates through the compiled pass list, submits the precomputed barriers for each pass (`vkCmdPipelineBarrier` in Vulkan, `ResourceBarrier` in D3D12), begins the render pass, invokes the execute lambda, and ends the render pass. That pattern repeats until every pass has been recorded into the command buffer.
 
 <div class="diagram-box">
-  <div class="db-title">▶ EXECUTE — recording GPU commands</div>
+  <div class="db-title">▶ EXECUTE: recording GPU commands</div>
   <div class="db-body">
     <div class="diagram-pipeline">
       <div class="dp-stage">
         <div class="dp-title">FOR EACH PASS</div>
-        <ul><li>submit precomputed barriers</li><li>begin render pass</li><li>call <code>execute()</code> lambda — draw calls, dispatches, copies</li><li>end render pass</li></ul>
+        <ul><li>submit precomputed barriers</li><li>begin render pass</li><li>call <code>execute()</code> lambda: draw calls, dispatches, copies</li><li>end render pass</li></ul>
       </div>
     </div>
-    <div style="text-align:center;font-size:.82em;opacity:.6;margin-top:.3em">The only phase that touches the GPU API — resources already bound</div>
+    <div style="text-align:center;font-size:.82em;opacity:.6;margin-top:.3em">The only phase that touches the GPU API (resources already bound)</div>
   </div>
 </div>
 
-Each execute lambda sees a fully resolved environment — barriers already computed and stored in the plan, memory already allocated, resources ready to bind. The lambda just records draw calls, dispatches, and copies. All the intelligence lives in the compile step.
+Each execute lambda sees a fully resolved environment: barriers already computed and stored in the plan, memory already allocated, resources ready to bind. The lambda just records draw calls, dispatches, and copies. All the intelligence lives in the compile step.
 
 ### 🧵 Parallel command recording
 
-The compiled plan doesn't just decide *what* runs — it reveals *what can run at the same time*. Because each lambda only touches its own declared resources and all barriers are precomputed, the engine knows exactly which passes are independent and can record them on separate CPU threads simultaneously.
+The compiled plan doesn't just decide *what* runs. It reveals *what can run at the same time*. Because each lambda only touches its own declared resources and all barriers are precomputed, the engine knows exactly which passes are independent and can record them on separate CPU threads simultaneously.
 
 <div style="margin:1.2em 0;border-radius:10px;overflow:hidden;border:1.5px solid rgba(var(--ds-code-rgb),.2);">
-  <div style="padding:.55em 1em;background:rgba(var(--ds-code-rgb),.08);border-bottom:1px solid rgba(var(--ds-code-rgb),.12);font-weight:700;font-size:.85em;text-transform:uppercase;letter-spacing:.04em;color:var(--ds-code-light);">Parallel recording — conceptual flow</div>
+  <div style="padding:.55em 1em;background:rgba(var(--ds-code-rgb),.08);border-bottom:1px solid rgba(var(--ds-code-rgb),.12);font-weight:700;font-size:.85em;text-transform:uppercase;letter-spacing:.04em;color:var(--ds-code-light);">Parallel recording: conceptual flow</div>
   <div style="padding:.8em 1em;font-size:.88em;line-height:1.7;">
     <div style="display:grid;grid-template-columns:auto 1fr;gap:.35em .9em;align-items:start;">
-      <span style="font-weight:700;color:var(--ds-code-light);">①</span><span>The compiled plan identifies <strong>groups</strong> of passes with no dependencies between them — they appear at the same depth in the sorted order.</span>
+      <span style="font-weight:700;color:var(--ds-code-light);">①</span><span>The compiled plan identifies <strong>groups</strong> of passes with no dependencies between them (they appear at the same depth in the sorted order).</span>
       <span style="font-weight:700;color:var(--ds-code);">②</span><span>Each independent pass is dispatched to a <strong>worker thread</strong>, which records GPU commands into its own secondary command buffer (Vulkan) or command list (D3D12).</span>
       <span style="font-weight:700;color:var(--ds-code);">③</span><span>Once all threads finish, the engine <strong>merges</strong> the recorded buffers into the primary command buffer in the correct order and submits to the GPU.</span>
     </div>
   </div>
 </div>
 
-The scalability gain comes from the DAG itself: passes at the same depth in the topological order have no edges between them, so recording them in parallel requires no additional synchronization. The more independent passes a frame has, the more CPU cores stay busy — and modern frames have plenty of independence (shadow cascades, GBuffer, SSAO, and bloom often share a depth level).
+The scalability gain comes from the DAG itself: passes at the same depth in the topological order have no edges between them, so recording them in parallel requires no additional synchronization. The more independent passes a frame has, the more CPU cores stay busy, and modern frames have plenty of independence (shadow cascades, GBuffer, SSAO, and bloom often share a depth level).
 
 ### 🧹 Cleanup and reset
 
-After every pass has been recorded, cleanup is trivial. The frame graph was designed around single-frame lifetimes, so there's nothing to track individually — the system just resets the transient memory pool in one shot (every GBuffer, scratch texture, and temporary buffer vanishes together). Imported resources like the swapchain, TAA history, or shadow atlas aren't touched — they belong to external systems and persist across frames. The graph object itself clears its pass list and resource table, leaving it empty and ready for the next frame's declare phase to start fresh. This reset-and-rebuild cycle is what lets engines add or remove passes freely without any teardown logic.
+After every pass has been recorded, cleanup is trivial. The frame graph was designed around single-frame lifetimes, so there's nothing to track individually. The system just resets the transient memory pool in one shot (every GBuffer, scratch texture, and temporary buffer vanishes together). Imported resources like the swapchain, TAA history, or shadow atlas aren't touched. They belong to external systems and persist across frames. The graph object itself clears its pass list and resource table, leaving it empty and ready for the next frame's declare phase to start fresh. This reset-and-rebuild cycle is what lets engines add or remove passes freely without any teardown logic.
 
 ---
 
@@ -507,7 +507,7 @@ How often should the graph recompile? Three approaches, each a valid tradeoff:
     <div style="padding:.7em .8em;font-size:.88em;line-height:1.6;">
       Rebuild every frame.<br>
       <strong>Cost:</strong> microseconds<br>
-      <strong>Flexibility:</strong> total — passes can appear, disappear, or change every frame
+      <strong>Flexibility:</strong> total. Passes can appear, disappear, or change every frame
     </div>
   </div>
   <div class="fg-hoverable" style="border-radius:10px;border:1.5px solid var(--ds-info);overflow:hidden;">
@@ -527,17 +527,17 @@ How often should the graph recompile? Three approaches, each a valid tradeoff:
     <div style="padding:.7em .8em;font-size:.88em;line-height:1.6;">
       Compile once at init, replay forever.<br>
       <strong>Cost:</strong> zero<br>
-      <strong>Flexibility:</strong> none — the pipeline is locked at startup<br>
+      <strong>Flexibility:</strong> none. The pipeline is locked at startup<br>
       <span style="opacity:.6;font-size:.9em;">Rare in practice</span>
     </div>
   </div>
 </div>
 
-**Dynamic** is the simplest approach and the most common starting point. The compile cost is low — sorting, culling, aliasing, and barrier computation are all CPU-side integer work over small arrays — but it isn't zero. It scales with the number of passes and resources, and on CPU-constrained platforms (consoles, mobile) or graphs with hundreds of passes, the per-frame cost can become noticeable.
+**Dynamic** is the simplest approach and the most common starting point. The compile cost is low (sorting, culling, aliasing, and barrier computation are all CPU-side integer work over small arrays), but it isn't zero. It scales with the number of passes and resources, and on CPU-constrained platforms (consoles, mobile) or graphs with hundreds of passes, the per-frame cost can become noticeable.
 
-**Hybrid** exists precisely because of that cost. When the graph topology is mostly stable frame-to-frame — same passes, same connections — there's no reason to recompute the same plan 60 times per second. A hybrid approach caches the compiled result and only invalidates when the declared graph actually changes (typically detected by hashing the pass + resource set). The tradeoff is complexity: you need reliable dirty-tracking and must guarantee a stale plan is never replayed against a changed graph.
+**Hybrid** exists precisely because of that cost. When the graph topology is mostly stable frame-to-frame (same passes, same connections), there's no reason to recompute the same plan 60 times per second. A hybrid approach caches the compiled result and only invalidates when the declared graph actually changes (typically detected by hashing the pass + resource set). The tradeoff is complexity: you need reliable dirty-tracking and must guarantee a stale plan is never replayed against a changed graph.
 
-**Static** compiles once at init and replays the same plan forever. It's rarely useful because the whole point of a frame graph is flexibility — feature toggles, dynamic quality scaling, debug overlays. A locked pipeline can't adapt. It appears occasionally in fixed-function scenarios like a VR compositor that always runs the same few passes.
+**Static** compiles once at init and replays the same plan forever. It's rarely useful because the whole point of a frame graph is flexibility: feature toggles, dynamic quality scaling, debug overlays. A locked pipeline can't adapt. It appears occasionally in fixed-function scenarios like a VR compositor that always runs the same few passes.
 
 ---
 
@@ -551,7 +551,7 @@ How often should the graph recompile? Three approaches, each a valid tradeoff:
     <strong>Memory aliasing</strong><br><span style="opacity:.65">Opt-in, fragile, rarely done</span>
   </div>
   <div style="padding:.55em .8em;font-size:.88em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.1);background:rgba(var(--ds-success-rgb),.02);">
-    <strong>Memory aliasing</strong><br>Automatic — compiler sees all lifetimes. <strong style="color:var(--ds-success);">~50% transient VRAM savings</strong> <span style="font-size:.85em;opacity:.7">(Frostbite reported this on BF1's deferred pipeline — <a href="https://www.gdcvault.com/play/1024612/FrameGraph-Extensible-Rendering-Architecture-in" style="opacity:.7;">GDC 2017</a>)</span>
+    <strong>Memory aliasing</strong><br>Automatic: compiler sees all lifetimes. <strong style="color:var(--ds-success);">~50% transient VRAM savings</strong> <span style="font-size:.85em;opacity:.7">(Frostbite reported this on BF1's deferred pipeline, see <a href="https://www.gdcvault.com/play/1024612/FrameGraph-Extensible-Rendering-Architecture-in" style="opacity:.7;">GDC 2017</a>)</span>
   </div>
 
   <div style="padding:.55em .8em;font-size:.88em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.1);border-right:1.5px solid rgba(var(--ds-indigo-rgb),.15);background:rgba(var(--ds-danger-rgb),.02);">
@@ -572,26 +572,26 @@ How often should the graph recompile? Three approaches, each a valid tradeoff:
     <strong>Pass reordering</strong><br><span style="opacity:.65">Breaks silently</span>
   </div>
   <div style="padding:.55em .8em;font-size:.88em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.1);background:rgba(var(--ds-success-rgb),.02);">
-    <strong>Pass reordering</strong><br>Safe — compiler respects dependencies
+    <strong>Pass reordering</strong><br>Safe: compiler respects dependencies
   </div>
 
   <div style="padding:.55em .8em;font-size:.88em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.1);border-right:1.5px solid rgba(var(--ds-indigo-rgb),.15);background:rgba(var(--ds-danger-rgb),.02);">
     <strong>Pass culling</strong><br><span style="opacity:.65">Manual ifdef / flag checks</span>
   </div>
   <div style="padding:.55em .8em;font-size:.88em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.1);background:rgba(var(--ds-success-rgb),.02);">
-    <strong>Pass culling</strong><br>Automatic — unused outputs = dead pass
+    <strong>Pass culling</strong><br>Automatic: unused outputs = dead pass
   </div>
 
   <div style="padding:.55em .8em;font-size:.88em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.1);border-right:1.5px solid rgba(var(--ds-indigo-rgb),.15);background:rgba(var(--ds-danger-rgb),.02);">
-    <strong>Context rolls</strong><br><span style="opacity:.65">Hard-coded pass order — unnecessary state switches</span>
+    <strong>Context rolls</strong><br><span style="opacity:.65">Hard-coded pass order: unnecessary state switches</span>
   </div>
   <div style="padding:.55em .8em;font-size:.88em;border-bottom:1px solid rgba(var(--ds-indigo-rgb),.1);background:rgba(var(--ds-success-rgb),.02);">
-    <strong>Context rolls</strong><br>Sort heuristic groups compatible passes — <strong style="color:var(--ds-success);">fewer switches</strong> <span style="font-size:.85em;opacity:.7">(gain varies by topology)</span>
+    <strong>Context rolls</strong><br>Sort heuristic groups compatible passes: <strong style="color:var(--ds-success);">fewer switches</strong> <span style="font-size:.85em;opacity:.7">(gain varies by topology)</span>
   </div>
 
   <!-- Advanced features divider -->
   <div style="grid-column:1/-1;padding:.4em 1em;background:rgba(var(--ds-indigo-rgb),.06);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.1);text-align:center;">
-    <span style="font-size:.75em;text-transform:uppercase;letter-spacing:.06em;font-weight:700;opacity:.5;">Advanced — covered in <a href="../frame-graph-advanced/" style="color:var(--ds-info);text-decoration:none;border-bottom:1px dashed rgba(var(--ds-info-rgb),.4);">Part III</a></span>
+    <span style="font-size:.75em;text-transform:uppercase;letter-spacing:.06em;font-weight:700;opacity:.5;">Advanced: covered in <a href="../frame-graph-advanced/" style="color:var(--ds-info);text-decoration:none;border-bottom:1px dashed rgba(var(--ds-info-rgb),.4);">Part III</a></span>
   </div>
 
   <div style="padding:.55em .8em;font-size:.88em;border-right:1.5px solid rgba(var(--ds-indigo-rgb),.15);background:rgba(var(--ds-danger-rgb),.02);opacity:.55;">
@@ -613,12 +613,12 @@ How often should the graph recompile? Three approaches, each a valid tradeoff:
 
 ### 🔮 What's next
 
-That's the full theory — sorting, culling, barriers, aliasing — everything a frame graph compiler does. [Part II — Build It](../frame-graph-build-it/) turns every concept from this article into running C++, three iterations from blank file to a working `FrameGraph` class with automatic barriers and memory aliasing.
+That's the full theory (sorting, culling, barriers, aliasing), everything a frame graph compiler does. [Part II: Build It](../frame-graph-build-it/) turns every concept from this article into running C++, three iterations from blank file to a working `FrameGraph` class with automatic barriers and memory aliasing.
 
 ---
 
 <div class="ds-article-footer" style="justify-content:flex-end;">
   <a href="../frame-graph-build-it/">
-    Next: Part II — Build It →
+    Next: Part II: Build It →
   </a>
 </div>
