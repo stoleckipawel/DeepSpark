@@ -88,207 +88,45 @@
 </script>
 
 <script>
-/* ═══ Site-wide Navigation ═══════════════════════════════════════════
-   Progress bar + breadcrumbs + TOC rail for every page.
-   Skips automatically when article-nav shortcode is present.
-   ═══════════════════════════════════════════════════════════════════ */
-(function(){
-  /* If article-nav is already active, it handles everything */
-  if (document.getElementById('anav-top')) return;
+(function () {
+  var emojiRe = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{27BF}\u{2B50}\u{2B55}\u{231A}-\u{23F3}\u{23CF}\u{2934}-\u{2935}\u{25AA}-\u{25FE}\u{2702}-\u{27B0}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}\u{E0020}-\u{E007F}\u{1FA70}-\u{1FAFF}\u{1F900}-\u{1F9FF}\u{1F018}-\u{1F270}\u{238C}-\u{2454}\u{20D0}-\u{20FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu;
 
-  function init() {
-    /* ── Breadcrumbs from URL ─────────────────────────────────────── */
-    var baseMeta = document.querySelector('meta[name="snav-base"]');
-    var basePath = baseMeta ? baseMeta.content.replace(/\/$/,'') : '';
-    var rawPath  = location.pathname;
-    if (basePath && rawPath.indexOf(basePath) === 0) rawPath = rawPath.substring(basePath.length);
-    var path = rawPath.replace(/^\/|\/$/g, '');
-    var segments = path ? path.split('/') : [];
+  function cleanTextNode(node) {
+    var value = node.nodeValue;
+    emojiRe.lastIndex = 0;
+    if (!value || !emojiRe.test(value)) return;
+    emojiRe.lastIndex = 0;
+    node.nodeValue = value.replace(emojiRe, '').replace(/\s{2,}/g, ' ');
+  }
 
-    var h1El = document.querySelector('article h1') ||
-               document.querySelector('main h1') ||
-               document.querySelector('h1');
-    var pageTitle = h1El
-      ? h1El.textContent.trim()
-      : document.title.split('|')[0].split('·')[0].trim();
+  function shouldSkip(el) {
+    return !!el.closest('code, pre, kbd, samp, script, style, textarea, .highlight, .chroma');
+  }
 
-    var niceNames = {
-      posts:'Posts', about:'About', tags:'Tags',
-      categories:'Categories', series:'Series', authors:'Authors'
-    };
-
-    var crumbs = [{ name: 'Deep Spark', url: basePath + '/' }];
-    for (var i = 0; i < segments.length; i++) {
-      var seg = segments[i];
-      var isLast = i === segments.length - 1;
-      if (isLast) {
-        crumbs.push({
-          name: segments.length === 1
-            ? (niceNames[seg] || pageTitle)
-            : pageTitle,
-          url: null
-        });
-      } else {
-        crumbs.push({
-          name: niceNames[seg] || seg.charAt(0).toUpperCase() + seg.slice(1),
-          url: basePath + '/' + segments.slice(0, i + 1).join('/') + '/'
-        });
+  function stripRenderedEmoji(root) {
+    if (!root) return;
+    var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode: function (node) {
+        var parent = node.parentElement;
+        if (!parent || shouldSkip(parent)) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
       }
-    }
-
-    /* ── Scan headings for TOC ────────────────────────────────────── */
-    var article = document.querySelector('article') ||
-                  document.querySelector('.prose') ||
-                  document.querySelector('main');
-    var rawH = article ? article.querySelectorAll('h2, h3') : [];
-    var tocItems = [];
-    rawH.forEach(function(h) {
-      var text = h.textContent.trim();
-      if (text.length < 2) return;
-      if (!h.id) h.id = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '');
-      tocItems.push({ name: text, el: h, id: h.id, level: parseInt(h.tagName.charAt(1)) });
     });
-    var hasToc = tocItems.length >= 3;
 
-    /* ── Build DOM ────────────────────────────────────────────────── */
-    var html = '<div class="snav-top" id="snav-top">' +
-      '<div class="snav-progress-track"><div class="snav-progress-bar" id="snav-progress-bar"></div></div>' +
-      '</div>';
-
-    /* Side rail */
-    if (hasToc) {
-      html += '<div class="snav-rail" id="snav-rail">' +
-        '<button class="snav-rail-minimize" id="snav-rail-minimize" aria-label="Minimize navigation" title="Minimize">\u2039</button>' +
-        '<div class="snav-rail-inner" id="snav-rail-inner">' +
-        '<div class="snav-rail-title">On this page</div>' +
-        '<div class="snav-rail-items" id="snav-rail-items">';
-      tocItems.forEach(function(item) {
-        var indent = item.level === 3 ? ' style="padding-left:1.8em;font-size:.9em;opacity:.8"' : '';
-        var sName = item.name.length > 30 ? item.name.substring(0, 30) + '\u2026' : item.name;
-        html += '<div class="snav-rail-link" data-target="' + item.id + '"' + indent + '>' + sName + '</div>';
-      });
-      html += '</div><div class="snav-rail-pct-bottom" id="snav-rail-pct">0% read</div></div></div>';
-      html += '<div class="snav-mobile-backdrop" id="snav-mobile-backdrop"></div>';
-      html += '<button class="snav-mobile-fab" id="snav-mobile-fab" aria-label="Open navigation">\u2630</button>';
+    var textNode;
+    while ((textNode = walker.nextNode())) {
+      cleanTextNode(textNode);
     }
+  }
 
-    var tmp = document.createElement('div');
-    tmp.innerHTML = html;
-    while (tmp.firstChild) document.body.appendChild(tmp.firstChild);
-
-    /* ── References ───────────────────────────────────────────────── */
-    var topEl      = document.getElementById('snav-top');
-    var barEl      = document.getElementById('snav-progress-bar');
-    var railEl     = document.getElementById('snav-rail');
-    var railPctEl  = document.getElementById('snav-rail-pct');
-    var railItemsE = document.getElementById('snav-rail-items');
-
-    /* ── Minimize button toggle ───────────────────────────────────── */
-    if (railEl) {
-      var minBtn = document.getElementById('snav-rail-minimize');
-      if (minBtn) {
-        minBtn.addEventListener('click', function() {
-          var isMin = railEl.classList.toggle('minimized');
-          minBtn.setAttribute('aria-label', isMin ? 'Expand navigation' : 'Minimize navigation');
-          minBtn.title = isMin ? 'Expand' : 'Minimize';
-        });
-      }
-    }
-
-    /* ── Rail click → smooth scroll ───────────────────────────────── */
-    if (railItemsE) {
-      railItemsE.querySelectorAll('[data-target]').forEach(function(el) {
-        el.addEventListener('click', function() {
-          var t = document.getElementById(el.getAttribute('data-target'));
-          if (t) { t.scrollIntoView({ behavior:'smooth', block:'start' }); closeMobile(); }
-        });
-      });
-    }
-
-
-    /* ── Mobile FAB & backdrop ────────────────────────────────────── */
-    var fab = document.getElementById('snav-mobile-fab');
-    var bkd = document.getElementById('snav-mobile-backdrop');
-
-    function openMobile()  { if(railEl) railEl.classList.add('snav-rail-open'); if(bkd) bkd.classList.add('active'); if(fab) fab.textContent='\u2715'; }
-    function closeMobile() { if(railEl) railEl.classList.remove('snav-rail-open'); if(bkd) bkd.classList.remove('active'); if(fab) fab.textContent='\u2630'; }
-
-    if (fab) fab.addEventListener('click', function() {
-      railEl.classList.contains('snav-rail-open') ? closeMobile() : openMobile();
-    });
-    if (bkd) bkd.addEventListener('click', closeMobile);
-
-    /* Swipe-down to close mobile rail */
-    if (hasToc) {
-      var railInner = document.getElementById('snav-rail-inner');
-      var startY = 0;
-      railInner.addEventListener('touchstart', function(e){ startY = e.touches[0].clientY; }, { passive:true });
-      railInner.addEventListener('touchend', function(e){
-        if (e.changedTouches[0].clientY - startY > 60 && railInner.scrollTop <= 0) closeMobile();
-      }, { passive:true });
-    }
-
-    /* ── Scroll tracking ──────────────────────────────────────────── */
-    var ticking = false;
-    var prevActive = null;          /* cache to avoid querySelectorAll */
-    var railInnerRef = hasToc ? document.getElementById('snav-rail-inner') : null;
-
-    function onScroll() {
-      if (ticking) return;
-      ticking = true;
-      requestAnimationFrame(function() {
-        ticking = false;
-
-        /* ── Reads first (avoid layout thrashing) ──────────────── */
-        var scrollY  = window.scrollY || window.pageYOffset;
-        var docH     = document.documentElement.scrollHeight - window.innerHeight;
-        var pct      = docH > 0 ? Math.min(100, Math.round(scrollY / docH * 100)) : 0;
-        var show     = scrollY > 150;
-
-        var cur = null;
-        if (hasToc) {
-          for (var i = tocItems.length - 1; i >= 0; i--) {
-            if (tocItems[i].el.getBoundingClientRect().top <= 80) { cur = tocItems[i]; break; }
-          }
-        }
-
-        /* ── Writes ────────────────────────────────────────────── */
-        topEl.classList.toggle('visible', show);
-        document.body.classList.toggle('snav-active', show);
-        if (railEl) railEl.classList.toggle('visible', show);
-
-        barEl.style.transform = 'scaleX(' + (pct / 100) + ')';
-        if (railPctEl) railPctEl.textContent = pct + '% read';
-
-        /* Scrollspy — swap only changed active link */
-        if (hasToc) {
-          if (cur) {
-            var next = railItemsE.querySelector('[data-target="' + cur.id + '"]');
-            if (next !== prevActive) {
-              if (prevActive) prevActive.classList.remove('active');
-              if (next) {
-                next.classList.add('active');
-                /* Scroll rail to keep active visible (reads after all class writes) */
-                var lr = next.getBoundingClientRect(), rr = railInnerRef.getBoundingClientRect();
-                if (lr.bottom > rr.bottom || lr.top < rr.top) next.scrollIntoView({ block:'nearest' });
-              }
-              prevActive = next;
-            }
-          } else {
-            if (prevActive) { prevActive.classList.remove('active'); prevActive = null; }
-          }
-        }
-      });
-    }
-
-    window.addEventListener('scroll', onScroll, { passive: true });
-    setTimeout(onScroll, 100);
+  function run() {
+    stripRenderedEmoji(document.querySelector('main') || document.body);
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', run);
   } else {
-    init();
+    run();
   }
 })();
 </script>

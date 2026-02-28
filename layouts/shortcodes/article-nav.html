@@ -1,11 +1,4 @@
-{{/* Article Navigation — sticky progress bar + breadcrumb + side rail */}}
-
-<!-- Progress bar + breadcrumb (top) -->
-<div class="anav-top" id="anav-top">
-  <div class="anav-progress-track">
-    <div class="anav-progress-bar" id="anav-progress-bar"></div>
-  </div>
-</div>
+{{/* Article Navigation — side rail */}}
 
 <!-- Side rail (right) -->
 <div class="anav-rail" id="anav-rail">
@@ -20,7 +13,6 @@
     </div>
     <div class="anav-rail-title" style="margin-top:.6em;">Sections</div>
     <div class="anav-rail-items" id="anav-rail-items"></div>
-    <div class="anav-rail-pct-bottom" id="anav-rail-pct">0% read</div>
   </div>
 </div>
 
@@ -32,39 +24,6 @@
 /* ── Hide Blowfish built-in TOC (backup; also disabled via front matter) ── */
 .toc { display: none !important; }
 
-/* ── Progress bar + breadcrumb (top) ──────────── */
-.anav-top {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 900;
-  pointer-events: none;
-  opacity: 0;
-  transform: translateY(-100%);
-  transition: opacity .3s, transform .3s;
-}
-.anav-top.visible {
-  opacity: 1;
-  transform: translateY(0);
-  pointer-events: auto;
-}
-.anav-progress-track {
-  height: 5px;
-  background: var(--color-neutral-200, #e5e5e5);
-}
-:is(.dark,.scheme-congo) .anav-progress-track {
-  background: var(--color-neutral-700);
-}
-.anav-progress-bar {
-  height: 100%;
-  width: 100%;
-  background: linear-gradient(90deg, var(--ds-accent), var(--ds-highlight));
-  transform: scaleX(0);
-  transform-origin: left;
-  will-change: transform;
-  border-radius: 0 2px 2px 0;
-}
 /* ── Series links in side rail ── */
 .anav-rail-series {
   display: flex;
@@ -173,7 +132,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.anav-rail-part:hover { text-decoration: underline; }
+.anav-rail-part:hover { opacity: .85; }
 .anav-rail-part[data-part="0"] { color: var(--ds-part-0); }
 .anav-rail-part[data-part="1"] { color: var(--ds-part-1); }
 .anav-rail-part[data-part="2"] { color: var(--ds-part-2); }
@@ -206,19 +165,6 @@
 }
 :is(.dark,.scheme-congo) .anav-rail-link.active {
   background: rgba(var(--ds-accent-rgb),.15);
-}
-
-.anav-rail-pct-bottom {
-  padding: .5em .8em .3em;
-  font-family: ui-monospace, SFMono-Regular, monospace;
-  font-size: .78em;
-  font-weight: 700;
-  color: var(--ds-accent);
-  border-top: 1px solid var(--color-neutral-200, #e5e5e5);
-  margin-top: .3em;
-}
-:is(.dark,.scheme-congo) .anav-rail-pct-bottom {
-  border-color: var(--color-neutral-700);
 }
 
 /* ── Minimize button (top-right dash) ───────── */
@@ -365,15 +311,8 @@
     padding: .45em 1em .45em 1.6em;
     line-height: 1.6;
   }
-  .anav-rail-pct-bottom {
-    font-size: .85em;
-    padding: .6em 1em .4em;
-  }
   .anav-mobile-fab {
     display: block;
-  }
-  .anav-progress-track {
-    height: 4px;
   }
 }
 
@@ -392,12 +331,6 @@
   }
 }
 
-/* ── Scroll offset for fixed header ──────────── */
-.anav-top.visible ~ * h1[id],
-.anav-top.visible ~ * h2[id],
-.anav-top.visible ~ * h3[id] {
-  scroll-margin-top: 50px;
-}
 </style>
 
 <script>
@@ -421,11 +354,8 @@
       });
     })();
 
-    var topBar = document.getElementById('anav-top');
     var rail = document.getElementById('anav-rail');
-    var progressBar = document.getElementById('anav-progress-bar');
     var railItems = document.getElementById('anav-rail-items');
-    var railPct = document.getElementById('anav-rail-pct');
 
     // ── Minimize button toggle ──
     var minBtn = document.getElementById('anav-rail-minimize');
@@ -469,26 +399,26 @@
         var entry = { name: text, el: h, id: h.id, partIdx: Math.max(0, currentPart), isPart: false, level: 2 };
         if (currentPart >= 0) parts[currentPart].sections.push(entry);
         allSections.push(entry);
-      } else if (level === 3) {
-        var entry3 = { name: text, el: h, id: h.id, partIdx: Math.max(0, currentPart), isPart: false, level: 3 };
-        if (currentPart >= 0) parts[currentPart].sections.push(entry3);
-        allSections.push(entry3);
       }
     });
 
     if (allSections.length < 2) return;
 
+    // Strip emoji characters from text
+    function stripEmoji(str) {
+      return str.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{27BF}\u{2B50}\u{2B55}\u{231A}-\u{23F3}\u{23CF}\u{2934}-\u{2935}\u{25AA}-\u{25FE}\u{2702}-\u{27B0}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}\u{E0020}-\u{E007F}\u{FE0F}\u{1FA70}-\u{1FAFF}\u{1F900}-\u{1F9FF}\u{1F018}-\u{1F270}\u{238C}-\u{2454}\u{20D0}-\u{20FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim();
+    }
+
     // Build rail HTML
     var railHTML = '';
     parts.forEach(function(p, pi) {
-      var shortName = p.name.split('—')[0].trim();
+      var shortName = stripEmoji(p.name).split('—')[0].trim();
       if (shortName.length > 20) shortName = shortName.substring(0, 20) + '…';
       railHTML += '<div class="anav-rail-part" data-part="' + pi + '" data-target="' + p.id + '">' + shortName + '</div>';
       p.sections.forEach(function(s) {
-        var indent = s.level === 3 ? 'padding-left:1.8em;font-size:.9em;opacity:.8' : '';
-        var sName = s.name;
+        var sName = stripEmoji(s.name);
         if (sName.length > 28) sName = sName.substring(0, 28) + '…';
-        railHTML += '<div class="anav-rail-link" data-target="' + s.id + '" style="' + indent + '">' + sName + '</div>';
+        railHTML += '<div class="anav-rail-link" data-target="' + s.id + '">' + sName + '</div>';
       });
     });
     railItems.innerHTML = railHTML;
@@ -563,8 +493,6 @@
 
     function updateNav() {
       var scrollY = window.scrollY || window.pageYOffset;
-      var docHeight = document.documentElement.scrollHeight - window.innerHeight;
-      var pct = docHeight > 0 ? Math.min(100, Math.round((scrollY / docHeight) * 100)) : 0;
 
       // Show/hide — only show if scrolled past threshold AND rail doesn't overlap content
       var show = scrollY > showThreshold;
@@ -576,12 +504,7 @@
         }
       }
 
-      topBar.classList.toggle('visible', scrollY > showThreshold);
       rail.classList.toggle('visible', show);
-
-      // Progress bar — use scaleX (compositor-friendly) instead of width
-      progressBar.style.transform = 'scaleX(' + (pct / 100) + ')';
-      railPct.textContent = pct + '% read';
 
       // Scroll spy — find current section (reads only)
       var currentSection = null;
