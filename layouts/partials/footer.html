@@ -22,19 +22,13 @@
     </div>
 
     {{/* Columns — inside the same glow wrapper */}}
-    <div style="position:relative;padding:2em 6em 2em;">
+    <div style="position:relative;padding:1.2em 6em 1.2em;">
 
     {{/* Columns */}}
-    <div style="display:flex;gap:3em;flex-wrap:wrap;">
+    <div style="display:flex;gap:3em;flex-wrap:wrap;align-items:flex-start;">
 
-      {{/* Column 1: Contact + Socials */}}
-      <div style="min-width:200px;flex:1;">
-        <div style="font-size:.72em;font-weight:700;text-transform:uppercase;letter-spacing:.08em;opacity:.45;margin-bottom:.7em;">Contact</div>
-        <div style="display:flex;align-items:center;gap:.4em;margin-bottom:1.5em;">
-          <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor;opacity:.5;flex-shrink:0;"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
-          <a href="mailto:stoleckipawel@deepspark.dev" style="font-size:.88em;color:inherit;text-decoration:none;opacity:.7;">stoleckipawel@deepspark.dev</a>
-        </div>
-
+      {{/* Column 1: Socials */}}
+      <div style="min-width:180px;flex:1;">
         <div style="font-size:.72em;font-weight:700;text-transform:uppercase;letter-spacing:.08em;opacity:.45;margin-bottom:.7em;">Socials</div>
         <div style="display:flex;gap:.6em;align-items:center;">
           <a href="https://www.linkedin.com/in/stoleckipawel/" target="_blank" rel="noopener" title="LinkedIn" style="display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.08);color:inherit;opacity:.7;transition:opacity .15s,background .15s;" onmouseover="this.style.opacity='1';this.style.background='rgba(255,255,255,.15)'" onmouseout="this.style.opacity='.7';this.style.background='rgba(255,255,255,.08)'">
@@ -55,21 +49,19 @@
         </div>
       </div>
 
-      {{/* Column 2: Navigation */}}
-      <div style="min-width:140px;">
-        <div style="font-size:.72em;font-weight:700;text-transform:uppercase;letter-spacing:.08em;opacity:.45;margin-bottom:.7em;">Deep Spark</div>
-        <ul style="list-style:none;padding:0;margin:0;">
-          <li style="margin-bottom:.4em;"><a href="/" style="font-size:.88em;color:inherit;text-decoration:none;opacity:.7;transition:opacity .15s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.7'">Home</a></li>
-          <li style="margin-bottom:.4em;"><a href="/about/" style="font-size:.88em;color:inherit;text-decoration:none;opacity:.7;transition:opacity .15s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.7'">About</a></li>
-          <li style="margin-bottom:.4em;"><a href="/contact/" style="font-size:.88em;color:inherit;text-decoration:none;opacity:.7;transition:opacity .15s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.7'">Contact</a></li>
-        </ul>
+      {{/* Column 2: Contact */}}
+      <div style="min-width:200px;flex:1;text-align:center;">
+        <div style="font-size:.72em;font-weight:700;text-transform:uppercase;letter-spacing:.08em;opacity:.45;margin-bottom:.7em;">Contact</div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:.4em;">
+          <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor;opacity:.5;flex-shrink:0;"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+          <a href="mailto:stoleckipawel@deepspark.dev" style="font-size:.88em;color:inherit;text-decoration:none;opacity:.7;">stoleckipawel@deepspark.dev</a>
+        </div>
       </div>
 
       {{/* Column 3: Resources */}}
-      <div style="min-width:140px;">
+      <div style="min-width:140px;flex:1;text-align:right;">
         <div style="font-size:.72em;font-weight:700;text-transform:uppercase;letter-spacing:.08em;opacity:.45;margin-bottom:.7em;">Resources</div>
         <ul style="list-style:none;padding:0;margin:0;">
-          <li style="margin-bottom:.4em;"><a href="/posts/" style="font-size:.88em;color:inherit;text-decoration:none;opacity:.7;transition:opacity .15s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.7'">Blog</a></li>
           <li style="margin-bottom:.4em;"><a href="/index.xml" style="font-size:.88em;color:inherit;text-decoration:none;opacity:.7;transition:opacity .15s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.7'">RSS</a></li>
         </ul>
       </div>
