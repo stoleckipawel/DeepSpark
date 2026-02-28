@@ -14,6 +14,22 @@
      code-*      Code shortcode styles (diff, collapse, compile)
    ═══════════════════════════════════════════════════════════════ */
 
+/* ── Sticky header: compact sizing + darkening overlay ─────────── */
+.fixed.inset-x-0.z-100 {
+  background: rgba(0, 0, 0, 0.14);
+}
+.main-menu { padding-top: .25rem; padding-bottom: .25rem; }
+.main-menu .header-icon { max-height: 2rem; max-width: 2rem; }
+.main-menu .logo { max-height: 1.4rem; max-width: 10rem; }
+.min-h-\[148px\] { min-height: 56px !important; }
+
+/* ── Footer: break out of body max-width ─────────────────────── */
+#site-footer {
+  width: 100vw !important;
+  margin-left: calc(-50vw + 50%) !important;
+  box-sizing: border-box;
+}
+
 /* ── Series navigation banner (top of each article) ──────────── */
 .ds-series-nav {
   margin: 0 0 1.5em;

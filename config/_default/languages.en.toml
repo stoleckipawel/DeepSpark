@@ -17,9 +17,6 @@ title = "Deep Spark"
 [params.author]
   name = "Pawel Stolecki"
   headline = "Rendering Engineer"
-  # image = "images/author.jpg"
-  links = [
-    { x-twitter = "https://x.com/stoleckipawel" },
-    { linkedin = "https://www.linkedin.com/in/stoleckipawel/" },
-    { youtube = "https://www.youtube.com/@stoleckipawel" },
-  ]
+  image = "images/author.jpg"
+  # links moved to /contact/ page
+  links = []

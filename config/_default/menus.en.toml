@@ -12,17 +12,21 @@
 
 [[main]]
 name = "Posts"
-pre = "pencil"
 pageRef = "/"
 title = "Read articles on rendering architecture and GPU performance"
 weight = 10
 
 [[main]]
 name = "About"
-pre = "globe"
 pageRef = "about"
 title = "Learn more about the author and this site"
 weight = 20
+
+[[main]]
+name = "Contact"
+pageRef = "contact"
+title = "Get in touch"
+weight = 30
 
 #[[main]]
 #name = "GitHub"
@@ -31,12 +35,12 @@ weight = 20
 #url = "https://github.com/stoleckipawel"
 #weight = 30
 
-[[main]]
-name = "LinkedIn"
-pre = "linkedin"
-title = "Connect on LinkedIn"
-url = "https://www.linkedin.com/in/stoleckirendering/"
-weight = 40
+#[[main]]
+#name = "LinkedIn"
+#pre = "linkedin"
+#title = "Connect on LinkedIn"
+#url = "https://www.linkedin.com/in/stoleckirendering/"
+#weight = 40
 
 #[[main]]
 #  name = "Blog"

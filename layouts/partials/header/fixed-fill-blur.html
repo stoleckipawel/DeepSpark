@@ -1,0 +1,16 @@
+<div class="min-h-[148px]"></div>
+<div class="fixed inset-x-0 z-100">
+  <div
+    id="menu-blur"
+    class="absolute opacity-0 inset-x-0 top-0 h-full nozoom backdrop-blur-xl" style="mask-image:linear-gradient(to bottom, black 0%, black 25%, rgba(0,0,0,0.94) 35%, rgba(0,0,0,0.84) 45%, rgba(0,0,0,0.7) 55%, rgba(0,0,0,0.5) 65%, rgba(0,0,0,0.3) 75%, rgba(0,0,0,0.12) 85%, rgba(0,0,0,0.03) 93%, transparent 100%);-webkit-mask-image:linear-gradient(to bottom, black 0%, black 25%, rgba(0,0,0,0.94) 35%, rgba(0,0,0,0.84) 45%, rgba(0,0,0,0.7) 55%, rgba(0,0,0,0.5) 65%, rgba(0,0,0,0.3) 75%, rgba(0,0,0,0.12) 85%, rgba(0,0,0,0.03) 93%, transparent 100%);"></div>
+  <div class="relative m-auto leading-7" style="max-width:100%;padding:0 1.25rem;">
+    {{ partial "header/basic.html" . }}
+  </div>
+</div>
+{{ $backgroundBlur := resources.Get "js/background-blur.js" }}
+{{ $backgroundBlur = $backgroundBlur | resources.Minify | resources.Fingerprint (.Site.Params.fingerprintAlgorithm | default "sha512") }}
+<script
+  type="text/javascript"
+  src="{{ $backgroundBlur.RelPermalink }}"
+  integrity="{{ $backgroundBlur.Data.Integrity }}"
+  data-blur-id="menu-blur"></script>

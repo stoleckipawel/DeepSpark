@@ -1,189 +1,471 @@
 ---
-title: "About"
+title: " "
 description: "Personal notes on real-time rendering and software engineering."
 date: 2026-02-09
 showDate: false
 showReadingTime: false
 showWordCount: false
+showShare: false
+sharingLinks: false
 ---
 
-<!-- Animations -->
 <style>
-/* Hero */
+/* ── About page – clean layout ──────────────────────────────── */
+
+/* Wrapper: kill default article max-width for full-bleed sections */
+.about-page { margin: 0; padding-bottom: 0; }
+
+/* Kill ALL bottom spacing the theme injects below article content */
+.article-content { margin-bottom: 0 !important; }
+.article-content.mb-20 { margin-bottom: 0 !important; }
+article { padding-bottom: 0 !important; margin-bottom: 0 !important; }
+article > section { padding-bottom: 0 !important; margin-bottom: 0 !important; }
+article > section > div { padding-bottom: 0 !important; margin-bottom: 0 !important; }
+/* Article inner footer (pagination area) adds pt-8 even when empty */
+article > footer { padding-top: 0 !important; margin-top: 0 !important; }
+/* Stop main from growing beyond its content (h-screen + grow creates gap) */
+main { flex-grow: 0 !important; }
+
+/* ── Section rhythm ─────────────────────────────────────────── */
+.about-section {
+  margin: 0 0 0;
+  padding: 3.5em 0;
+}
+
+/* Full-bleed alternating band */
+.about-band {
+  width: 100vw;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 2.5em 2rem;
+  box-sizing: border-box;
+}
+.about-band-dim {
+  background: rgba(255,255,255,.03);
+  border-top: 1px solid rgba(255,255,255,.06);
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+.about-band-inner {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+/* Section heading with accent bar */
+.about-section h2,
+.about-band h2 {
+  font-size: 1.5em;
+  font-weight: 800;
+  margin: 0 0 1.2em;
+  letter-spacing: -.01em;
+  padding-left: .75em;
+  border-left: 3px solid var(--ds-accent);
+  line-height: 1.2;
+}
+.about-section .section-sub {
+  font-size: .92em;
+  opacity: .5;
+  margin: 0 0 1.8em;
+  line-height: 1.6;
+}
+
+/* ── Hero two-column (compact, centered like a card) ────────── */
 .about-hero {
+  display: flex;
+  gap: 2.5em;
+  align-items: center;
+  max-width: 760px;
+  margin: 0 auto 2em;
+  line-height: 1.7;
 }
-.about-hero::before {
-  content: '';
-  position: absolute; inset: -1.5px; border-radius: 15px;
-  background: linear-gradient(90deg, transparent 15%, rgba(var(--ds-accent-rgb),.3) 50%, transparent 85%);
-  background-size: 200% 100%;
-  animation: shimmer 5s ease-in-out infinite;
-  pointer-events: none;
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask-composite: exclude; -webkit-mask-composite: xor;
-  padding: 1.5px;
+.about-hero-text { flex: 1; min-width: 0; }
+.about-hero-text p {
+  font-size: .93em;
+  margin: 0 0 .9em;
+  opacity: .78;
 }
-/* Topic cards */
-.about-card {
-  transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+.about-hero-text p:last-child { margin-bottom: 0; }
+.about-hero-photo {
+  flex-shrink: 0;
+  width: 240px;
 }
-.about-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 6px 24px rgba(var(--ds-accent-rgb),.12);
-  border-color: rgba(var(--ds-accent-rgb),.4);
-  background: rgba(var(--ds-accent-rgb),.06);
+.about-hero-photo img {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  object-position: center top;
+  border-radius: 14px;
+  display: block;
 }
-.about-card .card-icon {
-  display: inline-block;
-  transition: transform .25s ease;
-}
-.about-card:hover .card-icon {
-  transform: scale(1.2);
-}
-
-/* Author card */
-.about-author {
-}
-.about-author::before {
-  content: '';
-  position: absolute; left: 0; top: 12%; bottom: 12%;
-  width: 3px; border-radius: 2px;
-  background: var(--ds-accent);
+@media (max-width: 720px) {
+  .about-hero { flex-direction: column-reverse; align-items: center; gap: 1.5em; max-width: 400px; }
+  .about-hero-photo { width: 200px; }
 }
 
-/* Timeline entries */
-.tl-entry {
+/* ── Portfolio grid: 2 featured + rest ──────────────────────── */
+.portfolio-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1em;
 }
-
-/* Pulsing current-role dot — uses pseudo-element so box-shadow doesn’t shift the dot */
-.tl-dot-active {
+.portfolio-grid .featured {
+  grid-column: span 2;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1em;
+}
+@media (max-width: 600px) {
+  .portfolio-grid { grid-template-columns: 1fr; }
+  .portfolio-grid .featured { grid-column: span 1; grid-template-columns: 1fr; }
+}
+.portfolio-card {
   position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+  display: block;
+  text-decoration: none !important;
+  background: #0d0d0d;
+  transition: transform .25s ease, box-shadow .25s ease;
 }
-.tl-dot-active::after {
-  content: '';
-  position: absolute; inset: -3px;
-  border-radius: 50%;
+.portfolio-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 32px rgba(0,0,0,.45);
+}
+.portfolio-card img {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  display: block;
+  transition: transform .4s ease;
+}
+.portfolio-card:hover img { transform: scale(1.04); }
+.portfolio-card .overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(0deg, rgba(0,0,0,.85) 0%, transparent 50%);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 1em 1.1em;
+}
+.portfolio-card .overlay .title {
+  font-size: .88em;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.3;
+}
+.portfolio-card .overlay .tag {
+  font-size: .7em;
+  color: rgba(255,255,255,.45);
+  margin-top: .1em;
 }
 
-/* Skill tags */
-.tl-tags span {
+/* ── Games showcase ────────────────────────────────────────── */
+.games-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1em;
 }
-
-/* Current badge */
-.badge-current {
+@media (max-width: 700px) {
+  .games-grid { grid-template-columns: 1fr; }
+}
+.game-card {
   position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  display: block;
+  text-decoration: none !important;
+  background: #0d0d0d;
+  transition: transform .25s ease, box-shadow .25s ease;
 }
-.badge-current::after {
-  content: '';
-  position: absolute; inset: -2px; border-radius: 7px;
-  background: rgba(var(--ds-highlight-rgb),.12);
+.game-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 36px rgba(0,0,0,.55);
+}
+.game-card img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  display: block;
+  transition: transform .4s ease;
+}
+.game-card:hover img { transform: scale(1.04); }
+.game-card .game-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(0deg, rgba(0,0,0,.92) 0%, rgba(0,0,0,.3) 45%, transparent 70%);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 1.1em 1.2em;
+}
+.game-card .game-title {
+  font-size: 1em;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.25;
+  margin-bottom: .35em;
+}
+.game-card .game-role {
+  font-size: .72em;
+  color: rgba(255,255,255,.7);
+  line-height: 1.5;
+}
+.game-card .game-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -60%);
+  opacity: 0;
+  transition: opacity .25s, transform .25s;
+}
+.game-card:hover .game-play {
+  opacity: 1;
+  transform: translate(-50%, -50%);
+}
+.game-card .game-play svg {
+  width: 52px; height: 52px;
+  fill: #fff;
+  filter: drop-shadow(0 2px 8px rgba(0,0,0,.6));
 }
 
-/* Section headings — warm underline accent */
-.article-content h2 {
+/* ── Talks grid ─────────────────────────────────────────────── */
+.talks-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1em;
+}
+.talk-card {
+  display: block;
+  text-decoration: none !important;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #0d0d0d;
+  transition: transform .25s ease, box-shadow .25s ease;
+}
+.talk-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 32px rgba(0,0,0,.45);
+}
+.talk-thumb {
   position: relative;
-  padding-bottom: .35em;
+  overflow: hidden;
 }
-.article-content h2::after {
-  content: '';
-  position: absolute; left: 0; bottom: 0;
-  width: 2.5em; height: 2.5px; border-radius: 2px;
-  background: var(--ds-accent);
-  opacity: .7;
+.talk-thumb img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  display: block;
+  transition: transform .4s ease;
+}
+.talk-card:hover .talk-thumb img { transform: scale(1.04); }
+.talk-play {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,.2);
+  opacity: 0;
+  transition: opacity .25s ease;
+}
+.talk-card:hover .talk-play { opacity: 1; }
+.talk-play svg {
+  width: 48px; height: 48px;
+  fill: #fff;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,.5));
+}
+.talk-body {
+  padding: 1em 1.1em 1.15em;
+}
+.talk-body h4 {
+  font-size: .9em;
+  font-weight: 700;
+  margin: 0 0 .3em;
+  line-height: 1.35;
+}
+.talk-body .meta {
+  font-size: .75em;
+  opacity: .45;
+  line-height: 1.5;
 }
 
-/* Disclaimer */
-.about-disclaimer {
-}
 
 </style>
 
-<!-- Hero intro -->
-<div class="about-hero" style="position:relative;margin:0 0 2em;padding:1.6em 1.8em;border-radius:14px;border:1.5px solid rgba(var(--ds-accent-rgb),.2);background:rgba(var(--ds-accent-rgb),.04);line-height:1.7;overflow:hidden;">
-  <div style="font-size:1.3em;font-weight:800;margin-bottom:.35em;background:linear-gradient(90deg,var(--ds-soft),var(--ds-accent),var(--ds-highlight));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;display:inline-block;">Deep Spark</div>
-  <div style="font-size:1em;">
-    A compact notebook for <strong>engine design</strong>, <strong>GPU/CPU/memory profiling</strong>, <strong>PBR</strong>, <strong>ray tracing</strong>, and <strong>practical performance work</strong>.
+<div class="about-page">
+
+<!-- ── About me ──────────────────────────────────────────────── -->
+
+
+<div class="about-hero">
+  <div style="flex:1;min-width:0;">
+    <h1 style="font-size:2.3em;font-weight:800;margin:0 0 .35em;line-height:1.1;">About me</h1>
+    <div class="about-hero-text">
+      <p>
+        I'm Pawel Stolecki, a rendering engineer focused on real-time graphics and performance-critical systems —
+        building scalable rendering architectures that fully utilize modern GPU hardware under strict frame budgets.
+      </p>
+      <p>
+        My work spans physically based rendering, real-time ray tracing, low-level graphics programming
+        (DirectX 12, Vulkan, UE RHI, Render Graph), and GPU/CPU/memory profiling across PC and console platforms.
+      </p>
+      <p>
+        I enjoy working close to the metal — analyzing wave behavior, occupancy, cache utilization,
+        and submission pipelines to ensure every millisecond is accounted for.
+      </p>
+    </div>
+  </div>
+  <div class="about-hero-photo">
+    <img src="/images/author.jpg" alt="Pawel Stolecki" />
   </div>
 </div>
 
----
+<!-- ── Games shipped ───────────────────────────────────────── -->
 
-## About the Author
+<div class="about-band about-band-dim"><div class="about-band-inner">
 
-<div class="about-author" style="position:relative;margin:1.2em 0 1.5em;padding:1.3em 1.5em 1.3em 1.8em;border-radius:12px;border:1.5px solid rgba(var(--ds-accent-rgb),.18);background:rgba(var(--ds-accent-rgb),.03);line-height:1.7;overflow:hidden;">
-  <div style="font-size:1.12em;font-weight:800;margin-bottom:.4em;color:var(--ds-highlight);">Pawel Stolecki</div>
-  <div style="font-size:.95em;">
-    3D graphics software engineer focused on real-time rendering. I enjoy the intersection where visual-quality research meets hands-on optimization — pushing shading closer to ground truth while keeping systems efficient and shippable.
-  </div>
-</div>
+<h2>Games I worked on</h2>
 
-### Experience
+<div class="games-grid">
 
-<div style="position:relative;margin:1.4em 0 2em;padding-left:2.2em;border-left:3px solid rgba(var(--ds-accent-rgb),.25);">
+  <a class="game-card" href="https://www.youtube.com/watch?v=Nthv4xF_zHU" target="_blank" rel="noopener">
+    <img src="https://img.youtube.com/vi/Nthv4xF_zHU/maxresdefault.jpg" alt="The Witcher 4" loading="lazy" />
+    <div class="game-overlay">
+      <div class="game-title">The Witcher 4 — Tech Demo</div>
+      <div class="game-role">GPU Optimization · CD PROJEKT RED<br>Delivered 60 fps on PS5 — Lumen performance &amp; general GPU optimization</div>
+    </div>
+    <div class="game-play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+  </a>
 
-  <!-- CD PROJEKT RED -->
-  <div class="tl-entry">
-    <div class="tl-dot tl-dot-active"><div class="tl-dot__inner"></div></div>
-    <div style="display:flex;align-items:baseline;gap:.6em;flex-wrap:wrap;">
-      <span class="tl-company">CD PROJEKT RED</span>
-      <span class="badge-current">Current</span>
+  <a class="game-card" href="https://www.youtube.com/watch?v=km7pc3P6PE8" target="_blank" rel="noopener">
+    <img src="https://img.youtube.com/vi/km7pc3P6PE8/maxresdefault.jpg" alt="Dying Light 2" loading="lazy" />
+    <div class="game-overlay">
+      <div class="game-title">Dying Light 2: Stay Human</div>
+      <div class="game-role">Rendering Engineer · Techland<br>Contributed to internal engine renderloop — improving GBuffer &amp; lighting rendering</div>
     </div>
-    <div class="tl-role">Rendering Engineer</div>
-    <div class="tl-body">
-      Driving lighting technology improvements. The work is hands-on and investigative — prototype a change, measure it on hardware, trace what the GPU, CPU, memory is actually doing, and ship what moves the needle.
-    </div>
-    <div class="tl-tags">
-      <span class="ds-tag ds-tag--accent">Direct Lighting</span>
-      <span class="ds-tag ds-tag--accent">Indirect Lighting</span>
-      <span class="ds-tag ds-tag--highlight">GPU/CPU Profiling</span>
-      <span class="ds-tag ds-tag--highlight">Memory Profiling</span>
-      <span class="ds-tag ds-tag--warm">Platform Optimization</span>
-      <span class="ds-tag ds-tag--warm">Cross-Platform</span>
-    </div>
-  </div>
+    <div class="game-play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+  </a>
 
-  <!-- Techland -->
-  <div class="tl-entry">
-    <div class="tl-dot tl-dot-past"><div class="tl-dot__inner"></div></div>
-    <div class="tl-company">Techland</div>
-    <div class="tl-role">Rendering | Technical Artist</div>
-    <div class="tl-body">
-      Worked across the full rasterization pipeline — GBuffer generation, lighting, and post-processing — while scaling the renderer to ship on everything from handhelds to high-end PC. Began as a Technical Artist, which built a lasting focus on artist-facing tools, visual debugging, and workflows that keep content creators unblocked.
+  <a class="game-card" href="https://www.youtube.com/watch?v=ysgzR2jMwNE" target="_blank" rel="noopener">
+    <img src="https://img.youtube.com/vi/ysgzR2jMwNE/maxresdefault.jpg" alt="World War 3" loading="lazy" />
+    <div class="game-overlay">
+      <div class="game-title">World War 3</div>
+      <div class="game-role">Rendering Engineer · The Farm 51<br>Environmental shaders &amp; rendering tooling</div>
     </div>
-    <div class="tl-tags">
-      <span class="ds-tag ds-tag--accent">GBuffer Fill</span>
-      <span class="ds-tag ds-tag--accent">Lighting</span>
-      <span class="ds-tag ds-tag--highlight">Post-Processing</span>
-      <span class="ds-tag ds-tag--highlight">Multi-Platform Scalability</span>
-      <span class="ds-tag ds-tag--warm">Artist Tooling</span>
-      <span class="ds-tag ds-tag--warm">Visual Debugging</span>
-    </div>
-  </div>
-
-  <!-- The Farm 51 -->
-  <div class="tl-entry">
-    <div class="tl-dot tl-dot-early"><div class="tl-dot__inner"></div></div>
-    <div class="tl-company">The Farm 51</div>
-    <div class="tl-role">Technical Artist</div>
-    <div class="tl-body">
-      Built procedural shader systems for environmental effects — forest fire, stormy ocean, wind-driven foliage — alongside a landscape production pipeline and general-purpose shader library. Owned R&D for simulation systems and drove performance optimization across the board.
-    </div>
-    <div class="tl-tags">
-      <span class="ds-tag ds-tag--accent">Procedural Shaders</span>
-      <span class="ds-tag ds-tag--accent">Wind Simulation</span>
-      <span class="ds-tag ds-tag--highlight">Landscape Pipeline</span>
-      <span class="ds-tag ds-tag--highlight">Ocean Rendering</span>
-      <span class="ds-tag ds-tag--warm">R&amp;D</span>
-      <span class="ds-tag ds-tag--warm">Optimization</span>
-    </div>
-  </div>
+    <div class="game-play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+  </a>
 
 </div>
+</div></div>
 
----
+<!-- ── Rendering showcase ────────────────────────────────────── -->
 
-<div class="about-disclaimer" style="margin-top:1em;padding:.9em 1.2em;border-radius:8px;border:1px solid rgba(var(--ds-accent-rgb),.08);background:rgba(var(--ds-accent-rgb),.02);font-size:.82em;line-height:1.6;opacity:.6;">
-<strong>Disclaimer:</strong> All content on this site reflects my personal opinions and experiences only. Nothing here represents the views, positions, or endorsements of any company I currently work for or have previously worked for.
+<div class="about-band"><div class="about-band-inner">
+
+<h2>Contribution Examples</h2>
+
+<div class="portfolio-grid">
+
+  <div class="featured">
+    <a class="portfolio-card" href="https://www.artstation.com/artwork/OGER3g" target="_blank" rel="noopener">
+      <img src="https://cdnb.artstation.com/p/assets/images/images/062/270/817/medium/pawel-stolecki-1.jpg?1682718299" alt="Volumetric Fog" loading="lazy" />
+      <div class="overlay">
+        <div class="title">Volumetric Fog</div>
+        <div class="tag">Dying Light 2 · Techland</div>
+      </div>
+    </a>
+    <a class="portfolio-card" href="https://www.artstation.com/artwork/8bmLQQ" target="_blank" rel="noopener">
+      <img src="https://cdna.artstation.com/p/assets/images/images/062/269/266/medium/pawel-stolecki-1.jpg?1682714949" alt="Water Rendering" loading="lazy" />
+      <div class="overlay">
+        <div class="title">Water Rendering</div>
+        <div class="tag">Dying Light 2 · Techland</div>
+      </div>
+    </a>
+  </div>
+
+  <a class="portfolio-card" href="https://www.artstation.com/artwork/PXOBQy" target="_blank" rel="noopener">
+    <img src="https://cdnb.artstation.com/p/assets/images/images/062/268/265/medium/pawel-stolecki-1.jpg?1682713064" alt="SSAO" loading="lazy" />
+    <div class="overlay">
+      <div class="title">Screen Space Ambient Occlusion</div>
+      <div class="tag">Dying Light 2 · Techland</div>
+    </div>
+  </a>
+
+  <a class="portfolio-card" href="https://www.artstation.com/artwork/m83KDd" target="_blank" rel="noopener">
+    <img src="https://cdnb.artstation.com/p/assets/images/images/062/270/439/medium/pawel-stolecki-1.jpg?1682717446" alt="Motion Blur" loading="lazy" />
+    <div class="overlay">
+      <div class="title">Motion Blur</div>
+      <div class="tag">Dying Light 2 · Techland</div>
+    </div>
+  </a>
+
+  <a class="portfolio-card" href="https://www.artstation.com/artwork/N5K5qb" target="_blank" rel="noopener">
+    <img src="https://cdna.artstation.com/p/assets/images/images/017/927/150/medium/pawel-stolecki-ocean2.jpg?1557873130" alt="Gerstner Ocean R&amp;D" loading="lazy" />
+    <div class="overlay">
+      <div class="title">Gerstner Ocean R&amp;D</div>
+      <div class="tag">World War 3 · The Farm 51</div>
+    </div>
+  </a>
+
+  <a class="portfolio-card" href="https://www.artstation.com/artwork/4XJLvn" target="_blank" rel="noopener">
+    <img src="https://cdnb.artstation.com/p/assets/images/images/056/812/167/medium/pawel-stolecki-curtaain.jpg?1670166783" alt="Wind Simulation" loading="lazy" />
+    <div class="overlay">
+      <div class="title">Wind Simulation on Curtains</div>
+      <div class="tag">World War 3 · The Farm 51</div>
+    </div>
+  </a>
+
+</div>
+</div></div>
+
+<!-- ── Talks & presentations ─────────────────────────────────── -->
+
+<div class="about-band about-band-dim"><div class="about-band-inner">
+
+<h2>Talks &amp; presentations</h2>
+
+
+<div class="talks-grid">
+
+  <a class="talk-card" href="https://www.youtube.com/watch?v=OwyMw2C4UfA" target="_blank" rel="noopener">
+    <div class="talk-thumb">
+      <img src="https://i.ytimg.com/vi/OwyMw2C4UfA/hqdefault.jpg" alt="PBR: Putting Pieces Together" loading="lazy" />
+      <div class="talk-play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+    </div>
+    <div class="talk-body">
+      <h4>Physically Based Rendering: Putting Pieces Together</h4>
+      <div class="meta">Game Industry Conference · CD Projekt Red</div>
+    </div>
+  </a>
+
+  <a class="talk-card" href="https://www.youtube.com/watch?v=UOsPC_V6uxA" target="_blank" rel="noopener">
+    <div class="talk-thumb">
+      <img src="https://i.ytimg.com/vi/UOsPC_V6uxA/hqdefault.jpg" alt="Illuminating the Villedor" loading="lazy" />
+      <div class="talk-play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+    </div>
+    <div class="talk-body">
+      <h4>Illuminating the Villedor: Lighting in Dying Light 2</h4>
+      <div class="meta">Game Industry Conference · w/ Wojciech Zeler · Techland</div>
+    </div>
+  </a>
+
+  <a class="talk-card" href="https://www.youtube.com/watch?v=z0JE_eqxrVQ" target="_blank" rel="noopener">
+    <div class="talk-thumb">
+      <img src="https://i.ytimg.com/vi/z0JE_eqxrVQ/hqdefault.jpg" alt="Pakiet Technicznej wiedzy" loading="lazy" />
+      <div class="talk-play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+    </div>
+    <div class="talk-body">
+      <h4>Pakiet Technicznej wiedzy dla 3D Artysty</h4>
+      <div class="meta">Personal channel</div>
+    </div>
+  </a>
+
+</div>
+</div></div>
+
+
+
 </div>
 
 
