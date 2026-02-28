@@ -32,7 +32,7 @@ main { flex-grow: 0 !important; }
   padding: 3.5em 0;
 }
 
-/* Full-bleed alternating band */
+/* ── Below-fold sections: skip render until near viewport ───────── */
 .about-band {
   width: 100vw;
   position: relative;
@@ -40,6 +40,8 @@ main { flex-grow: 0 !important; }
   transform: translateX(-50%);
   padding: 2.5em 2rem;
   box-sizing: border-box;
+  content-visibility: auto;
+  contain-intrinsic-size: 0 500px;
 }
 .about-band-dim {
   background: rgba(255,255,255,.03);
@@ -145,6 +147,8 @@ main { flex-grow: 0 !important; }
   overflow: hidden;
   background: #0d0d0d;
   display: block;
+  contain: strict;
+  will-change: transform; /* single compositor layer for the whole card */
 }
 .pf-slide {
   position: absolute;
@@ -155,6 +159,14 @@ main { flex-grow: 0 !important; }
   opacity: 0;
   animation: pf-fade 7.5s linear infinite;
   animation-fill-mode: both;
+}
+/* Pause all slideshow animations when user prefers reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .pf-slide {
+    animation: none;
+    opacity: 0;
+  }
+  .pf-slide:first-child { opacity: 1; }
 }
 .portfolio-card:hover .pf-slide { animation-play-state: paused; }
 /*
@@ -171,21 +183,6 @@ main { flex-grow: 0 !important; }
   56.67%  { opacity: 1; }
   66.67%  { opacity: 0; }
   100%    { opacity: 0; }
-}
-/* GIF placeholder badge */
-.gif-badge {
-  position: absolute;
-  top: .6em;
-  right: .6em;
-  z-index: 5;
-  font-size: .65em;
-  font-weight: 700;
-  color: rgba(255,255,255,.6);
-  background: rgba(0,0,0,.55);
-  border: 1px dashed rgba(255,255,255,.28);
-  border-radius: 4px;
-  padding: .2em .55em;
-  letter-spacing: .05em;
 }
 .portfolio-card .overlay {
   position: absolute;
@@ -363,7 +360,7 @@ main { flex-grow: 0 !important; }
     </div>
   </div>
   <div class="about-hero-photo">
-    <img src="/images/author.jpg" alt="Pawel Stolecki" />
+    <img src="/images/author.jpg" alt="Pawel Stolecki" fetchpriority="high" decoding="async" />
   </div>
 </div>
 
@@ -376,16 +373,16 @@ main { flex-grow: 0 !important; }
 <div class="games-grid">
 
   <a class="game-card" href="https://www.youtube.com/watch?v=Nthv4xF_zHU" target="_blank" rel="noopener">
-    <img src="https://img.youtube.com/vi/Nthv4xF_zHU/maxresdefault.jpg" alt="The Witcher 4" loading="lazy" />
+    <img src="https://img.youtube.com/vi/Nthv4xF_zHU/hqdefault.jpg" alt="The Witcher 4" loading="lazy" decoding="async" />
     <div class="game-overlay">
       <div class="game-title">The Witcher 4: Tech Demo</div>
-      <div class="game-role">CD PROJEKT RED · Lumen performance &amp; GPU optimization</div>
+      <div class="game-role">CD PROJEKT RED · Delivering visual quality within a 60 fps PS5 budget</div>
     </div>
     <div class="game-play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
   </a>
 
   <a class="game-card" href="https://www.youtube.com/watch?v=km7pc3P6PE8" target="_blank" rel="noopener">
-    <img src="https://img.youtube.com/vi/km7pc3P6PE8/maxresdefault.jpg" alt="Dying Light 2" loading="lazy" />
+    <img src="https://img.youtube.com/vi/km7pc3P6PE8/hqdefault.jpg" alt="Dying Light 2" loading="lazy" decoding="async" />
     <div class="game-overlay">
       <div class="game-title">Dying Light 2: Stay Human</div>
       <div class="game-role">Techland · GBuffer &amp; lighting rendering improvements</div>
@@ -394,7 +391,7 @@ main { flex-grow: 0 !important; }
   </a>
 
   <a class="game-card" href="https://www.youtube.com/watch?v=ysgzR2jMwNE" target="_blank" rel="noopener">
-    <img src="https://img.youtube.com/vi/ysgzR2jMwNE/maxresdefault.jpg" alt="World War 3" loading="lazy" />
+    <img src="https://img.youtube.com/vi/ysgzR2jMwNE/hqdefault.jpg" alt="World War 3" loading="lazy" decoding="async" />
     <div class="game-overlay">
       <div class="game-title">World War 3</div>
       <div class="game-role">The Farm 51 · Environmental shaders &amp; rendering tooling</div>
@@ -428,7 +425,7 @@ main { flex-grow: 0 !important; }
     </a>
     <!-- Ocean R&D — animated GIF -->
     <a class="portfolio-card" href="https://www.artstation.com/artwork/N5K5qb" target="_blank" rel="noopener">
-      <img src="/images/water.gif" alt="Gerstner Ocean R&amp;D" />
+      <img src="/images/water.gif" alt="Gerstner Ocean R&amp;D" loading="lazy" decoding="async" />
       <div class="overlay">
         <div class="title">Gerstner Ocean</div>
         <div class="tag">World War 3 · The Farm 51</div>
@@ -477,7 +474,7 @@ main { flex-grow: 0 !important; }
 
   <!-- Wind Simulation — animated GIF -->
   <a class="portfolio-card" href="https://www.artstation.com/artwork/4XJLvn" target="_blank" rel="noopener">
-    <img src="/images/simulation.gif" alt="Wind Simulation" />
+    <img src="/images/simulation.gif" alt="Wind Simulation" loading="lazy" decoding="async" />
     <div class="overlay">
       <div class="title">Wind Simulation</div>
       <div class="tag">World War 3 · The Farm 51</div>
@@ -498,7 +495,7 @@ main { flex-grow: 0 !important; }
 
   <a class="talk-card" href="https://www.youtube.com/watch?v=OwyMw2C4UfA" target="_blank" rel="noopener">
     <div class="talk-thumb">
-      <img src="https://i.ytimg.com/vi/OwyMw2C4UfA/hqdefault.jpg" alt="PBR: Putting Pieces Together" loading="lazy" />
+      <img src="https://i.ytimg.com/vi/OwyMw2C4UfA/hqdefault.jpg" alt="PBR: Putting Pieces Together" loading="lazy" decoding="async" />
       <div class="talk-play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
     </div>
     <div class="talk-body">
@@ -509,7 +506,7 @@ main { flex-grow: 0 !important; }
 
   <a class="talk-card" href="https://www.youtube.com/watch?v=UOsPC_V6uxA" target="_blank" rel="noopener">
     <div class="talk-thumb">
-      <img src="https://i.ytimg.com/vi/UOsPC_V6uxA/hqdefault.jpg" alt="Illuminating the Villedor" loading="lazy" />
+      <img src="https://i.ytimg.com/vi/UOsPC_V6uxA/hqdefault.jpg" alt="Illuminating the Villedor" loading="lazy" decoding="async" />
       <div class="talk-play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
     </div>
     <div class="talk-body">
@@ -520,7 +517,7 @@ main { flex-grow: 0 !important; }
 
   <a class="talk-card" href="https://www.youtube.com/watch?v=z0JE_eqxrVQ" target="_blank" rel="noopener">
     <div class="talk-thumb">
-      <img src="https://i.ytimg.com/vi/z0JE_eqxrVQ/hqdefault.jpg" alt="Pakiet Technicznej wiedzy" loading="lazy" />
+      <img src="https://i.ytimg.com/vi/z0JE_eqxrVQ/hqdefault.jpg" alt="Pakiet Technicznej wiedzy" loading="lazy" decoding="async" />
       <div class="talk-play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
     </div>
     <div class="talk-body">

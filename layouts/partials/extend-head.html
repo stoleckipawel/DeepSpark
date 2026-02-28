@@ -1,5 +1,9 @@
 {{ $parsed := urls.Parse site.BaseURL }}
 <meta name="snav-base" content="{{ $parsed.Path }}">
+<link rel="preconnect" href="https://cdnb.artstation.com" crossorigin>
+<link rel="preconnect" href="https://cdna.artstation.com" crossorigin>
+<link rel="preconnect" href="https://img.youtube.com" crossorigin>
+<link rel="preconnect" href="https://i.ytimg.com" crossorigin>
 <style>
 /* ═══ Site-wide Navigation ═══════════════════════════════════════════
    Progress bar, breadcrumbs, and TOC rail for ALL pages.
