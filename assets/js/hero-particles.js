@@ -9,15 +9,18 @@
   if (!canvas) return;
   var ctx = canvas.getContext('2d');
   var width, height, dpr, raf;
+  var SCENE_ASPECT = 2.8;  /* reference aspect ratio (wide corridor) */
+  var sceneW, sceneH, offX, offY;
 
   /* -- Tunables ------------------------------------------------- */
-  var RAY_COUNT      = 20;
-  var RAY_LIFETIME   = 9000;
-  var SPAWN_STAGGER  = 700;
+  var RAY_COUNT      = 22;
+  var RAY_LIFETIME   = 16000;
+  var SPAWN_STAGGER  = 600;
   var MAX_BOUNCES    = 8;
   var FOCAL_DEPTH    = 0.35;
   var DOF_STRENGTH   = 16;
-  var SCENE_ALPHA    = 0.16;
+  var SCENE_ALPHA    = 0.20;
+  var TAIL_FRACTION  = 0.38;
 
   /* Warm palette for rays */
   var palette = [
@@ -66,8 +69,8 @@
       sceneSegs.push({ x0: x0, y0: y0, x1: x1, y1: y1, depth: depth, col: col || null });
     }
 
-    /* 7 column positions = 6 arcade bays */
-    var depths = [0.0, 0.14, 0.28, 0.42, 0.56, 0.70, 0.84];
+    /* 5 column positions = 4 arcade bays (cleaner, less noisy) */
+    var depths = [0.0, 0.18, 0.38, 0.58, 0.80];
 
     /* Vertical layout (y = 0 top, y = 1 bottom) */
     var floorY   = 0.96;    // floor pushed very low
@@ -99,17 +102,6 @@
             perspX(colLi, zn), perspY(floorY, zn), zm);
         seg(perspX(colRi, z), perspY(floorY, z),
             perspX(colRi, zn), perspY(floorY, zn), zm);
-        /* tile-pattern receding lines */
-        seg(perspX(0.50, z), perspY(floorY, z),
-            perspX(0.50, zn), perspY(floorY, zn), zm);
-        seg(perspX(0.33, z), perspY(floorY, z),
-            perspX(0.33, zn), perspY(floorY, zn), zm);
-        seg(perspX(0.67, z), perspY(floorY, z),
-            perspX(0.67, zn), perspY(floorY, zn), zm);
-        /* tile cross-line midway */
-        var tzm = (z + zn) * 0.5;
-        seg(perspX(colLi, tzm), perspY(floorY, tzm),
-            perspX(colRi, tzm), perspY(floorY, tzm), tzm);
       }
 
       /* -- Ground-floor columns (both faces) -------------------- */
@@ -134,7 +126,7 @@
 
       /* -- Ground-floor semicircular arches ---------------------- */
       if (i < depths.length - 1) {
-        var aN = 12;
+        var aN = 10;
         var a, t0, t1, za, zb, ya, yb;
         /* Left arcade arch */
         for (a = 0; a < aN; a++) {
@@ -195,14 +187,6 @@
             perspX(colLo, zn), perspY(balTopY, zn), zm);
         seg(perspX(colRo, z), perspY(balTopY, z),
             perspX(colRo, zn), perspY(balTopY, zn), zm);
-        /* Small balusters in each bay */
-        for (var b = 1; b <= 2; b++) {
-          var bz = z + (zn - z) * b / 3;
-          seg(perspX(colLo + 0.01, bz), perspY(balTopY, bz),
-              perspX(colLo + 0.01, bz), perspY(galleryY, bz), bz);
-          seg(perspX(colRo - 0.01, bz), perspY(balTopY, bz),
-              perspX(colRo - 0.01, bz), perspY(galleryY, bz), bz);
-        }
       }
 
       /* -- Upper-gallery columns -------------------------------- */
@@ -223,7 +207,7 @@
 
       /* -- Upper-gallery arches --------------------------------- */
       if (i < depths.length - 1) {
-        var uN = 8;
+        var uN = 6;
         for (a = 0; a < uN; a++) {
           t0 = a / uN; t1 = (a + 1) / uN;
           za = z + (zn - z) * t0; zb = z + (zn - z) * t1;
@@ -320,6 +304,10 @@
       }
     }
   }
+
+  /* Sort segments back-to-front (painter's algorithm) so nearer
+     geometry naturally paints over distant geometry */
+  sceneSegs.sort(function(a, b) { return b.depth - a.depth; });
 
   /* -- Ray-segment intersection (2D) ---------------------------- */
   function intersectScene(ox, oy, dx, dy) {
@@ -434,6 +422,10 @@
     };
   }
 
+  /* -- Coordinate helpers (aspect-ratio-locked) ----------------- */
+  function toScreenX(nx) { return offX + nx * sceneW; }
+  function toScreenY(ny) { return offY + ny * sceneH; }
+
   /* -- Resize --------------------------------------------------- */
   function resize() {
     dpr = window.devicePixelRatio || 1;
@@ -445,6 +437,22 @@
     canvas.style.width  = width + 'px';
     canvas.style.height = height + 'px';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    /* Cover-fit: fill the container, crop overflow, never stretch */
+    var containerAspect = width / height;
+    if (containerAspect > SCENE_ASPECT) {
+      /* Container is wider than scene — match width, crop top/bottom */
+      sceneW = width;
+      sceneH = width / SCENE_ASPECT;
+      offX = 0;
+      offY = (height - sceneH) * 0.5;
+    } else {
+      /* Container is taller — match height, crop left/right */
+      sceneH = height;
+      sceneW = height * SCENE_ASPECT;
+      offX = (width - sceneW) * 0.5;
+      offY = 0;
+    }
   }
 
   function rgba(c, a) {
@@ -491,14 +499,28 @@
     ctx.lineCap = 'round';
     for (var si = 0; si < sceneSegs.length; si++) {
       var s = sceneSegs[si];
+
+      /* Viewport culling — skip segments entirely off-screen */
+      var px0 = toScreenX(s.x0), py0 = toScreenY(s.y0);
+      var px1 = toScreenX(s.x1), py1 = toScreenY(s.y1);
+      if ((px0 < -20 && px1 < -20) || (px0 > width + 20 && px1 > width + 20)) continue;
+      if ((py0 < -20 && py1 < -20) || (py0 > height + 20 && py1 > height + 20)) continue;
+
+      /* Exponential depth occlusion — gentler fade keeps centre visible */
       var coc = cocRadius(s.depth);
-      var a = pulse * clamp01(1.2 - s.depth * 0.25);
+      var depthOcc = Math.exp(-s.depth * 1.6);
+      if (depthOcc < 0.015) continue;
+
+      /* Closer segments: brighter + thicker. Far away: dim + thin */
+      var a = pulse * depthOcc;
+      var lw = Math.max(0.4, coc * 0.18 * depthOcc + 0.5);
       var color = s.col || stoneCol;
+      var isColored = !!s.col;
       ctx.beginPath();
-      ctx.moveTo(s.x0 * width, s.y0 * height);
-      ctx.lineTo(s.x1 * width, s.y1 * height);
-      ctx.strokeStyle = rgba(color, a);
-      ctx.lineWidth = Math.max(0.8, coc * 0.22);
+      ctx.moveTo(px0, py0);
+      ctx.lineTo(px1, py1);
+      ctx.strokeStyle = rgba(color, a * (isColored ? 1.5 : 1.0));
+      ctx.lineWidth = lw * (isColored ? 1.3 : 1.0);
       ctx.stroke();
     }
   }
@@ -525,34 +547,81 @@
 
       var lifeNorm = age / ray.lifetime;
       var envelope;
-      if (lifeNorm < 0.10) envelope = lifeNorm / 0.10;
-      else if (lifeNorm > 0.70) envelope = (1 - lifeNorm) / 0.30;
+      if (lifeNorm < 0.08) envelope = lifeNorm / 0.08;
+      else if (lifeNorm > 0.75) envelope = (1 - lifeNorm) / 0.25;
       else envelope = 1;
       envelope = clamp01(envelope);
 
-      var travelStart = ray.lifetime * 0.04;
-      var travelEnd   = ray.lifetime * 0.62;
+      var travelStart = ray.lifetime * 0.03;
+      var travelEnd   = ray.lifetime * 0.58;
       var photonProg  = clamp01((age - travelStart) / (travelEnd - travelStart));
       var drawnLen    = photonProg * ray.totalLen;
+      var tailLen     = ray.totalLen * TAIL_FRACTION;
+      var tailStart   = Math.max(0, drawnLen - tailLen);
       var baseAlpha   = ray.alpha * envelope;
 
-      /* Draw segments */
+      /* Draw ray as continuous straight-line path with fading tail */
       for (var si = 0; si < ray.segments.length; si++) {
         var seg = ray.segments[si];
-        if (seg.cumStart > drawnLen) break;
+        var segEnd = seg.cumStart + seg.len;
+        if (seg.cumStart >= drawnLen) break;
+        if (segEnd <= tailStart) continue;
 
-        var segDraw = clamp01((drawnLen - seg.cumStart) / seg.len);
-        var sx0 = seg.x0 * width,  sy0 = seg.y0 * height;
-        var sx1 = (seg.x0 + (seg.x1 - seg.x0) * segDraw) * width;
-        var sy1 = (seg.y0 + (seg.y1 - seg.y0) * segDraw) * height;
+        /* Clamp visible portion to tail..head window */
+        var clipS = clamp01((tailStart - seg.cumStart) / seg.len);
+        var clipE = clamp01((drawnLen - seg.cumStart) / seg.len);
 
-        var segFade = 1 - (si / (ray.segments.length + 2)) * 0.2;
-        var a = baseAlpha * segFade;
+        var sx0 = toScreenX(seg.x0 + (seg.x1 - seg.x0) * clipS);
+        var sy0 = toScreenY(seg.y0 + (seg.y1 - seg.y0) * clipS);
+        var sx1 = toScreenX(seg.x0 + (seg.x1 - seg.x0) * clipE);
+        var sy1 = toScreenY(seg.y0 + (seg.y1 - seg.y0) * clipE);
 
-        drawSoftBeam(sx0, sy0, sx1, sy1, ray.color, a, seg.depth);
+        /* Viewport cull */
+        if ((sx0 < -30 && sx1 < -30) || (sx0 > width + 30 && sx1 > width + 30)) continue;
+        if ((sy0 < -30 && sy1 < -30) || (sy0 > height + 30 && sy1 > height + 30)) continue;
 
-        if (segDraw >= 0.97 && si < ray.segments.length - 1) {
-          drawBloom(seg.x1 * width, seg.y1 * height, ray.color, a * 1.4, seg.depth);
+        /* Per-segment alpha based on distance from head */
+        var segMidDist = seg.cumStart + seg.len * (clipS + clipE) * 0.5;
+        var headDist = clamp01((drawnLen - segMidDist) / tailLen);
+        var tailA = 1 - headDist;
+        tailA *= tailA;
+        var a = baseAlpha * tailA;
+
+        if (a > 0.002) {
+          /* Perspective scale: rays further away are thinner */
+          var depthScale = 1.0 / (1.0 + seg.depth * 2.5);
+          /* Draw as one straight canvas line with gradient stroke */
+          var coc = cocRadius(seg.depth) * depthScale;
+          var grad = ctx.createLinearGradient(sx0, sy0, sx1, sy1);
+          var aStart = baseAlpha * (function(d){ var h = clamp01((drawnLen - d) / tailLen); var v = 1-h; return v*v; })(seg.cumStart + seg.len * clipS);
+          var aEnd   = baseAlpha * (function(d){ var h = clamp01((drawnLen - d) / tailLen); var v = 1-h; return v*v; })(seg.cumStart + seg.len * clipE);
+
+          /* Outer glow */
+          grad.addColorStop(0, rgba(ray.color, aStart * 0.04));
+          grad.addColorStop(1, rgba(ray.color, aEnd * 0.04));
+          ctx.beginPath(); ctx.moveTo(sx0, sy0); ctx.lineTo(sx1, sy1);
+          ctx.strokeStyle = grad; ctx.lineWidth = coc * 2.2; ctx.lineCap = 'round'; ctx.stroke();
+
+          /* Mid glow */
+          var grad2 = ctx.createLinearGradient(sx0, sy0, sx1, sy1);
+          grad2.addColorStop(0, rgba(ray.color, aStart * 0.10));
+          grad2.addColorStop(1, rgba(ray.color, aEnd * 0.10));
+          ctx.beginPath(); ctx.moveTo(sx0, sy0); ctx.lineTo(sx1, sy1);
+          ctx.strokeStyle = grad2; ctx.lineWidth = coc * 1.2; ctx.lineCap = 'round'; ctx.stroke();
+
+          /* Core beam */
+          var grad3 = ctx.createLinearGradient(sx0, sy0, sx1, sy1);
+          grad3.addColorStop(0, rgba(ray.color, aStart * 0.28));
+          grad3.addColorStop(1, rgba(ray.color, aEnd * 0.28));
+          ctx.beginPath(); ctx.moveTo(sx0, sy0); ctx.lineTo(sx1, sy1);
+          ctx.strokeStyle = grad3; ctx.lineWidth = Math.max(1, coc * 0.3); ctx.lineCap = 'round'; ctx.stroke();
+
+          /* Hot core */
+          var grad4 = ctx.createLinearGradient(sx0, sy0, sx1, sy1);
+          grad4.addColorStop(0, rgba([255,240,210], aStart * 0.40));
+          grad4.addColorStop(1, rgba([255,240,210], aEnd * 0.40));
+          ctx.beginPath(); ctx.moveTo(sx0, sy0); ctx.lineTo(sx1, sy1);
+          ctx.strokeStyle = grad4; ctx.lineWidth = Math.max(0.5, coc * 0.08); ctx.lineCap = 'round'; ctx.stroke();
         }
       }
 
@@ -563,14 +632,15 @@
           var pseg = ray.segments[pi];
           if (pDist <= pseg.len) {
             var pr = pDist / pseg.len;
-            var px = (pseg.x0 + (pseg.x1 - pseg.x0) * pr) * width;
-            var py = (pseg.y0 + (pseg.y1 - pseg.y0) * pr) * height;
-            var pCoc = cocRadius(pseg.depth) * 1.2;
+            var px = toScreenX(pseg.x0 + (pseg.x1 - pseg.x0) * pr);
+            var py = toScreenY(pseg.y0 + (pseg.y1 - pseg.y0) * pr);
+            var pDepthScale = 1.0 / (1.0 + pseg.depth * 2.5);
+            var pCoc = cocRadius(pseg.depth) * 1.4 * pDepthScale;
 
             var pgGrad = ctx.createRadialGradient(px, py, 0, px, py, pCoc);
-            pgGrad.addColorStop(0,    rgba([255, 240, 210], baseAlpha * 0.55));
-            pgGrad.addColorStop(0.25, rgba(ray.color, baseAlpha * 0.22));
-            pgGrad.addColorStop(0.6,  rgba(ray.color, baseAlpha * 0.05));
+            pgGrad.addColorStop(0,    rgba([255, 240, 210], baseAlpha * 0.60));
+            pgGrad.addColorStop(0.20, rgba(ray.color, baseAlpha * 0.28));
+            pgGrad.addColorStop(0.55, rgba(ray.color, baseAlpha * 0.06));
             pgGrad.addColorStop(1,    rgba(ray.color, 0));
             ctx.beginPath();
             ctx.arc(px, py, pCoc, 0, Math.PI * 2);
@@ -588,8 +658,8 @@
   buildScene();
   resize();
   window.addEventListener('resize', resize);
-  for (var k = 0; k < 12; k++) {
-    rays.push(buildRay(-k * 1200));
+  for (var k = 0; k < 14; k++) {
+    rays.push(buildRay(-k * 1800));
   }
   nextSpawnTime = 0;
   raf = requestAnimationFrame(draw);
