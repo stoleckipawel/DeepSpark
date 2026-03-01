@@ -338,6 +338,36 @@ main { flex-grow: 0 !important; }
   line-height: 1.5;
 }
 
+/* ── GIF poster + play button overlay ────────────────────────── */
+.portfolio-card { position: relative; }
+.pf-gif-poster {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  display: block;
+  transition: filter .3s ease;
+}
+.pf-gif-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  opacity: .85;
+  transition: opacity .25s ease, transform .25s ease;
+  pointer-events: none;
+  z-index: 2;
+}
+.portfolio-card:hover .pf-gif-play {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1.1);
+}
+.portfolio-card.pf-gif-loaded .pf-gif-play { display: none; }
+/* Slideshow: deferred images start invisible until src is set */
+.pf-slide:not([src]) { visibility: hidden; }
+
+/* Off-screen slideshows: pause animation to save GPU */
+.pf-slides.pf-paused .pf-slide { animation-play-state: paused !important; }
+
 
 </style>
 
@@ -418,17 +448,18 @@ main { flex-grow: 0 !important; }
     <a class="portfolio-card" href="https://www.artstation.com/artwork/OGER3g" target="_blank" rel="noopener">
       <div class="pf-slides">
         <img class="pf-slide" src="https://cdnb.artstation.com/p/assets/images/images/062/270/817/medium/pawel-stolecki-1.jpg?1682718299"   alt="Volumetric Fog 1" loading="lazy" style="animation-delay:-0.75s" />
-        <img class="pf-slide" src="https://cdnb.artstation.com/p/assets/images/images/062/270/829/medium/pawel-stolecki-5.jpg?1682718331"   alt="Volumetric Fog 2" loading="lazy" style="animation-delay:1.75s" />
-        <img class="pf-slide" src="https://cdna.artstation.com/p/assets/images/images/062/270/844/medium/pawel-stolecki-9.jpg?1682718362"   alt="Volumetric Fog 3" loading="lazy" style="animation-delay:4.25s" />
+        <img class="pf-slide" data-src="https://cdnb.artstation.com/p/assets/images/images/062/270/829/medium/pawel-stolecki-5.jpg?1682718331"   alt="Volumetric Fog 2" loading="lazy" style="animation-delay:1.75s" />
+        <img class="pf-slide" data-src="https://cdna.artstation.com/p/assets/images/images/062/270/844/medium/pawel-stolecki-9.jpg?1682718362"   alt="Volumetric Fog 3" loading="lazy" style="animation-delay:4.25s" />
       </div>
       <div class="overlay">
         <div class="title">Volumetric Fog</div>
         <div class="tag">Dying Light 2 · Techland</div>
       </div>
     </a>
-    <!-- Ocean R&D — animated GIF -->
+    <!-- Ocean R&D — deferred GIF with poster -->
     <a class="portfolio-card" href="https://www.artstation.com/artwork/N5K5qb" target="_blank" rel="noopener">
-      <img src="/images/water.gif" alt="Gerstner Ocean R&amp;D" loading="lazy" decoding="async" />
+      <img class="pf-gif-poster" src="/images/water-poster.jpg" data-gif="/images/water.gif" alt="Gerstner Ocean R&amp;D" loading="lazy" decoding="async" />
+      <div class="pf-gif-play" aria-hidden="true"><svg viewBox="0 0 24 24" width="40" height="40" fill="#fff"><circle cx="12" cy="12" r="11" fill="rgba(0,0,0,.45)" stroke="#fff" stroke-width="1.2"/><path d="M9.5 7.5v9l7-4.5z"/></svg></div>
       <div class="overlay">
         <div class="title">Gerstner Ocean</div>
         <div class="tag">World War 3 · The Farm 51</div>
@@ -440,8 +471,8 @@ main { flex-grow: 0 !important; }
   <a class="portfolio-card" href="https://www.artstation.com/artwork/PXOBQy" target="_blank" rel="noopener">
     <div class="pf-slides">
       <img class="pf-slide" src="https://cdnb.artstation.com/p/assets/images/images/062/268/265/medium/pawel-stolecki-1.jpg?1682713064"  alt="SSAO 1" loading="lazy" style="animation-delay:4.05s" />
-      <img class="pf-slide" src="https://cdna.artstation.com/p/assets/images/images/062/268/810/medium/pawel-stolecki-222.jpg?1682714090" alt="SSAO compare" loading="lazy" style="animation-delay:6.55s" />
-      <img class="pf-slide" src="https://cdnb.artstation.com/p/assets/images/images/062/268/621/medium/pawel-stolecki-2.jpg?1682713769"  alt="SSAO 3" loading="lazy" style="animation-delay:9.05s" />
+      <img class="pf-slide" data-src="https://cdna.artstation.com/p/assets/images/images/062/268/810/medium/pawel-stolecki-222.jpg?1682714090" alt="SSAO compare" loading="lazy" style="animation-delay:6.55s" />
+      <img class="pf-slide" data-src="https://cdnb.artstation.com/p/assets/images/images/062/268/621/medium/pawel-stolecki-2.jpg?1682713769"  alt="SSAO 3" loading="lazy" style="animation-delay:9.05s" />
     </div>
     <div class="overlay">
       <div class="title">Screen Space Ambient Occlusion</div>
@@ -453,8 +484,8 @@ main { flex-grow: 0 !important; }
   <a class="portfolio-card" href="https://www.artstation.com/artwork/8bmLQQ" target="_blank" rel="noopener">
     <div class="pf-slides">
       <img class="pf-slide" src="https://cdna.artstation.com/p/assets/images/images/062/269/266/medium/pawel-stolecki-1.jpg?1682714949"  alt="Water Rendering 1" loading="lazy" style="animation-delay:1.45s" />
-      <img class="pf-slide" src="https://cdna.artstation.com/p/assets/images/images/062/269/286/medium/pawel-stolecki-4.jpg?1682714973"  alt="Water Rendering 2" loading="lazy" style="animation-delay:3.95s" />
-      <img class="pf-slide" src="https://cdna.artstation.com/p/assets/images/images/062/269/308/medium/pawel-stolecki-7.jpg?1682715005"  alt="Water Rendering 3" loading="lazy" style="animation-delay:6.45s" />
+      <img class="pf-slide" data-src="https://cdna.artstation.com/p/assets/images/images/062/269/286/medium/pawel-stolecki-4.jpg?1682714973"  alt="Water Rendering 2" loading="lazy" style="animation-delay:3.95s" />
+      <img class="pf-slide" data-src="https://cdna.artstation.com/p/assets/images/images/062/269/308/medium/pawel-stolecki-7.jpg?1682715005"  alt="Water Rendering 3" loading="lazy" style="animation-delay:6.45s" />
     </div>
     <div class="overlay">
       <div class="title">Water Rendering</div>
@@ -466,8 +497,8 @@ main { flex-grow: 0 !important; }
   <a class="portfolio-card" href="https://www.artstation.com/artwork/m83KDd" target="_blank" rel="noopener">
     <div class="pf-slides">
       <img class="pf-slide" src="https://cdnb.artstation.com/p/assets/images/images/062/270/439/medium/pawel-stolecki-1.jpg?1682717446"  alt="Motion Blur 1" loading="lazy" style="animation-delay:0.35s" />
-      <img class="pf-slide" src="https://cdnb.artstation.com/p/assets/images/images/062/270/447/medium/pawel-stolecki-3.jpg?1682717455"  alt="Motion Blur 2" loading="lazy" style="animation-delay:2.85s" />
-      <img class="pf-slide" src="https://cdna.artstation.com/p/assets/images/images/062/270/454/medium/pawel-stolecki-5.jpg?1682717470"  alt="Motion Blur 3" loading="lazy" style="animation-delay:5.35s" />
+      <img class="pf-slide" data-src="https://cdnb.artstation.com/p/assets/images/images/062/270/447/medium/pawel-stolecki-3.jpg?1682717455"  alt="Motion Blur 2" loading="lazy" style="animation-delay:2.85s" />
+      <img class="pf-slide" data-src="https://cdna.artstation.com/p/assets/images/images/062/270/454/medium/pawel-stolecki-5.jpg?1682717470"  alt="Motion Blur 3" loading="lazy" style="animation-delay:5.35s" />
     </div>
     <div class="overlay">
       <div class="title">Motion Blur</div>
@@ -475,9 +506,10 @@ main { flex-grow: 0 !important; }
     </div>
   </a>
 
-  <!-- Wind Simulation — animated GIF -->
+  <!-- Wind Simulation — deferred GIF with poster -->
   <a class="portfolio-card" href="https://www.artstation.com/artwork/4XJLvn" target="_blank" rel="noopener">
-    <img src="/images/simulation.gif" alt="Wind Simulation" loading="lazy" decoding="async" />
+    <img class="pf-gif-poster" src="/images/simulation-poster.jpg" data-gif="/images/simulation.gif" alt="Wind Simulation" loading="lazy" decoding="async" />
+    <div class="pf-gif-play" aria-hidden="true"><svg viewBox="0 0 24 24" width="40" height="40" fill="#fff"><circle cx="12" cy="12" r="11" fill="rgba(0,0,0,.45)" stroke="#fff" stroke-width="1.2"/><path d="M9.5 7.5v9l7-4.5z"/></svg></div>
     <div class="overlay">
       <div class="title">Wind Simulation</div>
       <div class="tag">World War 3 · The Farm 51</div>
@@ -536,5 +568,60 @@ main { flex-grow: 0 !important; }
 
 </div>
 
+<script>
+(function(){
+  if (typeof IntersectionObserver === 'undefined') return;
 
+  /* ── 1. Deferred slideshow images: load slides 2-3 when card is near viewport ── */
+  var slideIO = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if (!e.isIntersecting) return;
+      var deferred = e.target.querySelectorAll('.pf-slide[data-src]');
+      deferred.forEach(function(img){
+        img.src = img.getAttribute('data-src');
+        img.removeAttribute('data-src');
+      });
+      slideIO.unobserve(e.target);
+    });
+  }, { rootMargin: '200px 0px' });
+  document.querySelectorAll('.pf-slides').forEach(function(el){ slideIO.observe(el); });
 
+  /* ── 2. Pause slideshow animations when off-screen ─────────── */
+  var pauseIO = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      e.target.classList.toggle('pf-paused', !e.isIntersecting);
+    });
+  }, { rootMargin: '50px 0px' });
+  document.querySelectorAll('.pf-slides').forEach(function(el){
+    el.classList.add('pf-paused');       /* start paused */
+    pauseIO.observe(el);
+  });
+
+  /* ── 3. GIF deferred load: swap poster → animated GIF on hover/tap ── */
+  document.querySelectorAll('.pf-gif-poster').forEach(function(poster){
+    var gifURL = poster.getAttribute('data-gif');
+    if (!gifURL) return;
+    var card = poster.closest('.portfolio-card');
+    var loaded = false;
+
+    function loadGif() {
+      if (loaded) return;
+      loaded = true;
+      var gif = new Image();
+      gif.onload = function(){
+        poster.src = gifURL;
+        poster.removeAttribute('data-gif');
+        card.classList.add('pf-gif-loaded');
+      };
+      gif.src = gifURL;
+    }
+
+    /* Desktop: hover loads the GIF */
+    card.addEventListener('mouseenter', loadGif, { once: true });
+    /* Mobile: tap loads the GIF (first tap loads, second follows href) */
+    card.addEventListener('touchstart', function(ev){
+      if (!loaded) { ev.preventDefault(); loadGif(); }
+    }, { passive: false, once: true });
+  });
+})();
+</script>

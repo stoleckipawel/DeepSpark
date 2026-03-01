@@ -16,7 +16,7 @@
     {{ range $posts }}
       {{ $page := site.GetPage (printf "/posts/%s" .slug) }}
       {{ if $page }}
-        <a class="ds-posts-series-card" href="{{ $page.RelPermalink }}">
+        <a class="ds-posts-series-card ds-reveal" href="{{ $page.RelPermalink }}">
           {{ $thumbSlug := .thumbSlug | default .slug }}
           {{ partial "thumbnails/render.html" (dict
             "slug"          $thumbSlug
