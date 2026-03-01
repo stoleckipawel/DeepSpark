@@ -1,20 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1200 627" width="1200" height="627" role="img" aria-label="Frame Graph Build It thumbnail">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#0f1b33"/>
-      <stop offset="100%" stop-color="#070c18"/>
+      <stop offset="0%" stop-color="#14151e"/>
+      <stop offset="100%" stop-color="#0a0a0e"/>
     </linearGradient>
     <linearGradient id="codeFade" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#11233b" stop-opacity=".42"/>
-      <stop offset="35%" stop-color="#11233b" stop-opacity=".18"/>
-      <stop offset="70%" stop-color="#11233b" stop-opacity=".05"/>
-      <stop offset="100%" stop-color="#11233b" stop-opacity="0"/>
+      <stop offset="0%" stop-color="#131210" stop-opacity=".42"/>
+      <stop offset="35%" stop-color="#131210" stop-opacity=".18"/>
+      <stop offset="70%" stop-color="#131210" stop-opacity=".05"/>
+      <stop offset="100%" stop-color="#131210" stop-opacity="0"/>
     </linearGradient>
     <linearGradient id="codeVignette" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#070c18" stop-opacity=".22"/>
-      <stop offset="22%" stop-color="#070c18" stop-opacity="0"/>
-      <stop offset="78%" stop-color="#070c18" stop-opacity="0"/>
-      <stop offset="100%" stop-color="#070c18" stop-opacity=".25"/>
+      <stop offset="0%" stop-color="#0a0a0e" stop-opacity=".22"/>
+      <stop offset="22%" stop-color="#0a0a0e" stop-opacity="0"/>
+      <stop offset="78%" stop-color="#0a0a0e" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#0a0a0e" stop-opacity=".25"/>
     </linearGradient>
     <clipPath id="codeClip">
       <rect x="1000" y="210" width="560" height="340" rx="16"/>
