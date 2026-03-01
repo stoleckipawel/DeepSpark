@@ -253,19 +253,22 @@ html {
 .ds-posts-series-card {
   display: block;
   width: auto;
-  border-radius: 12px;
+  border-radius: 14px;
   overflow: hidden;
-  border: 0;
-  background: transparent;
+  border: 1px solid rgba(var(--ds-accent-rgb), .08);
+  background: rgba(14, 16, 22, .6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   text-decoration: none;
   color: inherit;
-  box-shadow: 0 8px 26px rgba(2, 8, 18, .34);
-  transition: transform .2s ease, opacity .2s ease, box-shadow .2s ease;
+  box-shadow: 0 4px 20px rgba(2, 8, 18, .3), inset 0 1px 0 rgba(255,255,255,.03);
+  transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease;
 }
 .ds-posts-series-card:hover {
   text-decoration: none;
-  transform: translateY(-2px);
-  box-shadow: 0 16px 38px rgba(2, 8, 18, .48);
+  transform: translateY(-3px);
+  border-color: rgba(var(--ds-accent-rgb), .18);
+  box-shadow: 0 12px 36px rgba(2, 8, 18, .45), 0 0 0 1px rgba(var(--ds-accent-rgb), .06);
 }
 /* ── Unified inline-SVG thumbnail ─────────────────────────── */
 .ds-thumbnail-svg {
@@ -349,7 +352,7 @@ html {
   opacity: .75;
 }
 :is(.dark,.scheme-congo) .ds-posts-series-card {
-  background: transparent;
+  background: rgba(14, 16, 22, .6);
 }
 @media (max-width: 700px) {
   .ds-posts-series-grid {
@@ -2462,16 +2465,60 @@ html.dark {
   50%      { transform: translateX(-50%) translateY(8px); }
 }
 
-/* ── Featured section heading ────────────────────────────────── */
+/* ── Featured section ─────────────────────────────────────────── */
 .ds-featured {
-  margin-top: 2rem;
+  position: relative;
+  margin-top: 0;
+  padding: 4rem 0 3rem;
+  /* Full-bleed: break out of the content container */
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
+  box-sizing: border-box;
+  /* Layered gradient background — warm neutral darks */
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 0%, rgba(var(--ds-accent-rgb), .05) 0%, transparent 70%),
+    linear-gradient(180deg, #08090e 0%, #0c0e14 40%, #0e1016 100%);
+}
+/* Subtle top divider line across the full width */
+.ds-featured::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 10%,
+    rgba(var(--ds-accent-rgb), .2) 35%,
+    rgba(var(--ds-accent-rgb), .35) 50%,
+    rgba(var(--ds-accent-rgb), .2) 65%,
+    transparent 90%
+  );
+}
+/* Inner container to constrain content width */
+.ds-featured-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
 }
 .ds-featured-heading {
-  font-size: 1.5rem;
-  font-weight: 800;
-  margin: 0 0 1.2em;
-  color: rgba(245,245,247,.88);
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin: 0 0 .4em;
+  color: rgba(245,245,247,.92);
   letter-spacing: -.01em;
+  text-align: center;
+}
+.ds-featured-sub {
+  text-align: center;
+  font-size: .88rem;
+  color: rgba(200,210,230,.4);
+  margin: 0 0 2.2em;
+  font-weight: 400;
+}
+@media (max-width: 700px) {
+  .ds-featured { padding: 2.5rem 0 2rem; }
+  .ds-featured-heading { font-size: 1.15rem; }
+  .ds-featured-sub { font-size: .82rem; margin-bottom: 1.6em; }
 }
 
 /* ── Responsive hero ─────────────────────────────────────────── */
