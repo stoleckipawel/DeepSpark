@@ -65,13 +65,13 @@ Behind every smooth frame is a brutal scheduling problem: which passes can run i
       Same renderer, now with SSAO, SSR, bloom, TAA, shadow cascades. Three things going wrong simultaneously:
     </div>
     <div style="margin-top:.5em;display:grid;gap:.4em;">
-      <div style="padding:.5em .8em;border-radius:6px;border:1px solid rgba(var(--ds-warn-rgb),.2);background:rgba(var(--ds-warn-rgb),.04);font-size:.88em;line-height:1.5;">
+      <div style="padding:.5em .8em;border-radius:8px;border:1px solid rgba(var(--ds-warn-rgb),.2);background:rgba(var(--ds-warn-rgb),.04);font-size:.88em;line-height:1.5;">
         <strong>Invisible dependencies:</strong> someone adds SSAO but doesn't realize GBuffer needs an updated barrier. Visual artifacts on fresh build.
       </div>
-      <div style="padding:.5em .8em;border-radius:6px;border:1px solid rgba(var(--ds-warn-rgb),.2);background:rgba(var(--ds-warn-rgb),.04);font-size:.88em;line-height:1.5;">
+      <div style="padding:.5em .8em;border-radius:8px;border:1px solid rgba(var(--ds-warn-rgb),.2);background:rgba(var(--ds-warn-rgb),.04);font-size:.88em;line-height:1.5;">
         <strong>Wasted memory:</strong> SSAO and bloom textures never overlap, but aliasing them means auditing every pass that might touch them. Nobody does it.
       </div>
-      <div style="padding:.5em .8em;border-radius:6px;border:1px solid rgba(var(--ds-warn-rgb),.2);background:rgba(var(--ds-warn-rgb),.04);font-size:.88em;line-height:1.5;">
+      <div style="padding:.5em .8em;border-radius:8px;border:1px solid rgba(var(--ds-warn-rgb),.2);background:rgba(var(--ds-warn-rgb),.04);font-size:.88em;line-height:1.5;">
         <strong>Silent reordering:</strong> two branches touch the render loop. Git merges cleanly, but the shadow pass ends up after lighting. Subtly wrong output ships unnoticed.
       </div>
     </div>
@@ -84,13 +84,13 @@ Behind every smooth frame is a brutal scheduling problem: which passes can run i
     <div style="font-weight:800;font-size:1.05em;color:var(--ds-danger);margin-bottom:.3em;">Month 18: 25 passes, nobody touches it</div>
     <div style="font-size:.92em;line-height:1.6;margin-bottom:.5em;">The renderer works, but:</div>
     <div style="display:grid;gap:.4em;">
-      <div style="padding:.5em .8em;border-radius:6px;border:1px solid rgba(var(--ds-danger-rgb),.2);background:rgba(var(--ds-danger-rgb),.04);font-size:.88em;line-height:1.5;">
+      <div style="padding:.5em .8em;border-radius:8px;border:1px solid rgba(var(--ds-danger-rgb),.2);background:rgba(var(--ds-danger-rgb),.04);font-size:.88em;line-height:1.5;">
         <strong>900 MB VRAM.</strong> Profiling shows 400 MB is aliasable, but the lifetime analysis would take a week and break the next time anyone adds a pass.
       </div>
-      <div style="padding:.5em .8em;border-radius:6px;border:1px solid rgba(var(--ds-danger-rgb),.2);background:rgba(var(--ds-danger-rgb),.04);font-size:.88em;line-height:1.5;">
+      <div style="padding:.5em .8em;border-radius:8px;border:1px solid rgba(var(--ds-danger-rgb),.2);background:rgba(var(--ds-danger-rgb),.04);font-size:.88em;line-height:1.5;">
         <strong>47 barrier calls.</strong> Three are redundant, two are missing, one is in the wrong queue. Nobody knows which.
       </div>
-      <div style="padding:.5em .8em;border-radius:6px;border:1px solid rgba(var(--ds-danger-rgb),.2);background:rgba(var(--ds-danger-rgb),.04);font-size:.88em;line-height:1.5;">
+      <div style="padding:.5em .8em;border-radius:8px;border:1px solid rgba(var(--ds-danger-rgb),.2);background:rgba(var(--ds-danger-rgb),.04);font-size:.88em;line-height:1.5;">
         <strong>2 days to add a new pass.</strong> 30 minutes for the shader, the rest to figure out where to slot it and what barriers it needs.
       </div>
     </div>
@@ -208,21 +208,21 @@ Every frame follows a three-phase lifecycle:
 
 <!-- 3-step lifecycle, vertical cards with descriptions, clickable -->
 <div style="margin:1.5em 0 2em;display:grid;grid-template-columns:1fr;gap:.6em;max-width:620px;">
-  <a href="#-the-declare-step" style="display:grid;grid-template-columns:3.2em 1fr;gap:.8em;align-items:center;padding:1em 1.2em;border-radius:10px;background:rgba(var(--ds-info-rgb),.05);border-left:4px solid var(--ds-info-light);text-decoration:none;color:inherit;transition:background .2s;">
+  <a href="#-the-declare-step" style="display:grid;grid-template-columns:3.2em 1fr;gap:.8em;align-items:center;padding:1em 1.2em;border-radius:12px;background:rgba(var(--ds-info-rgb),.05);border-left:4px solid var(--ds-info-light);text-decoration:none;color:inherit;transition:background .22s ease;">
     <span style="font-size:1.6em;font-weight:800;color:var(--ds-info-light);text-align:center;">①</span>
     <div>
       <div style="font-weight:700;font-size:1.05em;color:var(--ds-info-light);letter-spacing:.03em;">DECLARE</div>
       <div style="font-size:.88em;opacity:.7;margin-top:.15em;">Build the graph: passes, resources, edges. No GPU work yet.</div>
     </div>
   </a>
-  <a href="#-the-compile-step" style="display:grid;grid-template-columns:3.2em 1fr;gap:.8em;align-items:center;padding:1em 1.2em;border-radius:10px;background:rgba(var(--ds-code-rgb),.05);border-left:4px solid var(--ds-code-light);text-decoration:none;color:inherit;transition:background .2s;">
+  <a href="#-the-compile-step" style="display:grid;grid-template-columns:3.2em 1fr;gap:.8em;align-items:center;padding:1em 1.2em;border-radius:12px;background:rgba(var(--ds-code-rgb),.05);border-left:4px solid var(--ds-code-light);text-decoration:none;color:inherit;transition:background .22s ease;">
     <span style="font-size:1.6em;font-weight:800;color:var(--ds-code-light);text-align:center;">②</span>
     <div>
       <div style="font-weight:700;font-size:1.05em;color:var(--ds-code-light);letter-spacing:.03em;">COMPILE</div>
       <div style="font-size:.88em;opacity:.7;margin-top:.15em;">Analyze the graph: sort, cull, alias memory, compute barriers.</div>
     </div>
   </a>
-  <a href="#-the-execute-step" style="display:grid;grid-template-columns:3.2em 1fr;gap:.8em;align-items:center;padding:1em 1.2em;border-radius:10px;background:rgba(var(--ds-success-rgb),.05);border-left:4px solid var(--ds-success);text-decoration:none;color:inherit;transition:background .2s;">
+  <a href="#-the-execute-step" style="display:grid;grid-template-columns:3.2em 1fr;gap:.8em;align-items:center;padding:1em 1.2em;border-radius:12px;background:rgba(var(--ds-success-rgb),.05);border-left:4px solid var(--ds-success);text-decoration:none;color:inherit;transition:background .22s ease;">
     <span style="font-size:1.6em;font-weight:800;color:var(--ds-success);text-align:center;">③</span>
     <div>
       <div style="font-weight:700;font-size:1.05em;color:var(--ds-success);letter-spacing:.03em;">EXECUTE</div>
@@ -241,7 +241,7 @@ The declare step is pure CPU work: you're building a **description** of what thi
 
 A pass is a logical unit of GPU work. It might contain a single compute dispatch or hundreds of draw calls. To add one you give the graph two things:
 
-<div style="margin:1em 0 1.2em;border-radius:10px;border:1px solid rgba(var(--ds-info-rgb),.12);background:rgba(var(--ds-info-rgb),.02);overflow:hidden;">
+<div style="margin:1em 0 1.2em;border-radius:12px;border:1px solid rgba(var(--ds-info-rgb),.12);background:rgba(var(--ds-info-rgb),.02);overflow:hidden;">
 
   <div style="display:grid;grid-template-columns:2.2em 1fr;gap:0 .8em;padding:.75em 1em;">
     <div style="grid-row:1/3;font-size:1em;color:var(--ds-info);opacity:.35;text-align:center;padding-top:.2em;">①</div>
@@ -302,7 +302,7 @@ Virtual resources fall into two categories:
 
 Each read or write you declare in a setup callback forms a connection in the dependency graph:
 
-<div style="margin:1em 0;padding:.85em 1.1em;border-radius:10px;border:1.5px solid rgba(var(--ds-info-rgb),.18);background:linear-gradient(135deg,rgba(var(--ds-info-rgb),.04),transparent);font-size:.88em;line-height:1.65;">
+<div style="margin:1em 0;padding:.85em 1.1em;border-radius:12px;border:1.5px solid rgba(var(--ds-info-rgb),.18);background:linear-gradient(135deg,rgba(var(--ds-info-rgb),.04),transparent);font-size:.88em;line-height:1.65;">
   <div style="display:grid;grid-template-columns:auto 1fr;gap:.3em .9em;align-items:start;">
     <span style="font-weight:700;color:var(--ds-info);">Read</span><span>Connects this pass to the last writer of a resource, specifying how the resource will be accessed.</span>
     <span style="font-weight:700;color:var(--ds-success);">Write</span><span>Advances the resource to a new version, making future reads depend on this pass instead of earlier writers, and defines the intended access.</span>
@@ -313,7 +313,7 @@ Each read or write you declare in a setup callback forms a connection in the dep
 The mechanism behind these edges is **versioning**: every time a pass writes a resource, the version number increments. Readers attach to whatever version existed when they were declared. Multiple passes can read the same version without conflict, but only a write creates a new version and a new dependency. Here's how that plays out across a real frame:
 
 <div style="margin:1.2em 0;font-size:.85em;">
-  <div style="border-radius:10px;overflow:hidden;border:1.5px solid rgba(var(--ds-indigo-rgb),.15);">
+  <div style="border-radius:12px;overflow:hidden;border:1.5px solid rgba(var(--ds-indigo-rgb),.15);">
     <div style="padding:.5em .8em;background:rgba(var(--ds-indigo-rgb),.06);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.1);font-weight:700;font-size:.9em;text-align:center;">Resource versioning: HDR target through the frame</div>
     <div style="display:grid;grid-template-columns:auto auto 1fr;gap:0;">
       <div style="padding:.45em .6em;background:rgba(var(--ds-info-rgb),.06);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.08);border-right:1px solid rgba(var(--ds-indigo-rgb),.08);font-weight:700;text-align:center;color:var(--ds-info-light);font-size:.82em;">v1</div>
@@ -477,7 +477,7 @@ Each execute lambda sees a fully resolved environment: barriers already computed
 
 The compiled plan doesn't just decide *what* runs. It reveals *what can run at the same time*. Because each lambda only touches its own declared resources and all barriers are precomputed, the engine knows exactly which passes are independent and can record them on separate CPU threads simultaneously.
 
-<div style="margin:1.2em 0;border-radius:10px;overflow:hidden;border:1.5px solid rgba(var(--ds-code-rgb),.2);">
+<div style="margin:1.2em 0;border-radius:12px;overflow:hidden;border:1.5px solid rgba(var(--ds-code-rgb),.2);">
   <div style="padding:.55em 1em;background:rgba(var(--ds-code-rgb),.08);border-bottom:1px solid rgba(var(--ds-code-rgb),.12);font-weight:700;font-size:.85em;text-transform:uppercase;letter-spacing:.04em;color:var(--ds-code-light);">Parallel recording: conceptual flow</div>
   <div style="padding:.8em 1em;font-size:.88em;line-height:1.7;">
     <div style="display:grid;grid-template-columns:auto 1fr;gap:.35em .9em;align-items:start;">
@@ -501,7 +501,7 @@ After every pass has been recorded, cleanup is trivial. The frame graph was desi
 How often should the graph recompile? Three approaches, each a valid tradeoff:
 
 <div class="fg-grid-stagger" style="display:grid;grid-template-columns:repeat(3,1fr);gap:1em;margin:1.2em 0;">
-  <div class="fg-hoverable" style="border-radius:10px;border:1.5px solid var(--ds-success);overflow:hidden;">
+  <div class="fg-hoverable" style="border-radius:12px;border:1.5px solid var(--ds-success);overflow:hidden;">
     <div style="padding:.5em .8em;background:rgba(var(--ds-success-rgb),.1);font-weight:800;font-size:.95em;border-bottom:1px solid rgba(var(--ds-success-rgb),.2);">
       🔄 Dynamic
     </div>
@@ -511,7 +511,7 @@ How often should the graph recompile? Three approaches, each a valid tradeoff:
       <strong>Flexibility:</strong> total. Passes can appear, disappear, or change every frame
     </div>
   </div>
-  <div class="fg-hoverable" style="border-radius:10px;border:1.5px solid var(--ds-info);overflow:hidden;">
+  <div class="fg-hoverable" style="border-radius:12px;border:1.5px solid var(--ds-info);overflow:hidden;">
     <div style="padding:.5em .8em;background:rgba(var(--ds-info-rgb),.1);font-weight:800;font-size:.95em;border-bottom:1px solid rgba(var(--ds-info-rgb),.2);">
        Hybrid
     </div>
@@ -521,7 +521,7 @@ How often should the graph recompile? Three approaches, each a valid tradeoff:
       <strong>Flexibility:</strong> total, but requires dirty-tracking to know when to invalidate the cache
     </div>
   </div>
-  <div class="fg-hoverable" style="border-radius:10px;border:1.5px solid var(--color-neutral-400,#9ca3af);overflow:hidden;">
+  <div class="fg-hoverable" style="border-radius:12px;border:1.5px solid var(--ds-slate);overflow:hidden;">
     <div style="padding:.5em .8em;background:rgba(var(--ds-slate-rgb),.1);font-weight:800;font-size:.95em;border-bottom:1px solid rgba(var(--ds-slate-rgb),.2);">
       🔒 Static
     </div>
@@ -544,7 +544,7 @@ How often should the graph recompile? Three approaches, each a valid tradeoff:
 
 ## 💰 The Payoff
 
-<div class="fg-compare ds-grid-2col" style="gap:0;border-radius:10px;overflow:hidden;border:2px solid rgba(var(--ds-indigo-rgb),.25);box-shadow:0 2px 8px rgba(0,0,0,.08);">
+<div class="fg-compare ds-grid-2col" style="gap:0;border-radius:12px;overflow:hidden;border:2px solid rgba(var(--ds-indigo-rgb),.25);box-shadow:0 2px 8px rgba(0,0,0,.08);">
   <div class="ds-card-header ds-card-header--danger" style="border-right:1.5px solid rgba(var(--ds-indigo-rgb),.15);">❌ Without Graph</div>
   <div class="ds-card-header ds-card-header--success">✅ With Graph</div>
 
