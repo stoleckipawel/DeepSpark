@@ -125,16 +125,16 @@ main { flex-grow: 0 !important; }
 }
 .portfolio-card {
   position: relative;
-  border-radius: 10px;
+  border-radius: 12px;
   overflow: hidden;
   display: block;
   text-decoration: none !important;
-  background: #0d0d0d;
-  transition: transform .25s ease, box-shadow .25s ease;
+  background: #0B0B0E;
+  transition: transform .22s ease, box-shadow .22s ease;
 }
 .portfolio-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 32px rgba(0,0,0,.45);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 28px rgba(0,0,0,.45);
 }
 .portfolio-card img {
   width: 100%;
@@ -148,7 +148,7 @@ main { flex-grow: 0 !important; }
   width: 100%;
   aspect-ratio: 16 / 10;
   overflow: hidden;
-  background: #0d0d0d;
+  background: #0B0B0E;
   display: block;
   contain: strict;
   will-change: transform; /* single compositor layer for the whole card */
@@ -223,12 +223,12 @@ main { flex-grow: 0 !important; }
   overflow: hidden;
   display: block;
   text-decoration: none !important;
-  background: #0d0d0d;
-  transition: transform .25s ease, box-shadow .25s ease;
+  background: #0B0B0E;
+  transition: transform .22s ease, box-shadow .22s ease;
 }
 .game-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 36px rgba(0,0,0,.55);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 28px rgba(0,0,0,.5);
 }
 .game-card img {
   width: 100%;
@@ -286,14 +286,14 @@ main { flex-grow: 0 !important; }
 .talk-card {
   display: block;
   text-decoration: none !important;
-  border-radius: 10px;
+  border-radius: 12px;
   overflow: hidden;
-  background: #0d0d0d;
-  transition: transform .25s ease, box-shadow .25s ease;
+  background: #0B0B0E;
+  transition: transform .22s ease, box-shadow .22s ease;
 }
 .talk-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 32px rgba(0,0,0,.45);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 28px rgba(0,0,0,.45);
 }
 .talk-thumb {
   position: relative;

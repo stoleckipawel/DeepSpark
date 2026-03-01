@@ -100,9 +100,9 @@ showTitle: false
   gap: 1.1em;
   padding: 1.4em 1.8em;
   border: 1px solid rgba(255,255,255,.08);
-  border-radius: 10px;
+  border-radius: 12px;
   background: rgba(255,255,255,.03);
-  transition: border-color .2s, background .2s;
+  transition: border-color .22s ease, background .22s ease;
   text-decoration: none;
   color: inherit;
 }
