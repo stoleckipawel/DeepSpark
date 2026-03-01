@@ -5,10 +5,10 @@
   the shared 1200×627 frame is in partials/thumbnails/render.html.
 */}}
 {{ $posts := slice
-  (dict "slug" "frame-graph-theory"     "part" "Part I"   "subtitle" "THEORY"     "subtitleColor" "#33e6ff")
-  (dict "slug" "frame-graph-build-it"   "part" "Part II"  "subtitle" "BUILD IT"   "subtitleColor" "#34f5d5")
-  (dict "slug" "frame-graph-advanced"   "part" "Part III" "subtitle" "BEYOND MVP" "subtitleColor" "#ffb455")
-  (dict "slug" "frame-graph-production" "part" "Part IV"  "subtitle" "PRODUCTION" "subtitleColor" "#5ec6ff")
+  (dict "slug" "frame-graph-theory"     "thumbSlug" "frame-graph-theory-variant-b" "part" "Part I"   "subtitle" "Learn It"       "subtitleColor" "#8dd5ff")
+  (dict "slug" "frame-graph-build-it"   "part" "Part II"  "subtitle" "Built It"       "subtitleColor" "#34f5d5")
+  (dict "slug" "frame-graph-advanced"   "part" "Part III" "subtitle" "Go Beyond MVP"  "subtitleColor" "#ffb455")
+  (dict "slug" "frame-graph-production" "part" "Part IV"  "subtitle" "Scale UP"       "subtitleColor" "#5ec6ff")
 }}
 
 <div class="ds-posts-series" data-keep-emoji="true">
@@ -17,8 +17,9 @@
       {{ $page := site.GetPage (printf "/posts/%s" .slug) }}
       {{ if $page }}
         <a class="ds-posts-series-card" href="{{ $page.RelPermalink }}">
+          {{ $thumbSlug := .thumbSlug | default .slug }}
           {{ partial "thumbnails/render.html" (dict
-            "slug"          .slug
+            "slug"          $thumbSlug
             "subtitle"      .subtitle
             "subtitleColor" .subtitleColor
             "partLabel"     .part
@@ -28,4 +29,5 @@
       {{ end }}
     {{ end }}
   </div>
+
 </div>

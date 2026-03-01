@@ -1,0 +1,80 @@
+{{/* Theory Variant B: Blueprint + Outcomes */}}
+{{ $id := .id }}
+
+<defs>
+  <marker id="vBArrow-{{ $id }}" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto" markerUnits="strokeWidth">
+    <path d="M0,0 L7,2.5 L0,5 z" fill="#5c6b80"/>
+  </marker>
+  <linearGradient id="vBblue-{{ $id }}" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#69a9ff"/>
+    <stop offset="100%" stop-color="#2f6ee5"/>
+  </linearGradient>
+  <linearGradient id="vBgreen-{{ $id }}" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#44d97a"/>
+    <stop offset="100%" stop-color="#22b55f"/>
+  </linearGradient>
+  <linearGradient id="vBorange-{{ $id }}" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#f8c32f"/>
+    <stop offset="100%" stop-color="#d97706"/>
+  </linearGradient>
+  <linearGradient id="vBred-{{ $id }}" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#ff6a6a"/>
+    <stop offset="100%" stop-color="#dc2626"/>
+  </linearGradient>
+  <linearGradient id="vBchipGreen-{{ $id }}" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%" stop-color="#1f7a49"/>
+    <stop offset="100%" stop-color="#196b41"/>
+  </linearGradient>
+  <linearGradient id="vBchipBlue-{{ $id }}" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%" stop-color="#244d7c"/>
+    <stop offset="100%" stop-color="#1f446e"/>
+  </linearGradient>
+  <linearGradient id="vBchipOrange-{{ $id }}" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%" stop-color="#7a4e1f"/>
+    <stop offset="100%" stop-color="#6b441a"/>
+  </linearGradient>
+</defs>
+
+<g transform="translate(64,322)">
+  <rect x="0" y="0" width="880" height="250" rx="16" fill="#11233b" stroke="#3a6293" stroke-width="2"/>
+
+  <g transform="translate(34,30) scale(0.72)">
+    <g stroke="#49556a" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#vBArrow-{{ $id }})" opacity=".95">
+      <path d="M130,100 L165,100 L165,53 L180,53"/>
+      <path d="M130,133 L165,133 L165,183 L180,183"/>
+      <path d="M330,183 L370,183"/>
+      <path d="M350,53 L510,53 L510,117 L540,117"/>
+      <path d="M480,183 L540,131"/>
+      <path d="M330,196 C420,230 500,216 540,136"/>
+      <path d="M690,117 L730,117"/>
+      <path d="M900,117 L940,117"/>
+    </g>
+
+    <rect x="0" y="84" width="130" height="66" rx="33" fill="url(#vBblue-{{ $id }})"/>
+    <rect x="180" y="20" width="170" height="66" rx="33" fill="url(#vBblue-{{ $id }})"/>
+    <rect x="180" y="150" width="150" height="66" rx="33" fill="url(#vBblue-{{ $id }})"/>
+    <rect x="370" y="150" width="110" height="66" rx="33" fill="url(#vBorange-{{ $id }})"/>
+    <rect x="540" y="84" width="150" height="66" rx="33" fill="url(#vBorange-{{ $id }})"/>
+    <rect x="730" y="84" width="170" height="66" rx="33" fill="url(#vBgreen-{{ $id }})"/>
+    <rect x="940" y="84" width="120" height="66" rx="33" fill="url(#vBred-{{ $id }})"/>
+
+    <g fill="#f5f8ff" font-family="Inter,system-ui,sans-serif" font-size="24" font-weight="700" text-anchor="middle">
+      <text x="65" y="125">Z-Prepass</text>
+      <text x="265" y="61">Shadows</text>
+      <text x="255" y="191">GBuffer</text>
+      <text x="425" y="191">SSAO</text>
+      <text x="615" y="125">Lighting</text>
+      <text x="815" y="125">PostProcess</text>
+      <text x="1000" y="125">Present</text>
+    </g>
+  </g>
+
+  <rect x="936" y="22" width="504" height="64" rx="12" fill="url(#vBchipGreen-{{ $id }})"/>
+  <text x="1188" y="63" text-anchor="middle" fill="#ecfff4" font-family="Inter,system-ui,sans-serif" font-size="24" font-weight="800">LESS BUGS</text>
+
+  <rect x="936" y="104" width="504" height="64" rx="12" fill="url(#vBchipBlue-{{ $id }})"/>
+  <text x="1188" y="145" text-anchor="middle" fill="#ecf5ff" font-family="Inter,system-ui,sans-serif" font-size="24" font-weight="800">LESS MEMORY</text>
+
+  <rect x="936" y="186" width="504" height="64" rx="12" fill="url(#vBchipOrange-{{ $id }})"/>
+  <text x="1188" y="227" text-anchor="middle" fill="#fff7e8" font-family="Inter,system-ui,sans-serif" font-size="24" font-weight="800">FASTER</text>
+</g>

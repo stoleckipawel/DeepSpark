@@ -8,60 +8,65 @@
     <stop offset="0%" stop-color="#35e7ff"/>
     <stop offset="100%" stop-color="#68ff9a"/>
   </linearGradient>
+  <linearGradient id="fgBlue-{{ $id }}" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#69a9ff"/>
+    <stop offset="100%" stop-color="#2f6ee5"/>
+  </linearGradient>
+  <linearGradient id="fgOrange-{{ $id }}" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#f8c32f"/>
+    <stop offset="100%" stop-color="#e48a05"/>
+  </linearGradient>
+  <linearGradient id="fgGreen-{{ $id }}" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#44d97a"/>
+    <stop offset="100%" stop-color="#22b55f"/>
+  </linearGradient>
+  <linearGradient id="fgRed-{{ $id }}" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#ff6a6a"/>
+    <stop offset="100%" stop-color="#ef2f3e"/>
+  </linearGradient>
+  <marker id="fgArrow-{{ $id }}" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto" markerUnits="strokeWidth">
+    <path d="M0,0 L7,2.5 L0,5 z" fill="#5c6b80"/>
+  </marker>
 </defs>
 
 {{/* ── Left side: tagline + sparkline + progress bar ───────── */}}
 <rect x="54" y="214" width="760" height="2" fill="url(#line-{{ $id }})" opacity=".75"/>
 <text x="54" y="270" fill="#e8f0ff" font-family="Inter,system-ui,sans-serif"
-      font-size="36" font-weight="800">Declare → Compile → Execute</text>
+  font-size="36" font-weight="800">Declare → Compile → Execute</text>
 <text x="54" y="316" fill="#b2c2de" font-family="Inter,system-ui,sans-serif"
-      font-size="24">DAG scheduling · Barrier generation · Memory aliasing</text>
+  font-size="24">DAG scheduling · Barrier generation · Memory aliasing</text>
 
-<polyline points="62,520 170,492 278,500 386,454 494,468 602,424 710,438 818,392"
-          fill="none" stroke="#57f08d" stroke-width="10" stroke-linecap="round"/>
-<rect x="54" y="566" width="780" height="10" rx="5" fill="#1b3352"/>
-<rect x="54" y="566" width="536" height="10" rx="5" fill="#57f08d"/>
-
-{{/* ── Right side: 3-D panel with simplified DAG ───────────── */}}
-<g filter="url(#softShadow-{{ $id }})">
-  <polygon points="992,208 1512,208 1550,240 1030,240" fill="url(#panelTop-{{ $id }})"/>
-  <polygon points="1512,208 1550,240 1550,548 1512,516" fill="url(#panelSide-{{ $id }})"/>
-  <polygon points="992,208 1030,240 1030,548 992,516" fill="#102239"/>
-  <polygon points="1030,240 1550,240 1550,548 1030,548" fill="#11233b" stroke="#3a6293" stroke-width="2"/>
-
-  <g transform="translate(154.5,0) scale(0.85,1)">
-    {{/* Edges */}}
-    <g stroke="#a4c9ee" stroke-width="3" fill="none" stroke-linecap="round" opacity=".95">
-      <line x1="1126" y1="382" x2="1186" y2="324"/>
-      <line x1="1126" y1="392" x2="1162" y2="440"/>
-      <line x1="1252" y1="440" x2="1296" y2="440"/>
-      <line x1="1274" y1="324" x2="1360" y2="324"/>
-      <line x1="1364" y1="440" x2="1386" y2="350"/>
-      <line x1="1252" y1="452" x2="1394" y2="352"/>
-      <line x1="1450" y1="350" x2="1538" y2="344"/>
-    </g>
-
-    {{/* Nodes */}}
-    <rect x="1058" y="364" width="68" height="48" rx="18" fill="#2f5f95" stroke="#78b4ff" stroke-width="2"/>
-    <rect x="1186" y="294" width="88" height="48" rx="18" fill="#2f5f95" stroke="#78b4ff" stroke-width="2"/>
-    <rect x="1162" y="414" width="90" height="48" rx="18" fill="#2f5f95" stroke="#78b4ff" stroke-width="2"/>
-    <rect x="1296" y="414" width="68" height="48" rx="18" fill="#d08a3d" stroke="#ffc88e" stroke-width="2"/>
-    <rect x="1360" y="308" width="90" height="56" rx="20" fill="#d08a3d" stroke="#ffc88e" stroke-width="2"/>
-    <rect x="1538" y="322" width="62" height="44" rx="18" fill="#9e3b3b" stroke="#ff9c9c" stroke-width="2"/>
-
-    {{/* Node labels */}}
-    <text x="1092" y="386" text-anchor="middle" fill="#edf5ff" font-family="JetBrains Mono,Fira Code,monospace" font-size="12" font-weight="700">Z-PRE</text>
-    <text x="1230" y="321" text-anchor="middle" fill="#edf5ff" font-family="JetBrains Mono,Fira Code,monospace" font-size="13" font-weight="700">SHADOWS</text>
-    <text x="1207" y="443" text-anchor="middle" fill="#edf5ff" font-family="JetBrains Mono,Fira Code,monospace" font-size="13" font-weight="700">GBUFFER</text>
-    <text x="1330" y="443" text-anchor="middle" fill="#fff3e5" font-family="JetBrains Mono,Fira Code,monospace" font-size="13" font-weight="700">SSAO</text>
-    <text x="1405" y="340" text-anchor="middle" fill="#fff3e5" font-family="JetBrains Mono,Fira Code,monospace" font-size="13" font-weight="700">LIGHTING</text>
-    <text x="1569" y="347" text-anchor="middle" fill="#fff0f0" font-family="JetBrains Mono,Fira Code,monospace" font-size="10" font-weight="700">PRESENT</text>
-
-    {{/* Annotations */}}
-    <text x="1182" y="286" text-anchor="middle" fill="#a8d1ff" font-family="JetBrains Mono,Fira Code,monospace" font-size="13">shadow map</text>
-    <text x="1290" y="478" text-anchor="middle" fill="#a8d1ff" font-family="JetBrains Mono,Fira Code,monospace" font-size="13">GBuffer MRTs</text>
+{{/* ── Right side: reference-style DAG graph (no box) ──────── */}}
+<g transform="translate(950,36) scale(0.88)">
+  {{/* Edges */}}
+  <g stroke="#49556a" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#fgArrow-{{ $id }})" opacity=".92">
+    <path d="M270,86 V122 H95 V140"/>
+    <path d="M270,86 V122 H445 V140"/>
+    <path d="M95,226 V270 H255 V378"/>
+    <path d="M445,226 V252"/>
+    <path d="M445,226 V302 H285 V378"/>
+    <path d="M445,338 V356 H285 V378"/>
+    <path d="M255,474 V512"/>
+    <path d="M255,608 V634"/>
   </g>
 
-  <text x="1058" y="270" fill="#a8d1ff" font-family="JetBrains Mono,Fira Code,monospace"
-        font-size="18" font-weight="700">SIMPLIFIED DAG</text>
+  {{/* Nodes */}}
+  <rect x="180" y="0" width="180" height="86" rx="43" fill="url(#fgBlue-{{ $id }})"/>
+  <rect x="0" y="140" width="190" height="86" rx="43" fill="url(#fgBlue-{{ $id }})"/>
+  <rect x="350" y="140" width="190" height="86" rx="43" fill="url(#fgBlue-{{ $id }})"/>
+  <rect x="350" y="252" width="190" height="86" rx="43" fill="url(#fgOrange-{{ $id }})"/>
+  <rect x="140" y="378" width="230" height="96" rx="48" fill="url(#fgOrange-{{ $id }})"/>
+  <rect x="140" y="512" width="230" height="96" rx="48" fill="url(#fgGreen-{{ $id }})"/>
+  <rect x="185" y="634" width="140" height="72" rx="36" fill="url(#fgRed-{{ $id }})"/>
+
+  {{/* Node labels */}}
+  <g fill="#f5f8ff" font-family="Inter,system-ui,sans-serif" font-size="34" font-weight="700" text-anchor="middle">
+    <text x="270" y="56">Z-Prepass</text>
+    <text x="95" y="195">Shadows</text>
+    <text x="445" y="195">GBuffer</text>
+    <text x="445" y="307">SSAO</text>
+    <text x="255" y="440">Lighting</text>
+    <text x="255" y="574">PostProcess</text>
+    <text x="255" y="683">Present</text>
+  </g>
 </g>

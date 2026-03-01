@@ -1,0 +1,50 @@
+{{/* Theory Variant C: Lifecycle + Value Ribbon */}}
+{{ $id := .id }}
+
+<defs>
+  <linearGradient id="vC1-{{ $id }}" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0%" stop-color="#1f4f8a"/>
+    <stop offset="100%" stop-color="#14365f"/>
+  </linearGradient>
+  <linearGradient id="vC2-{{ $id }}" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0%" stop-color="#7a4e1f"/>
+    <stop offset="100%" stop-color="#4d2f12"/>
+  </linearGradient>
+  <linearGradient id="vC3-{{ $id }}" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0%" stop-color="#1f7a49"/>
+    <stop offset="100%" stop-color="#124a2c"/>
+  </linearGradient>
+</defs>
+
+<text x="54" y="246" fill="#f7faff" font-family="Inter,system-ui,sans-serif" font-size="42" font-weight="900">LIFECYCLE + VALUE</text>
+<text x="54" y="300" fill="#b2c2de" font-family="Inter,system-ui,sans-serif" font-size="24">Methodology in front, business impact directly underneath.</text>
+
+<g transform="translate(64,352)">
+  <rect x="0" y="0" width="470" height="198" rx="16" fill="url(#vC1-{{ $id }})" stroke="#3f78b7" stroke-width="2"/>
+  <rect x="500" y="0" width="470" height="198" rx="16" fill="url(#vC2-{{ $id }})" stroke="#af7d44" stroke-width="2"/>
+  <rect x="1000" y="0" width="470" height="198" rx="16" fill="url(#vC3-{{ $id }})" stroke="#4db67c" stroke-width="2"/>
+
+  <circle cx="60" cy="54" r="22" fill="#60a5fa"/><text x="60" y="62" text-anchor="middle" fill="#071326" font-family="Inter,system-ui,sans-serif" font-size="22" font-weight="900">1</text>
+  <circle cx="560" cy="54" r="22" fill="#fbbf24"/><text x="560" y="62" text-anchor="middle" fill="#241402" font-family="Inter,system-ui,sans-serif" font-size="22" font-weight="900">2</text>
+  <circle cx="1060" cy="54" r="22" fill="#4ade80"/><text x="1060" y="62" text-anchor="middle" fill="#04210f" font-family="Inter,system-ui,sans-serif" font-size="22" font-weight="900">3</text>
+
+  <text x="100" y="62" fill="#f5f8ff" font-family="Inter,system-ui,sans-serif" font-size="38" font-weight="900">DECLARE</text>
+  <text x="600" y="62" fill="#fff7e8" font-family="Inter,system-ui,sans-serif" font-size="38" font-weight="900">COMPILE</text>
+  <text x="1100" y="62" fill="#ecfff4" font-family="Inter,system-ui,sans-serif" font-size="38" font-weight="900">EXECUTE</text>
+
+  <text x="34" y="116" fill="#c8ddff" font-family="JetBrains Mono,Fira Code,monospace" font-size="20">pass/resource declarations</text>
+  <text x="34" y="150" fill="#c8ddff" font-family="JetBrains Mono,Fira Code,monospace" font-size="20">setup callbacks only</text>
+
+  <text x="534" y="116" fill="#ffe4b9" font-family="JetBrains Mono,Fira Code,monospace" font-size="20">toposort + culling</text>
+  <text x="534" y="150" fill="#ffe4b9" font-family="JetBrains Mono,Fira Code,monospace" font-size="20">barriers + aliasing plan</text>
+
+  <text x="1034" y="116" fill="#c7f6da" font-family="JetBrains Mono,Fira Code,monospace" font-size="20">record command lists</text>
+  <text x="1034" y="150" fill="#c7f6da" font-family="JetBrains Mono,Fira Code,monospace" font-size="20">no decisions left</text>
+
+  <rect x="0" y="216" width="468" height="34" rx="10" fill="#1b3352"/>
+  <text x="234" y="239" text-anchor="middle" fill="#d9e9ff" font-family="Inter,system-ui,sans-serif" font-size="20" font-weight="800">fewer integration bugs</text>
+  <rect x="500" y="216" width="468" height="34" rx="10" fill="#3e2a1b"/>
+  <text x="734" y="239" text-anchor="middle" fill="#ffe8c4" font-family="Inter,system-ui,sans-serif" font-size="20" font-weight="800">barrier + aliasing automation</text>
+  <rect x="1000" y="216" width="468" height="34" rx="10" fill="#1a3e29"/>
+  <text x="1234" y="239" text-anchor="middle" fill="#ddffeb" font-family="Inter,system-ui,sans-serif" font-size="20" font-weight="800">faster pass iteration cadence</text>
+</g>
