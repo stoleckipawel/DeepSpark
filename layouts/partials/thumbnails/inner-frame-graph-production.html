@@ -13,40 +13,40 @@
 
 {{/* ── Queue visualization ─────────────────────────────────── */}}
 <g transform="translate(54, 390)">
-  <rect x="0" y="0" width="780" height="186" rx="14" fill="#0d1b2e" fill-opacity=".65"
-        stroke="#3B82F6" stroke-opacity=".2" stroke-width="1.2"/>
+  <rect x="0" y="0" width="780" height="186" rx="14" fill="#1a1608" fill-opacity=".65"
+        stroke="#FFD166" stroke-opacity=".14" stroke-width="1.2"/>
 
   {{/* Graphics queue */}}
-  <text x="28" y="44" fill="#c8d9f5" font-family="JetBrains Mono,Fira Code,monospace"
+  <text x="28" y="44" fill="#e8cc80" font-family="JetBrains Mono,Fira Code,monospace"
         font-size="20" font-weight="560">Graphics</text>
-  <line x1="188" y1="36" x2="740" y2="36" stroke="#60A5FA" stroke-width="14" stroke-linecap="round"/>
+  <line x1="188" y1="36" x2="740" y2="36" stroke="#FFD166" stroke-width="14" stroke-linecap="round" opacity=".7"/>
 
   {{/* Compute queue */}}
-  <text x="28" y="104" fill="#78c1ff" font-family="JetBrains Mono,Fira Code,monospace"
+  <text x="28" y="104" fill="#d4b860" font-family="JetBrains Mono,Fira Code,monospace"
         font-size="20" font-weight="560">Compute</text>
-  <line x1="188" y1="96" x2="660" y2="96" stroke="#22C55E" stroke-width="14" stroke-linecap="round"/>
+  <line x1="188" y1="96" x2="660" y2="96" stroke="#FFD166" stroke-width="14" stroke-linecap="round" opacity=".5"/>
 
   {{/* Copy queue */}}
-  <text x="28" y="164" fill="#ffbe73" font-family="JetBrains Mono,Fira Code,monospace"
+  <text x="28" y="164" fill="#c0a54a" font-family="JetBrains Mono,Fira Code,monospace"
         font-size="20" font-weight="560">Copy</text>
-  <line x1="188" y1="156" x2="520" y2="156" stroke="#FF9F1C" stroke-width="14" stroke-linecap="round"/>
+  <line x1="188" y1="156" x2="520" y2="156" stroke="#FFD166" stroke-width="14" stroke-linecap="round" opacity=".35"/>
 </g>
 
 {{/* ── Outcome chips ───────────────────────────────────────── */}}
 <g transform="translate(54, 610)">
-  <rect x="0" y="0" width="240" height="42" rx="10" fill="#0e1a2e"
-        stroke="#60A5FA" stroke-opacity=".24" stroke-width="1"/>
-  <text x="120" y="27" text-anchor="middle" fill="#6b92c0"
+  <rect x="0" y="0" width="240" height="42" rx="10" fill="#16120a"
+        stroke="#FFD166" stroke-opacity=".14" stroke-width="1"/>
+  <text x="120" y="27" text-anchor="middle" fill="#a89050"
         font-family="Inter,system-ui,sans-serif" font-size="16" font-weight="640">PARALLEL RECORDING</text>
 
-  <rect x="258" y="0" width="248" height="42" rx="10" fill="#0e2016"
-        stroke="#22C55E" stroke-opacity=".24" stroke-width="1"/>
-  <text x="382" y="27" text-anchor="middle" fill="#6bc08a"
+  <rect x="258" y="0" width="248" height="42" rx="10" fill="#16120a"
+        stroke="#FFD166" stroke-opacity=".14" stroke-width="1"/>
+  <text x="382" y="27" text-anchor="middle" fill="#a89050"
         font-family="Inter,system-ui,sans-serif" font-size="16" font-weight="640">RESOURCE LIFETIME</text>
 
-  <rect x="524" y="0" width="268" height="42" rx="10" fill="#1e170b"
-        stroke="#FF9F1C" stroke-opacity=".24" stroke-width="1"/>
-  <text x="658" y="27" text-anchor="middle" fill="#c09360"
+  <rect x="524" y="0" width="268" height="42" rx="10" fill="#16120a"
+        stroke="#FFD166" stroke-opacity=".14" stroke-width="1"/>
+  <text x="658" y="27" text-anchor="middle" fill="#a89050"
         font-family="Inter,system-ui,sans-serif" font-size="16" font-weight="640">MIGRATION STRATEGY</text>
 </g>
 
