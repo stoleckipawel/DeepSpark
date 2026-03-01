@@ -15,12 +15,18 @@
 
 {{/* ── Resolve any extra assets the inner partial may need ────── */}}
 {{ $innerCtx := dict "id" $id }}
-{{ if eq $id "frame-graph-build-it" }}
-  {{ $codeImageURL := "images/BuildItCode.png" | relURL }}
-  {{ with resources.Get "images/BuildItCode.png" }}
-    {{ $codeImageURL = .RelPermalink }}
+
+{{/* ── Image map: slug → asset path for the shared image panel ── */}}
+{{ $imageMap := dict
+  "frame-graph-build-it"   "images/BuildItCode.png"
+  "frame-graph-production" "images/UnrealInsightRDG.png"
+}}
+{{ with index $imageMap $id }}
+  {{ $url := . | relURL }}
+  {{ with resources.Get . }}
+    {{ $url = .RelPermalink }}
   {{ end }}
-  {{ $innerCtx = merge $innerCtx (dict "codeImageURL" $codeImageURL) }}
+  {{ $innerCtx = merge $innerCtx (dict "imageURL" $url) }}
 {{ end }}
 
 {{/* ── Render inner content via slug-specific partial ─────────── */}}
@@ -65,9 +71,14 @@
 
     <text x="1538" y="84" text-anchor="end" fill="#d5e0f5"
           font-family="Inter,system-ui,sans-serif" font-size="24"
-          font-weight="700">{{ $p.partLabel }}</text>
+          font-weight="700"></text>
 
     {{/* ── Per-post artwork ──────────────────────────────────── */}}
     {{ partial $innerName $innerCtx }}
+
+    {{/* ── Part label: bottom-left corner ────────────────────── */}}
+    <text x="54" y="672" fill="#d5e0f5"
+          font-family="Inter,system-ui,sans-serif" font-size="24"
+          font-weight="700">{{ $p.partLabel }}</text>
   </g>
 </svg>

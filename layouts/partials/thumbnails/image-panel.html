@@ -1,0 +1,44 @@
+{{/*
+  Reusable right-side image panel for thumbnails.
+  Full height, flush right edge, left-edge fade, no shadow.
+
+  Params (dict):
+    .id        – SVG-ID namespace (slug)
+    .imageURL  – resolved URL for the image
+*/}}
+{{ $id  := .id }}
+{{ $url := .imageURL }}
+
+<defs>
+  <linearGradient id="imgFade-{{ $id }}" x1="0" y1="0" x2="1" y2="0">
+    {{/* Smoothstep-style fade: fully opaque → ease-out mid → ease-in tail → transparent */}}
+    <stop offset="0%"   stop-color="#0b1526" stop-opacity="1"/>
+    <stop offset="4%"   stop-color="#0b1526" stop-opacity="1"/>
+    <stop offset="14%"  stop-color="#0b1526" stop-opacity=".95"/>
+    <stop offset="28%"  stop-color="#0b1526" stop-opacity=".78"/>
+    <stop offset="42%"  stop-color="#0b1526" stop-opacity=".52"/>
+    <stop offset="50%"  stop-color="#0b1526" stop-opacity=".35"/>
+    <stop offset="65%"  stop-color="#0b1526" stop-opacity=".16"/>
+    <stop offset="80%"  stop-color="#0b1526" stop-opacity=".05"/>
+    <stop offset="92%"  stop-color="#0b1526" stop-opacity=".01"/>
+    <stop offset="100%" stop-color="#0b1526" stop-opacity="0"/>
+  </linearGradient>
+  <linearGradient id="imgVignette-{{ $id }}" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%"   stop-color="#070c18" stop-opacity=".45"/>
+    <stop offset="12%"  stop-color="#070c18" stop-opacity="0"/>
+    <stop offset="88%"  stop-color="#070c18" stop-opacity="0"/>
+    <stop offset="100%" stop-color="#070c18" stop-opacity=".55"/>
+  </linearGradient>
+  <clipPath id="imgClip-{{ $id }}">
+    {{/* Sharp left edge, rounded right edge to match thumbnail border */}}
+    <rect x="907" y="8" width="657" height="684"/>
+    <rect x="1564" y="8" width="28" height="684" rx="28"/>
+  </clipPath>
+</defs>
+
+<g clip-path="url(#imgClip-{{ $id }})">
+  <image href="{{ $url }}" x="903" y="8" width="689" height="684"
+         preserveAspectRatio="xMidYMid slice"/>
+  <rect x="907" y="8" width="685" height="684" fill="url(#imgFade-{{ $id }})"/>
+  <rect x="907" y="8" width="685" height="684" fill="url(#imgVignette-{{ $id }})"/>
+</g>

@@ -1,13 +1,6 @@
 {{/*  Inner artwork for "Frame Graph: Production Engines" thumbnail.
-      Receives dict: .id (SVG-ID namespace)  */}}
+      Receives dict: .id, .imageURL  */}}
 {{ $id := .id }}
-
-{{/* ── Extra defs ──────────────────────────────────────────── */}}
-<defs>
-  <filter id="nodeGlow-{{ $id }}" x="-40%" y="-40%" width="180%" height="180%">
-    <feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="#8defff" flood-opacity=".5"/>
-  </filter>
-</defs>
 
 {{/* ── Left side: headlines + queue legend ──────────────────── */}}
 <text x="54" y="252" fill="#f7faff" font-family="Inter,system-ui,sans-serif"
@@ -25,65 +18,5 @@
 <line x1="250" y1="504" x2="560" y2="504" stroke="#4fb386" stroke-width="4"/>
 <line x1="250" y1="544" x2="520" y2="544" stroke="#b17f53" stroke-width="4"/>
 
-{{/* ── Right side: 3-D panel with thread-pool hub ──────────── */}}
-<g filter="url(#softShadow-{{ $id }})">
-  <polygon points="992,208 1512,208 1550,240 1030,240" fill="url(#panelTop-{{ $id }})"/>
-  <polygon points="1512,208 1550,240 1550,548 1512,516" fill="url(#panelSide-{{ $id }})"/>
-  <polygon points="992,208 1030,240 1030,548 992,516" fill="#102239"/>
-  <polygon points="1030,240 1550,240 1550,548 1030,548" fill="#11233b" stroke="#3a6293" stroke-width="2"/>
-
-  {{/* Hub circle */}}
-  <circle cx="1092" cy="394" r="46" fill="#28527f" stroke="#6ea6ea" stroke-width="3"/>
-  <text x="1092" y="402" text-anchor="middle" fill="#dce9ff"
-        font-family="JetBrains Mono,Fira Code,monospace" font-size="22" font-weight="800">16T</text>
-
-  {{/* Spokes */}}
-  <g stroke="#8abcf0" stroke-width="3" fill="none" opacity=".86">
-    <line x1="1138" y1="360" x2="1188" y2="320"/>
-    <line x1="1146" y1="382" x2="1188" y2="378"/>
-    <line x1="1146" y1="406" x2="1188" y2="432"/>
-    <line x1="1138" y1="430" x2="1188" y2="486"/>
-  </g>
-
-  {{/* Command-buffer lanes */}}
-  <rect x="1188" y="304" width="324" height="32" rx="8" fill="#1e3f66"/>
-  <rect x="1188" y="362" width="324" height="32" rx="8" fill="#1e3f66"/>
-  <rect x="1188" y="418" width="324" height="32" rx="8" fill="#1e3f66"/>
-  <rect x="1188" y="474" width="324" height="32" rx="8" fill="#1e3f66"/>
-
-  {{/* Work blocks */}}
-  <g>
-    <rect x="1202" y="308" width="30"  height="24" rx="6" fill="#5ec6ff"/>
-    <rect x="1238" y="308" width="44"  height="24" rx="6" fill="#4af0a4"/>
-    <rect x="1288" y="308" width="36"  height="24" rx="6" fill="#5ec6ff"/>
-    <rect x="1330" y="308" width="52"  height="24" rx="6" fill="#ffb974"/>
-    <rect x="1388" y="308" width="34"  height="24" rx="6" fill="#5ec6ff"/>
-    <rect x="1428" y="308" width="48"  height="24" rx="6" fill="#4af0a4"/>
-
-    <rect x="1202" y="366" width="40"  height="24" rx="6" fill="#4af0a4"/>
-    <rect x="1248" y="366" width="28"  height="24" rx="6" fill="#5ec6ff"/>
-    <rect x="1282" y="366" width="56"  height="24" rx="6" fill="#ffb974"/>
-    <rect x="1344" y="366" width="34"  height="24" rx="6" fill="#5ec6ff"/>
-    <rect x="1384" y="366" width="42"  height="24" rx="6" fill="#4af0a4"/>
-    <rect x="1432" y="366" width="50"  height="24" rx="6" fill="#5ec6ff"/>
-
-    <rect x="1202" y="422" width="34"  height="24" rx="6" fill="#5ec6ff"/>
-    <rect x="1242" y="422" width="46"  height="24" rx="6" fill="#4af0a4"/>
-    <rect x="1294" y="422" width="30"  height="24" rx="6" fill="#5ec6ff"/>
-    <rect x="1330" y="422" width="60"  height="24" rx="6" fill="#ffb974"/>
-    <rect x="1396" y="422" width="36"  height="24" rx="6" fill="#4af0a4"/>
-    <rect x="1438" y="422" width="44"  height="24" rx="6" fill="#5ec6ff"/>
-
-    <rect x="1202" y="478" width="54"  height="24" rx="6" fill="#ffb974"/>
-    <rect x="1262" y="478" width="32"  height="24" rx="6" fill="#5ec6ff"/>
-    <rect x="1300" y="478" width="42"  height="24" rx="6" fill="#4af0a4"/>
-    <rect x="1348" y="478" width="30"  height="24" rx="6" fill="#5ec6ff"/>
-    <rect x="1384" y="478" width="50"  height="24" rx="6" fill="#ffb974"/>
-    <rect x="1440" y="478" width="40"  height="24" rx="6" fill="#4af0a4"/>
-  </g>
-
-  {{/* Pass-count badge */}}
-  <rect x="1438" y="254" width="88" height="32" rx="8" fill="#35689c" stroke="#82bcff" stroke-width="2"/>
-  <text x="1482" y="276" text-anchor="middle" fill="#eff6ff"
-        font-family="JetBrains Mono,Fira Code,monospace" font-size="19" font-weight="800">700+</text>
-</g>
+{{/* ── Right side: shared image panel (UE5 RDG Insights) ───── */}}
+{{ partial "thumbnails/image-panel.html" (dict "id" $id "imageURL" .imageURL) }}
