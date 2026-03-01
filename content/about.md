@@ -1,12 +1,15 @@
 ---
-title: " "
-description: "Personal notes on real-time rendering and software engineering."
+title: "About"
+description: "About Pawel Stolecki — rendering engineer focused on real-time graphics, GPU architecture, and performance-driven systems."
+summary: "Background, projects, and engineering focus in real-time rendering."
+keywords: ["about", "rendering engineer", "real-time graphics", "GPU", "graphics programming"]
 date: 2026-02-09
 showDate: false
 showReadingTime: false
 showWordCount: false
 showShare: false
 sharingLinks: false
+showTitle: false
 ---
 
 <style>
@@ -343,7 +346,7 @@ main { flex-grow: 0 !important; }
 <!-- ── About me ──────────────────────────────────────────────── -->
 
 
-<div class="about-hero">
+<div class="about-hero ds-reveal">
   <div style="flex:1;min-width:0;">
     <h1 style="font-size:2.3em;font-weight:800;margin:0 0 .35em;line-height:1.1;">About me</h1>
     <div class="about-hero-text">

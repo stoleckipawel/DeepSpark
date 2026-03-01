@@ -1,5 +1,31 @@
 <script>
 (function(){
+  /* ── Scroll-triggered reveal: .ds-reveal → .ds-visible ── */
+  if(typeof IntersectionObserver==='undefined')return;
+  var revealIO = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting){
+        e.target.classList.add('ds-visible');
+        revealIO.unobserve(e.target);
+      }
+    });
+  }, {threshold:0.08, rootMargin:'0px 0px -40px 0px'});
+  document.querySelectorAll('.ds-reveal').forEach(function(el){
+    revealIO.observe(el);
+  });
+
+  /* Auto-reveal: add .ds-reveal to about-band, series headings, prose h2 */
+  document.querySelectorAll('.about-band, .article-content > h2, .article-content > .ds-card, .article-content > .interactive-widget').forEach(function(el){
+    if(!el.classList.contains('ds-reveal')){
+      el.classList.add('ds-reveal');
+      revealIO.observe(el);
+    }
+  });
+})();
+</script>
+
+<script>
+(function(){
   /* ── Pause/resume infinite animations when widgets leave viewport ── */
   if(typeof IntersectionObserver==='undefined')return;
   var widgetIO = new IntersectionObserver(function(entries){

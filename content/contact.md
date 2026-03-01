@@ -1,12 +1,15 @@
 ---
-title: " "
-description: "Get in touch."
+title: "Contact"
+description: "Contact Pawel Stolecki for rendering engineering collaboration, graphics programming consulting, and technical discussion."
+summary: "Ways to get in touch regarding rendering and graphics engineering."
+keywords: ["contact", "rendering engineer", "graphics programming", "collaboration"]
 date: 2026-02-28
 showDate: false
 showReadingTime: false
 showWordCount: false
 showShare: false
 sharingLinks: false
+showTitle: false
 ---
 
 <style>
@@ -167,7 +170,7 @@ sharingLinks: false
 }
 </style>
 
-<div class="contact-hero">
+<div class="contact-hero ds-reveal">
   <div class="contact-left">
     <div class="contact-label">Contact</div>
     <h2 class="contact-heading">Get in<br><span>touch.</span></h2>
