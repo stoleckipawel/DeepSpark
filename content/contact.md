@@ -19,10 +19,10 @@ showTitle: false
   position: relative;
   left: 50%;
   transform: translateX(-50%);
-  min-height: 55vh;
+  min-height: auto;
   display: flex;
-  align-items: center;
-  padding: 6em 8vw 5em;
+  align-items: flex-start;
+  padding: 2.5em 4vw 3em;
   box-sizing: border-box;
   gap: 4em;
   flex-wrap: wrap;
@@ -56,14 +56,19 @@ showTitle: false
   opacity: .4;
   margin-bottom: .9em;
 }
-.contact-heading {
+.contact-hero .contact-heading {
   font-size: clamp(2.4em, 5.5vw, 4em);
   font-weight: 800;
   line-height: 1.05;
   margin: 0 0 .7em;
+  padding-top: 0;
+  border-top: none;
 }
-.contact-heading span {
+.contact-hero .contact-heading span {
   color: var(--ds-accent);
+}
+.contact-hero .contact-heading::after {
+  display: none;
 }
 .contact-divider {
   width: 2.4em;
@@ -172,7 +177,6 @@ showTitle: false
 
 <div class="contact-hero ds-reveal">
   <div class="contact-left">
-    <div class="contact-label">Contact</div>
     <h2 class="contact-heading">Get in<br><span>touch.</span></h2>
     <div class="contact-divider"></div>
     <p class="contact-tagline">Collaborations, content inquiries, or just a good conversation about graphics engineering.</p>

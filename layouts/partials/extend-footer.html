@@ -24,6 +24,96 @@
 })();
 </script>
 
+<!-- ═══ Reading progress bar ═══ -->
+<script>
+(function(){
+  var article = document.querySelector('.article-content');
+  if (!article) return;
+
+  var bar = document.createElement('div');
+  bar.className = 'ds-progress-bar';
+  document.body.appendChild(bar);
+
+  var ticking = false;
+  function update() {
+    ticking = false;
+    var rect = article.getBoundingClientRect();
+    var total = article.offsetHeight - window.innerHeight;
+    if (total <= 0) { bar.style.width = '100%'; return; }
+    var scrolled = -rect.top;
+    var pct = Math.max(0, Math.min(100, (scrolled / total) * 100));
+    bar.style.width = pct + '%';
+  }
+
+  window.addEventListener('scroll', function() {
+    if (!ticking) { ticking = true; requestAnimationFrame(update); }
+  }, { passive: true });
+  update();
+})();
+</script>
+
+<!-- ═══ Back-to-top button ═══ -->
+<script>
+(function(){
+  var btn = document.createElement('button');
+  btn.className = 'ds-back-to-top';
+  btn.setAttribute('aria-label', 'Back to top');
+  btn.innerHTML = '<svg viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"></polyline></svg>';
+  document.body.appendChild(btn);
+
+  btn.addEventListener('click', function() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  var ticking = false;
+  function check() {
+    ticking = false;
+    if (window.scrollY > 400) {
+      btn.classList.add('ds-visible');
+    } else {
+      btn.classList.remove('ds-visible');
+    }
+  }
+
+  window.addEventListener('scroll', function() {
+    if (!ticking) { ticking = true; requestAnimationFrame(check); }
+  }, { passive: true });
+  check();
+})();
+</script>
+
+<!-- ═══ Breadcrumb trail (UE-docs inspired) ═══ -->
+<script>
+(function(){
+  var header = document.getElementById('single_header');
+  if (!header) return;
+  // Only show on posts pages
+  if (!/\/posts\/[^/]+/.test(location.pathname)) return;
+
+  var crumb = document.createElement('nav');
+  crumb.className = 'ds-breadcrumb';
+  crumb.setAttribute('aria-label', 'Breadcrumb');
+
+  var path = location.pathname.replace(/\/+$/, '').split('/');
+  var slug = path[path.length - 1] || '';
+
+  // Build: Home > Posts > Current Article
+  var html = '<a href="/" class="ds-breadcrumb-link">Home</a>';
+  html += '<span class="ds-breadcrumb-sep">/</span>';
+  html += '<a href="/posts/" class="ds-breadcrumb-link">Articles</a>';
+  html += '<span class="ds-breadcrumb-sep">/</span>';
+
+  // Get article title from h1
+  var h1 = header.querySelector('h1');
+  var title = h1 ? h1.textContent.trim() : slug;
+  if (title.length > 40) title = title.substring(0, 40) + '…';
+  html += '<span class="ds-breadcrumb-current">' + title + '</span>';
+
+  crumb.innerHTML = html;
+  header.insertBefore(crumb, header.firstChild);
+})();
+</script>
+
 <script>
 (function(){
   /* ── Pause/resume infinite animations when widgets leave viewport ── */

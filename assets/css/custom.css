@@ -273,6 +273,49 @@ html {
   transform: scale(1.02);
   filter: saturate(1.03);
 }
+
+/* ── Card info block (below thumbnail) ───────────────────────── */
+.ds-posts-card-info {
+  padding: .45em 1em .75em;
+}
+.ds-posts-card-part {
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: .3em;
+}
+.ds-posts-card-title {
+  font-size: 1.05em;
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 0 0 .35em !important;
+  color: rgba(255, 255, 255, .92);
+}
+.ds-posts-card-summary {
+  font-size: .82em;
+  line-height: 1.55;
+  opacity: .5;
+  margin: 0 0 .6em;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.ds-posts-card-meta {
+  font-size: .7rem;
+  opacity: .35;
+  display: flex;
+  align-items: center;
+  gap: .4em;
+  font-weight: 500;
+}
+.ds-posts-card-dot {
+  opacity: .5;
+}
+
 .ds-posts-series-body {
   padding: .55em .05em 0;
 }
@@ -313,18 +356,6 @@ html {
   width: 100vw !important;
   margin-left: calc(-50vw + 50%) !important;
   box-sizing: border-box;
-}
-
-/* ── Series navigation banner (top of each article) ──────────── */
-.ds-series-nav {
-  margin: 0 0 1.5em;
-  padding: .7em 1em;
-  border-radius: 8px;
-  background: rgba(var(--ds-indigo-rgb), .04);
-  border: 1px solid rgba(var(--ds-indigo-rgb), .12);
-  font-size: .88em;
-  line-height: 1.6;
-  opacity: .85;
 }
 
 /* ── Article prev/next footer navigation ─────────────────────── */
@@ -426,20 +457,6 @@ html {
   line-height: 1.7;
 }
 
-/* ── Callout / tip boxes (left-bordered note) ────────────────── */
-.ds-callout {
-  margin: 1em 0;
-  padding: .7em 1em;
-  border-radius: 8px;
-  font-size: .92em;
-  line-height: 1.6;
-  border-left: 4px solid;
-}
-.ds-callout--info    { border-color: var(--ds-info);    background: rgba(var(--ds-info-rgb), .04); }
-.ds-callout--success { border-color: var(--ds-success); background: rgba(var(--ds-success-rgb), .04); }
-.ds-callout--warn    { border-color: var(--ds-warn);    background: rgba(var(--ds-warn-rgb), .04); }
-.ds-callout--danger  { border-color: var(--ds-danger);  background: rgba(var(--ds-danger-rgb), .04); }
-
 /* ── Muted utility ───────────────────────────────────────────── */
 .ds-muted { opacity: .5; }
 
@@ -536,9 +553,56 @@ body {
   max-width: 1560px !important;
 }
 
-/* Widen article header (theme default: max-w-prose �? 65ch) */
+/* Widen article header (theme default: max-w-prose → 65ch) */
 #single_header {
   max-width: 96rem !important;
+  padding-bottom: 1.4em;
+  border-bottom: 1px solid rgba(255, 255, 255, .06);
+  margin-bottom: .5em;
+}
+#single_header h1 {
+  font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+  font-weight: 800;
+  letter-spacing: -.02em;
+  line-height: 1.15;
+  margin-bottom: .3em;
+}
+/* Article meta (date, reading time) */
+#single_header .text-neutral-500,
+#single_header .dark\:text-neutral-400 {
+  font-size: .82rem;
+  letter-spacing: .02em;
+  opacity: .5;
+}
+
+/* ── Breadcrumb trail (UE-docs inspired) ─────────────────────── */
+.ds-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: .35em;
+  font-size: .72rem;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  letter-spacing: .03em;
+  margin-bottom: .8em;
+  padding: .2em 0;
+}
+.ds-breadcrumb-link {
+  color: rgba(255, 255, 255, .35);
+  text-decoration: none;
+  transition: color .15s;
+}
+.ds-breadcrumb-link:hover {
+  color: var(--ds-accent);
+  text-decoration: none;
+}
+.ds-breadcrumb-sep {
+  color: rgba(255, 255, 255, .15);
+  font-size: .85em;
+  user-select: none;
+}
+.ds-breadcrumb-current {
+  color: rgba(255, 255, 255, .55);
+  font-weight: 600;
 }
 
 /* Widen article body text (theme default: max-w-prose �? 65ch) */
@@ -584,62 +648,202 @@ main > section {
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ── Heading: subtle accent underline on h2 ─────────────────── */
+/* ── Heading hierarchy (UE-docs inspired: clean, generous) ── */
 .article-content h2 {
   position: relative;
-  padding-bottom: .28em;
+  padding-bottom: .4em;
+  margin-top: 3.2em;
+  margin-bottom: 1.1em;
+  letter-spacing: -.01em;
+  /* Subtle top separator for visual section breaks */
+  padding-top: 1em;
+  border-top: 1px solid rgba(255, 255, 255, .04);
 }
+/* First h2 after header — no top border needed */
+.article-content > h2:first-of-type {
+  border-top: none;
+  padding-top: 0;
+  margin-top: 2em;
+}
+/* No bottom accent underline — UE docs uses clean separators above only */
 .article-content h2::after {
-  content: '';
-  position: absolute; bottom: 0; left: 0;
-  width: 2em; height: 2px;
-  background: var(--ds-accent);
-  border-radius: 2px;
-  opacity: .5;
-  transition: width .3s ease, opacity .3s ease;
+  display: none;
 }
-.article-content h2:hover::after {
-  width: 3em;
-  opacity: .8;
+.article-content h3 {
+  margin-top: 2.4em;
+  margin-bottom: .8em;
+}
+.article-content h4 {
+  margin-top: 1.8em;
+  margin-bottom: .6em;
 }
 
-/* ── Smooth image treatment ─────────────────────────────────── */
+/* ── Image treatment (clean — no hover effects, UE-docs style) */
 .article-content img:not(.nozoom) {
-  border-radius: 8px;
-  transition: transform .3s ease, box-shadow .3s ease;
-}
-.article-content img:not(.nozoom):hover {
-  transform: scale(1.01);
-  box-shadow: 0 12px 36px rgba(0,0,0,.25);
+  border-radius: 6px;
 }
 
-/* ── Blockquote polish ──────────────────────────────────────── */
+/* ── Blockquote: subtle, technical ──────────────────────────── */
 .article-content blockquote {
   border-left: 3px solid var(--ds-accent);
   background: rgba(var(--ds-accent-rgb), .03);
-  padding: .8em 1.2em;
-  border-radius: 0 8px 8px 0;
-  margin: 1.2em 0;
-  font-style: italic;
-  opacity: .9;
+  padding: 1em 1.4em;
+  border-radius: 0 6px 6px 0;
+  margin: 1.8em 0;
+  font-style: normal;
+  opacity: .88;
+  font-size: .97em;
 }
 
-/* ── Code inline: subtle accent ─────────────────────────────── */
+/* ── Code inline: dark pill style (UE-docs) ─────────────────── */
 .article-content code:not(.chroma):not([class*="cd-"]) {
-  background: rgba(var(--ds-accent-rgb), .07);
-  border: 1px solid rgba(var(--ds-accent-rgb), .1);
-  border-radius: 4px;
-  padding: .1em .35em;
-  font-size: .88em;
+  background: rgba(255, 255, 255, .1);
+  border: 1px solid rgba(255, 255, 255, .06);
+  border-radius: 5px;
+  padding: .15em .5em;
+  font-size: .85em;
+  font-weight: 500;
+  font-family: ui-monospace, SFMono-Regular, 'Cascadia Code', 'Consolas', monospace;
 }
 
-/* ── Horizontal rule: gradient fade ─────────────────────────── */
+/* ── Horizontal rule: quiet separator ───────────────────────── */
 .article-content hr,
 .prose hr {
   border: none;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(var(--ds-accent-rgb), .2), transparent);
-  margin: 2.5em 0;
+  background: rgba(255, 255, 255, .08);
+  margin: 3em 0;
+}
+
+/* ── Code blocks: clean rounded container (UE-docs style) ──── */
+.highlight-wrapper {
+  border: 1px solid rgba(255, 255, 255, .07);
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, .22);
+  position: relative;
+  overflow: hidden;
+}
+.highlight-wrapper pre {
+  padding: 1em 1.2em !important;
+  font-size: .85em !important;
+  line-height: 1.65 !important;
+}
+.highlight-wrapper code {
+  font-family: ui-monospace, SFMono-Regular, 'Cascadia Code', 'Consolas', monospace;
+}
+
+/* ── Line numbers: UE-docs gutter ────────────────────────────── */
+.highlight .lntable {
+  width: 100%;
+  border-spacing: 0;
+  border-collapse: collapse;
+  margin: 0;
+  table-layout: auto;
+}
+.highlight .lntd {
+  vertical-align: top;
+  padding: 0;
+  border: none;
+}
+/* Line number column */
+.highlight .lntd:first-child {
+  width: 1px;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.highlight .lntd:first-child pre {
+  padding: 1em .7em 1em .9em !important;
+  background: rgba(255, 255, 255, .015) !important;
+  border-right: 1px solid rgba(255, 255, 255, .06);
+  margin: 0;
+}
+/* Line number spans — right-aligned like UE docs */
+.highlight .lnt,
+.highlight .ln {
+  color: rgba(255, 255, 255, .2);
+  font-size: .82em;
+  font-family: ui-monospace, SFMono-Regular, 'Cascadia Code', 'Consolas', monospace;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.65;
+  display: block;
+  text-align: right;
+}
+/* Code column */
+.highlight .lntd:last-child pre {
+  padding: 1em 1.2em !important;
+  margin: 0;
+}
+/* Keep .highlight tables from getting prose styles */
+.prose .lntable,
+.article-content .lntable {
+  margin: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+.prose .lntable th,
+.prose .lntable td,
+.article-content .lntable th,
+.article-content .lntable td {
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+}
+.prose .lntable tr:hover,
+.article-content .lntable tr:hover {
+  background: transparent !important;
+}
+
+/* ── Code block language label ───────────────────────────────── */
+.highlight-wrapper .copy-button {
+  position: absolute;
+  top: .5em;
+  right: .5em;
+  z-index: 5;
+  opacity: .3;
+  transition: opacity .15s;
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: 4px;
+  color: inherit;
+  padding: .25em .5em;
+  font-size: .72em;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  cursor: pointer;
+}
+.highlight-wrapper:hover .copy-button {
+  opacity: .6;
+}
+.highlight-wrapper .copy-button:hover {
+  opacity: 1;
+  background: rgba(var(--ds-accent-rgb), .12);
+}
+
+/* ── Strong / emphasis: slightly lighter weight ──────────────── */
+.article-content strong {
+  font-weight: 700;
+  color: rgba(255, 255, 255, .95);
+}
+.article-content em {
+  font-style: italic;
+  color: rgba(255, 255, 255, .8);
+}
+
+/* ── Paragraph spacing: more breathing room ──────────────────── */
+.article-content p {
+  margin-bottom: 1.4em;
+  line-height: 1.85;
+}
+.article-content li {
+  line-height: 1.75;
+  margin-bottom: .3em;
+}
+
+/* ── Lists: clean indentation ────────────────────────────────── */
+.article-content ul,
+.article-content ol {
+  margin-bottom: 1.6em;
+  padding-left: 1.4em;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -653,7 +857,434 @@ main > section {
     transition: none !important;
   }
   .sc::before { animation: none !important; }
-  .article-content h2::after { transition: none !important; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   UE-DOCS INSPIRED: Posts page, article chrome, tables, progress
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Reading progress bar (top of page) ──────────────────────── */
+.ds-progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 0%;
+  height: 2px;
+  background: linear-gradient(90deg, var(--ds-accent), var(--ds-highlight));
+  z-index: 9999;
+  transition: width .1s linear;
+  pointer-events: none;
+}
+
+/* ── Back-to-top button ──────────────────────────────────────── */
+.ds-back-to-top {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, .1);
+  background: rgba(11, 11, 14, .85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: rgba(255, 255, 255, .6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity .25s ease, transform .25s ease, background .15s ease, border-color .15s ease;
+  z-index: 900;
+  pointer-events: none;
+}
+.ds-back-to-top.ds-visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+.ds-back-to-top:hover {
+  background: rgba(var(--ds-accent-rgb), .12);
+  border-color: rgba(var(--ds-accent-rgb), .3);
+  color: var(--ds-accent);
+}
+.ds-back-to-top svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ── Posts page hero section ─────────────────────────────────── */
+.ds-posts-hero {
+  margin: -.5em 0 2.5em;
+  padding: 2.8em 0 2.2em;
+  border-bottom: 1px solid rgba(255, 255, 255, .06);
+  position: relative;
+}
+.ds-posts-hero::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 3em;
+  height: 2px;
+  background: var(--ds-accent);
+  border-radius: 2px;
+  opacity: .5;
+}
+.ds-posts-hero-label {
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--ds-accent);
+  margin: 0 0 .6em;
+  opacity: .8;
+}
+.ds-posts-hero-title {
+  font-size: clamp(2rem, 4vw, 3rem) !important;
+  font-weight: 800;
+  letter-spacing: -.025em;
+  line-height: 1.1;
+  margin: 0 0 .6em !important;
+  color: rgba(255, 255, 255, .95);
+  padding: 0;
+  border: 0;
+}
+.ds-posts-hero-title::before,
+.ds-posts-hero-title::after {
+  display: none;
+}
+.ds-posts-hero-desc {
+  font-size: 1.05em;
+  line-height: 1.7;
+  max-width: 68ch;
+  margin: 0;
+  opacity: .6;
+}
+
+/* ── Posts page section header ───────────────────────────────── */
+.ds-posts-section {
+  margin: 0 0 .8em;
+}
+.ds-posts-section-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1em;
+  padding: .4em 0;
+}
+.ds-posts-section-marker {
+  width: 3px;
+  min-height: 2.8em;
+  border-radius: 2px;
+  background: var(--ds-accent);
+  opacity: .5;
+  flex-shrink: 0;
+  margin-top: .2em;
+}
+.ds-posts-section-title {
+  font-size: 1.3em !important;
+  font-weight: 700;
+  margin: 0 0 .25em !important;
+  letter-spacing: -.01em;
+  color: rgba(255, 255, 255, .9);
+  padding: 0;
+  border: 0;
+}
+.ds-posts-section-title::before,
+.ds-posts-section-title::after {
+  display: none;
+}
+.ds-posts-section-desc {
+  font-size: .9em;
+  line-height: 1.65;
+  opacity: .5;
+  margin: 0;
+  max-width: 72ch;
+}
+.ds-posts-section-count {
+  margin-left: auto;
+  font-size: .72rem;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  opacity: .35;
+  white-space: nowrap;
+  padding-top: .3em;
+}
+
+/* ── Posts series cards: refined grid ────────────────────────── */
+.ds-posts-series-card {
+  position: relative;
+}
+.ds-posts-series-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, .06);
+  pointer-events: none;
+  transition: border-color .2s ease;
+}
+.ds-posts-series-card:hover::after {
+  border-color: rgba(var(--ds-accent-rgb), .2);
+}
+
+/* ── Series navigation banner: refined ───────────────────────── */
+.ds-series-nav {
+  margin: 0 0 2em;
+  padding: .65em 1.2em;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .025);
+  border: 1px solid rgba(255, 255, 255, .06);
+  font-size: .82em;
+  line-height: 1.6;
+  opacity: .75;
+}
+.ds-series-nav a {
+  font-weight: 600;
+  transition: color .15s ease;
+}
+.ds-series-nav a:hover {
+  color: var(--ds-accent);
+}
+
+/* ── Heading anchors: subtle accent, appear on hover ─────────── */
+.article-content h2 .group-hover\:opacity-100,
+.article-content h3 .group-hover\:opacity-100,
+.article-content h4 .group-hover\:opacity-100 {
+  opacity: 0 !important;
+  transition: opacity .2s ease;
+}
+.article-content h2:hover .group-hover\:opacity-100,
+.article-content h3:hover .group-hover\:opacity-100,
+.article-content h4:hover .group-hover\:opacity-100 {
+  opacity: .35 !important;
+}
+.article-content h2:hover .group-hover\:opacity-100:hover,
+.article-content h3:hover .group-hover\:opacity-100:hover,
+.article-content h4:hover .group-hover\:opacity-100:hover {
+  opacity: .7 !important;
+}
+.article-content h2 .group-hover\:opacity-100 a,
+.article-content h3 .group-hover\:opacity-100 a,
+.article-content h4 .group-hover\:opacity-100 a {
+  color: var(--ds-accent) !important;
+  font-weight: 400;
+}
+
+/* ── Table styling: clean, technical (UE-docs inspired) ──────── */
+.article-content table,
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.6em 0;
+  font-size: .88em;
+  line-height: 1.6;
+}
+.article-content thead th,
+.prose thead th {
+  text-align: left;
+  font-weight: 700;
+  font-size: .78em;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  padding: .7em 1em;
+  border-bottom: 2px solid rgba(var(--ds-accent-rgb), .2);
+  color: rgba(255, 255, 255, .7);
+  white-space: nowrap;
+}
+.article-content tbody td,
+.prose tbody td {
+  padding: .65em 1em;
+  border-bottom: 1px solid rgba(255, 255, 255, .04);
+  vertical-align: top;
+}
+.article-content tbody tr:hover,
+.prose tbody tr:hover {
+  background: rgba(255, 255, 255, .02);
+}
+/* Alternating row tint */
+.article-content tbody tr:nth-child(even),
+.prose tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, .015);
+}
+.article-content tbody tr:nth-child(even):hover,
+.prose tbody tr:nth-child(even):hover {
+  background: rgba(255, 255, 255, .035);
+}
+
+/* ── Custom scrollbar for code blocks ────────────────────────── */
+.highlight-wrapper pre::-webkit-scrollbar {
+  height: 6px;
+}
+.highlight-wrapper pre::-webkit-scrollbar-track {
+  background: transparent;
+}
+.highlight-wrapper pre::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, .12);
+  border-radius: 3px;
+}
+.highlight-wrapper pre::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, .22);
+}
+/* Firefox scrollbar */
+.highlight-wrapper pre {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, .12) transparent;
+}
+
+/* ── Callout: UE-docs icon-left horizontal layout ────────────── */
+.ds-callout {
+  margin: 1.6em 0;
+  padding: 1.1em 1.3em;
+  border-radius: 10px;
+  font-size: .92em;
+  line-height: 1.7;
+  border: none;
+  border-left: none;
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: .9em;
+}
+/* Icon column — pseudo-element with SVG */
+.ds-callout::before {
+  flex-shrink: 0;
+  display: block;
+  margin-top: .15em;
+  line-height: 1;
+}
+/* Icon-only (no text labels) — matches UE docs pattern */
+.ds-callout--info::before {
+  content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%2358a6ff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 16v-4'/%3E%3Cpath d='M12 8h.01'/%3E%3C/svg%3E");
+}
+.ds-callout--success::before {
+  content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%234ec9b0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M22 11.08V12a10 10 0 1 1-5.93-9.14'/%3E%3Cpolyline points='22 4 12 14.01 9 11.01'/%3E%3C/svg%3E");
+}
+.ds-callout--warn::before {
+  content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23e5c07b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z'/%3E%3Cline x1='12' y1='9' x2='12' y2='13'/%3E%3Cline x1='12' y1='17' x2='12.01' y2='17'/%3E%3C/svg%3E");
+}
+.ds-callout--danger::before {
+  content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23f44747' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolygon points='7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2'/%3E%3Cline x1='12' y1='8' x2='12' y2='12'/%3E%3Cline x1='12' y1='16' x2='12.01' y2='16'/%3E%3C/svg%3E");
+}
+.ds-callout--info    { background: rgba(var(--ds-info-rgb), .06); }
+.ds-callout--success { background: rgba(var(--ds-success-rgb), .06); }
+.ds-callout--warn    { background: rgba(var(--ds-warn-rgb), .06); }
+.ds-callout--danger  { background: rgba(var(--ds-danger-rgb), .06); }
+/* Callout paragraph spacing */
+.ds-callout p {
+  margin: 0 0 .5em 0;
+}
+.ds-callout p:last-child {
+  margin-bottom: 0;
+}
+.ds-callout code {
+  background: rgba(255, 255, 255, .1);
+  padding: .15em .45em;
+  border-radius: 4px;
+  font-size: .88em;
+}
+.ds-callout a {
+  color: var(--ds-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ── Article content first paragraph: slightly larger ────────── */
+.article-content > p:first-of-type {
+  font-size: 1.08em;
+  line-height: 1.8;
+  opacity: .85;
+}
+
+/* ── Article footer: sharing links area ──────────────────────── */
+.article-content + div .sharing-links,
+footer.pt-8 {
+  border-top: 1px solid rgba(255, 255, 255, .06);
+  padding-top: 1.5em;
+}
+
+/* ── Figure captions ─────────────────────────────────────────── */
+.article-content figure {
+  margin: 2em 0;
+}
+.article-content figcaption {
+  text-align: center;
+  font-size: .8em;
+  opacity: .45;
+  margin-top: .6em;
+  font-style: italic;
+}
+
+/* ── Nested list hierarchy ───────────────────────────────────── */
+.article-content ul ul,
+.article-content ol ol,
+.article-content ul ol,
+.article-content ol ul {
+  margin-top: .3em;
+  margin-bottom: .3em;
+}
+.article-content ul > li::marker {
+  color: rgba(var(--ds-accent-rgb), .4);
+}
+
+/* ── Tag / taxonomy badges (UE-docs style dark pills) ────────── */
+.flex.flex-row.flex-wrap.items-center a[href*="/tags/"] > span > span,
+.flex.flex-row.flex-wrap.items-center a[href*="/categories/"] > span > span {
+  background: rgba(255, 255, 255, .07) !important;
+  border: 1px solid rgba(255, 255, 255, .10) !important;
+  color: rgba(255, 255, 255, .55) !important;
+  border-radius: 999px !important;
+  padding: .2em .85em !important;
+  font-size: .75rem !important;
+  font-weight: 500 !important;
+  letter-spacing: .03em;
+  text-transform: lowercase;
+  transition: background .2s, color .2s, border-color .2s;
+}
+.flex.flex-row.flex-wrap.items-center a[href*="/tags/"]:hover > span > span,
+.flex.flex-row.flex-wrap.items-center a[href*="/categories/"]:hover > span > span {
+  background: rgba(var(--ds-accent-rgb), .12) !important;
+  border-color: rgba(var(--ds-accent-rgb), .25) !important;
+  color: rgba(255, 255, 255, .8) !important;
+}
+/* Container spacing */
+.flex.flex-row.flex-wrap.items-center:has(a[href*="/tags/"]),
+.flex.flex-row.flex-wrap.items-center:has(a[href*="/categories/"]) {
+  gap: .4em;
+  margin-top: 1.5em;
+  padding-top: 1.2em;
+  border-top: 1px solid rgba(255, 255, 255, .06);
+}
+
+/* ── Article-level responsive refinements ────────────────────── */
+@media (max-width: 768px) {
+  .ds-posts-hero {
+    padding: 1.8em 0 1.4em;
+  }
+  .ds-posts-hero-title {
+    font-size: 1.8rem;
+  }
+  .ds-posts-section-header {
+    flex-direction: column;
+    gap: .5em;
+  }
+  .ds-posts-section-count {
+    margin-left: 0;
+  }
+  #single_header h1 {
+    font-size: 1.6rem;
+  }
+  .ds-back-to-top {
+    bottom: 1rem;
+    right: 1rem;
+  }
 }
 
 /* ── Collapsible code blocks (include-code shortcode) ────────── */
@@ -702,6 +1333,13 @@ main > section {
 .code-preview-body {
   position: relative;
   overflow: hidden;
+}
+/* Hide line numbers in collapsed preview — they're confusing at partial view */
+.code-preview-body .lntd:first-child {
+  display: none;
+}
+.code-preview-body .lntable {
+  margin: 0;
 }
 
 /* Fade overlay at the bottom of the preview */

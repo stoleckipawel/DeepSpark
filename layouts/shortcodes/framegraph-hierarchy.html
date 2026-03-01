@@ -5,10 +5,10 @@
   the shared 1200×627 frame is in partials/thumbnails/render.html.
 */}}
 {{ $posts := slice
-  (dict "slug" "frame-graph-theory"     "thumbSlug" "frame-graph-theory-variant-b" "part" "Part I"   "subtitle" "Learn It"       "subtitleColor" "#8dd5ff")
-  (dict "slug" "frame-graph-build-it"   "part" "Part II"  "subtitle" "Built It"       "subtitleColor" "#34f5d5")
-  (dict "slug" "frame-graph-advanced"   "part" "Part III" "subtitle" "Go Beyond MVP"  "subtitleColor" "#ffb455")
-  (dict "slug" "frame-graph-production" "part" "Part IV"  "subtitle" "Scale UP"       "subtitleColor" "#5ec6ff")
+  (dict "slug" "frame-graph-theory"     "thumbSlug" "frame-graph-theory-variant-b" "subtitle" "Learn It"       "subtitleColor" "#8dd5ff")
+  (dict "slug" "frame-graph-build-it"   "subtitle" "Built It"       "subtitleColor" "#34f5d5")
+  (dict "slug" "frame-graph-advanced"   "subtitle" "Go Beyond MVP"  "subtitleColor" "#ffb455")
+  (dict "slug" "frame-graph-production" "subtitle" "Scale UP"       "subtitleColor" "#5ec6ff")
 }}
 
 <div class="ds-posts-series" data-keep-emoji="true">
@@ -22,9 +22,17 @@
             "slug"          $thumbSlug
             "subtitle"      .subtitle
             "subtitleColor" .subtitleColor
-            "partLabel"     .part
             "ariaLabel"     (printf "%s thumbnail" $page.Title)
           ) }}
+          <div class="ds-posts-card-info">
+            <h3 class="ds-posts-card-title">{{ $page.Title }}</h3>
+            <p class="ds-posts-card-summary">{{ $page.Description | truncate 120 }}</p>
+            <div class="ds-posts-card-meta">
+              <span>{{ $page.ReadingTime }} min read</span>
+              <span class="ds-posts-card-dot">&middot;</span>
+              <span>{{ $page.Date.Format "Jan 2006" }}</span>
+            </div>
+          </div>
         </a>
       {{ end }}
     {{ end }}
