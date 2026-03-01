@@ -1,0 +1,31 @@
+{{/*
+  Data-driven series grid.
+  Each entry only differs in subtitle text, colour, and part label.
+  The actual artwork lives in partials/thumbnails/inner-<slug>.html;
+  the shared 1200×627 frame is in partials/thumbnails/render.html.
+*/}}
+{{ $posts := slice
+  (dict "slug" "frame-graph-theory"     "part" "Part I"   "subtitle" "THEORY"     "subtitleColor" "#33e6ff")
+  (dict "slug" "frame-graph-build-it"   "part" "Part II"  "subtitle" "BUILD IT"   "subtitleColor" "#34f5d5")
+  (dict "slug" "frame-graph-advanced"   "part" "Part III" "subtitle" "BEYOND MVP" "subtitleColor" "#ffb455")
+  (dict "slug" "frame-graph-production" "part" "Part IV"  "subtitle" "PRODUCTION" "subtitleColor" "#5ec6ff")
+}}
+
+<div class="ds-posts-series" data-keep-emoji="true">
+  <div class="ds-posts-series-grid">
+    {{ range $posts }}
+      {{ $page := site.GetPage (printf "/posts/%s" .slug) }}
+      {{ if $page }}
+        <a class="ds-posts-series-card" href="{{ $page.RelPermalink }}">
+          {{ partial "thumbnails/render.html" (dict
+            "slug"          .slug
+            "subtitle"      .subtitle
+            "subtitleColor" .subtitleColor
+            "partLabel"     .part
+            "ariaLabel"     (printf "%s thumbnail" $page.Title)
+          ) }}
+        </a>
+      {{ end }}
+    {{ end }}
+  </div>
+</div>

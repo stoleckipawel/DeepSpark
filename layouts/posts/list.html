@@ -1,0 +1,20 @@
+{{ define "main" }}
+  {{ .Scratch.Set "scope" "list" }}
+
+  {{/* Hero */}}
+  {{ if site.Params.list.showHero | default false }}
+    {{ $heroStyle := print "hero/" site.Params.list.heroStyle ".html" }}
+    {{ if templates.Exists ( printf "partials/%s" $heroStyle ) }}
+      {{ partial $heroStyle . }}
+    {{ else }}
+      {{ partial "hero/basic.html" . }}
+    {{ end }}
+  {{ end }}
+
+  {{/* Description/content only: custom curated hierarchy lives in _index.md */}}
+  <section class="mt-0 prose flex max-w-full flex-col dark:prose-invert mb-10">
+    <div class="min-w-0 min-h-0 max-w-full w-full">
+      {{ .Content }}
+    </div>
+  </section>
+{{ end }}

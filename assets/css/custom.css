@@ -23,6 +23,78 @@
 .main-menu .logo { max-height: 1.4rem; max-width: 10rem; }
 .min-h-\[148px\] { min-height: 56px !important; }
 
+/* ── Posts page hierarchy: Frame Graph series ───────────────── */
+.ds-posts-series {
+  margin: 1.2em 0 1.8em;
+  border: 0;
+  background: transparent;
+  border-radius: 0;
+  overflow: visible;
+}
+.ds-posts-series-grid {
+  display: grid;
+  gap: 1.6em;
+  padding: .85em;
+  width: 100%;
+  grid-template-columns: repeat(2, minmax(300px, 1fr));
+  justify-content: stretch;
+}
+.ds-posts-series-card {
+  display: block;
+  width: auto;
+  border-radius: 0;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+  text-decoration: none;
+  color: inherit;
+  transition: none;
+}
+.ds-posts-series-card:hover {
+  text-decoration: none;
+}
+/* ── Unified inline-SVG thumbnail ─────────────────────────── */
+.ds-thumbnail-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 12px;
+}
+.ds-posts-series-body {
+  padding: .55em .05em 0;
+}
+.ds-posts-series-meta {
+  margin: 0 0 .22em;
+  font-size: .68rem;
+  line-height: 1.2;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  font-weight: 700;
+  opacity: .65;
+}
+.ds-posts-series-title {
+  margin: 0;
+  font-size: clamp(1rem, .95vw, 1.18rem);
+  font-weight: 700;
+  line-height: 1.2;
+  color: inherit;
+}
+.ds-posts-series-desc {
+  margin: 0;
+  font-size: .88em;
+  line-height: 1.6;
+  opacity: .75;
+}
+:is(.dark,.scheme-congo) .ds-posts-series-card {
+  background: transparent;
+}
+@media (max-width: 700px) {
+  .ds-posts-series-grid {
+    grid-template-columns: minmax(220px, 1fr);
+    gap: 1em;
+    padding: .5em 0;
+  }
+}
 /* ── Footer: break out of body max-width ─────────────────────── */
 #site-footer {
   width: 100vw !important;

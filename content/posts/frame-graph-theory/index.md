@@ -8,6 +8,7 @@ description: "The theory behind frame graphs: how a DAG of passes and resources 
 tags: ["rendering", "frame-graph", "gpu", "architecture"]
 categories: ["analysis"]
 summary: "Declare → Compile → Execute. How a directed acyclic graph of render passes and virtual resources lets an engine automate topological sorting, barrier insertion, pass culling, and VRAM aliasing."
+listImage: "images/thumbnails/frame-graph-theory-e3.svg"
 showTableOfContents: false
 keywords: ["frame graph", "render graph", "render pass", "DAG", "topological sort", "GPU barriers", "resource aliasing", "VRAM", "Vulkan", "D3D12"]
 ---
@@ -22,7 +23,7 @@ keywords: ["frame graph", "render graph", "render pass", "DAG", "topological sor
 
 Behind every smooth frame is a brutal scheduling problem: which passes can run in parallel, which buffers can reuse the same memory, and which barriers are actually necessary. Frame graphs solve it: declare what each pass reads and writes, and the graph handles the rest. This series breaks down the theory, builds a real implementation in C++, and shows how the same ideas scale to production engines like UE5's RDG.
 
-<div class="fg-reveal" style="margin:1.5em 0;border-radius:12px;overflow:hidden;border:1.5px solid rgba(var(--ds-indigo-rgb),.25);background:linear-gradient(135deg,rgba(var(--ds-indigo-rgb),.04),transparent);">
+<div class="fg-reveal" data-keep-emoji="true" style="margin:1.5em 0;border-radius:12px;overflow:hidden;border:1.5px solid rgba(var(--ds-indigo-rgb),.25);background:linear-gradient(135deg,rgba(var(--ds-indigo-rgb),.04),transparent);">
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0;">
     <div style="padding:1em;text-align:center;border-right:1px solid rgba(var(--ds-indigo-rgb),.12);border-bottom:1px solid rgba(var(--ds-indigo-rgb),.12);">
       <div style="font-size:1.6em;margin-bottom:.15em;">📖</div>

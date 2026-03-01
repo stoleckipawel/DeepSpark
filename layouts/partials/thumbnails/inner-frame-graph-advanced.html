@@ -1,0 +1,60 @@
+{{/*  Inner artwork for "Frame Graph: Beyond MVP" thumbnail.
+      Receives dict: .id (SVG-ID namespace)  */}}
+{{ $id := .id }}
+
+{{/* ── Extra defs ──────────────────────────────────────────── */}}
+<defs>
+  <filter id="nodeGlow-{{ $id }}" x="-40%" y="-40%" width="180%" height="180%">
+    <feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="#8defff" flood-opacity=".5"/>
+  </filter>
+</defs>
+
+{{/* ── Left side: feature headlines + bar chart ────────────── */}}
+<text x="54" y="254" fill="#f7faff" font-family="Inter,system-ui,sans-serif"
+      font-size="46" font-weight="900">ASYNC COMPUTE</text>
+<text x="54" y="316" fill="#57f08d" font-family="Inter,system-ui,sans-serif"
+      font-size="46" font-weight="900">SPLIT BARRIERS</text>
+<text x="54" y="382" fill="#b2c2de" font-family="Inter,system-ui,sans-serif"
+      font-size="24">Queue overlap · Fence reduction · Better throughput</text>
+
+<g transform="translate(50,420)">
+  <rect x="0"   y="38"  width="84" height="110" fill="#17263d"/>
+  <rect x="100" y="0"   width="84" height="148" fill="#1f3350"/>
+  <rect x="200" y="56"  width="84" height="92"  fill="#1a2b44"/>
+  <rect x="300" y="20"  width="84" height="128" fill="#244067"/>
+  <rect x="400" y="72"  width="84" height="76"  fill="#1b314f"/>
+  <rect x="500" y="30"  width="84" height="118" fill="#244067"/>
+  <polyline points="0,30 100,50 200,18 300,38 400,6 500,26"
+            fill="none" stroke="#57f08d" stroke-width="8" stroke-linecap="round"/>
+</g>
+
+{{/* ── Right side: 3-D panel with dual-queue timeline ──────── */}}
+<g filter="url(#softShadow-{{ $id }})">
+  <polygon points="992,208 1512,208 1550,240 1030,240" fill="url(#panelTop-{{ $id }})"/>
+  <polygon points="1512,208 1550,240 1550,548 1512,516" fill="url(#panelSide-{{ $id }})"/>
+  <polygon points="992,208 1030,240 1030,548 992,516" fill="#102239"/>
+  <polygon points="1030,240 1550,240 1550,548 1030,548" fill="#11233b" stroke="#3a6293" stroke-width="2"/>
+
+  {{/* Queue lanes */}}
+  <rect x="1060" y="304" width="460" height="34" rx="10" fill="#1e3f66"/>
+  <rect x="1060" y="412" width="460" height="34" rx="10" fill="#1e3f66"/>
+
+  {{/* Work blocks */}}
+  <rect x="1092" y="307" width="130" height="28" rx="8" fill="#5ec6ff"/>
+  <rect x="1242" y="307" width="164" height="28" rx="8" fill="#5ec6ff"/>
+  <rect x="1164" y="415" width="188" height="28" rx="8" fill="#57f08d"/>
+  <rect x="1376" y="415" width="120" height="28" rx="8" fill="#57f08d"/>
+
+  {{/* Split-barrier dashes */}}
+  <line x1="1298" y1="302" x2="1298" y2="447" stroke="#ffb974" stroke-width="4" stroke-dasharray="7 7"/>
+  <line x1="1332" y1="302" x2="1332" y2="447" stroke="#ffb974" stroke-width="4" stroke-dasharray="7 7"/>
+  <line x1="1298" y1="374" x2="1332" y2="374" stroke="#ffe0bf" stroke-width="4"/>
+
+  {{/* Labels */}}
+  <text x="1062" y="286" fill="#b6dbff" font-family="JetBrains Mono,Fira Code,monospace"
+        font-size="18" font-weight="700">GFX QUEUE</text>
+  <text x="1062" y="394" fill="#aaf7c8" font-family="JetBrains Mono,Fira Code,monospace"
+        font-size="18" font-weight="700">ASYNC COMPUTE</text>
+  <text x="1350" y="374" fill="#ffe0bf" font-family="JetBrains Mono,Fira Code,monospace"
+        font-size="17" font-weight="700">SPLIT BARRIER</text>
+</g>

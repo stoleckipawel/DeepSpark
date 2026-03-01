@@ -8,6 +8,7 @@ description: "Async compute and split barriers: how the frame graph compiler squ
 tags: ["rendering", "frame-graph", "gpu", "architecture"]
 categories: ["analysis"]
 summary: "How the frame graph compiler schedules async compute across GPU queues and splits barrier transitions to hide cache-flush latency."
+listImage: "images/thumbnails/frame-graph-advanced.svg"
 showTableOfContents: false
 keywords: ["async compute", "split barriers", "GPU queue", "fence minimization", "render graph optimization", "Vulkan", "D3D12"]
 ---

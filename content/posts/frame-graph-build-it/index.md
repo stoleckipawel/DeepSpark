@@ -8,6 +8,7 @@ description: "Three iterations from blank file to working frame graph with autom
 tags: ["rendering", "frame-graph", "gpu", "architecture", "cpp"]
 categories: ["analysis"]
 summary: "Three C++ iterations (v1 scaffold, v2 dependencies and barriers, v3 lifetime analysis and memory aliasing), building a complete frame graph from scratch."
+listImage: "images/thumbnails/frame-graph-theory-f2.svg"
 showTableOfContents: false
 keywords: ["frame graph C++", "render graph implementation", "topological sort", "Kahn algorithm", "barrier insertion", "memory aliasing", "resource lifetime", "GPU programming"]
 ---
@@ -440,7 +441,7 @@ Compiles and runs: the execute lambdas are stubs, but the scaffolding is real. E
 
 Four steps in strict order, each one's output feeding the next:
 
-<div style="margin:.8em 0 1.2em;display:grid;grid-template-columns:1fr auto 1fr auto 1fr auto 1fr;gap:0;align-items:stretch;border-radius:10px;overflow:hidden;border:1.5px solid rgba(var(--ds-indigo-rgb),.2);">
+<div data-keep-emoji="true" style="margin:.8em 0 1.2em;display:grid;grid-template-columns:1fr auto 1fr auto 1fr auto 1fr;gap:0;align-items:stretch;border-radius:10px;overflow:hidden;border:1.5px solid rgba(var(--ds-indigo-rgb),.2);">
   <a href="#v2-versioning" style="padding:.7em .5em .5em;background:rgba(var(--ds-info-rgb),.05);text-decoration:none;text-align:center;transition:background .15s;" onmouseover="this.style.background='rgba(var(--ds-info-rgb),.12)'" onmouseout="this.style.background='rgba(var(--ds-info-rgb),.05)'">
     <div style="font-size:.65em;font-weight:800;opacity:.45;margin-bottom:.15em;">STEP 1</div>
     <div style="font-size:1.2em;margin-bottom:.15em;">🔀</div>

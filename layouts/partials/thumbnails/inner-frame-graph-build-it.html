@@ -1,0 +1,53 @@
+{{/*  Inner artwork for "Frame Graph: Build It" thumbnail.
+      Receives dict: .id (SVG-ID namespace), .codeImageURL  */}}
+{{ $id := .id }}
+
+{{/* ── Extra defs ──────────────────────────────────────────── */}}
+<defs>
+  <linearGradient id="codeFade-{{ $id }}" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%"   stop-color="#11233b" stop-opacity=".42"/>
+    <stop offset="35%"  stop-color="#11233b" stop-opacity=".18"/>
+    <stop offset="70%"  stop-color="#11233b" stop-opacity=".05"/>
+    <stop offset="100%" stop-color="#11233b" stop-opacity="0"/>
+  </linearGradient>
+  <linearGradient id="codeVignette-{{ $id }}" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%"   stop-color="#070c18" stop-opacity=".22"/>
+    <stop offset="22%"  stop-color="#070c18" stop-opacity="0"/>
+    <stop offset="78%"  stop-color="#070c18" stop-opacity="0"/>
+    <stop offset="100%" stop-color="#070c18" stop-opacity=".25"/>
+  </linearGradient>
+  <clipPath id="codeClip-{{ $id }}">
+    <rect x="1000" y="210" width="560" height="340" rx="16"/>
+  </clipPath>
+</defs>
+
+{{/* ── Left side: LOC progression bars ─────────────────────── */}}
+<rect x="54" y="220" width="640" height="44" rx="8" fill="#1b3352"/>
+<text x="76" y="250" fill="#f7faff" font-family="JetBrains Mono,Fira Code,monospace"
+      font-size="24" font-weight="700">v1 ~ 90 LOC</text>
+
+<rect x="54" y="278" width="730" height="44" rx="8" fill="#1a3c49"/>
+<text x="76" y="308" fill="#b8ffe6" font-family="JetBrains Mono,Fira Code,monospace"
+      font-size="24" font-weight="700">v2 ~ 260 LOC</text>
+
+<rect x="54" y="336" width="810" height="44" rx="8" fill="#3f2c3f"/>
+<text x="76" y="366" fill="#ffd2a8" font-family="JetBrains Mono,Fira Code,monospace"
+      font-size="24" font-weight="700">v3 ~ 500 LOC</text>
+
+<text x="54" y="438" fill="#b2c2de" font-family="Inter,system-ui,sans-serif"
+      font-size="25">From scaffold to full compiler plan.</text>
+<text x="54" y="478" fill="#b2c2de" font-family="Inter,system-ui,sans-serif"
+      font-size="25">Sorting, culling, barriers, aliasing.</text>
+
+{{/* ── Right side: code screenshot panel ───────────────────── */}}
+<g filter="url(#softShadow-{{ $id }})">
+  <g clip-path="url(#codeClip-{{ $id }})">
+    <image href="{{ .codeImageURL }}" x="1000" y="210" width="560" height="340"
+           preserveAspectRatio="xMinYMid slice"/>
+    <rect x="1000" y="210" width="560" height="340" fill="url(#codeFade-{{ $id }})"/>
+    <rect x="1000" y="210" width="560" height="340" fill="url(#codeVignette-{{ $id }})"/>
+  </g>
+
+  <text x="1062" y="478" fill="#9ec3ef" font-family="JetBrains Mono,Fira Code,monospace"
+        font-size="17" font-weight="700">SCAFFOLD → VALIDATE → COMPILE</text>
+</g>

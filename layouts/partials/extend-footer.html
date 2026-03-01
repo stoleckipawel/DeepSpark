@@ -100,7 +100,7 @@
   }
 
   function shouldSkip(el) {
-    return !!el.closest('code, pre, kbd, samp, script, style, textarea, .highlight, .chroma');
+    return !!el.closest('code, pre, kbd, samp, script, style, textarea, .highlight, .chroma, .ds-callout, [data-keep-emoji]');
   }
 
   function stripRenderedEmoji(root) {

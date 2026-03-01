@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 627" width="1200" height="627" role="img" aria-label="Frame Graph Theory thumbnail">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f1b33"/>
+      <stop offset="100%" stop-color="#070c18"/>
+    </linearGradient>
+    <linearGradient id="line" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#35e7ff"/>
+      <stop offset="100%" stop-color="#68ff9a"/>
+    </linearGradient>
+    <linearGradient id="panelTop" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#213a62"/>
+      <stop offset="100%" stop-color="#11233b"/>
+    </linearGradient>
+    <linearGradient id="panelSide" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#132740"/>
+      <stop offset="100%" stop-color="#0a1526"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="160%" height="180%">
+      <feDropShadow dx="0" dy="18" stdDeviation="14" flood-color="#000" flood-opacity=".55"/>
+    </filter>
+  </defs>
+  <g transform="translate(0 51) scale(0.75)">
+  <rect x="8" y="8" width="1584" height="684" rx="28" fill="url(#bg)"/>
+
+  <text x="54" y="96" fill="#f7faff" font-family="Inter,system-ui,sans-serif" font-size="64" font-weight="900" letter-spacing="1.2">FRAME GRAPH</text>
+  <text x="54" y="166" fill="#33e6ff" font-family="Inter,system-ui,sans-serif" font-size="64" font-weight="900" letter-spacing="1.2">THEORY</text>
+  <text x="1538" y="84" text-anchor="end" fill="#d5e0f5" font-family="Inter,system-ui,sans-serif" font-size="24" font-weight="700">Part I</text>
+
+  <rect x="54" y="214" width="760" height="2" fill="url(#line)" opacity=".75"/>
+  <text x="54" y="270" fill="#e8f0ff" font-family="Inter,system-ui,sans-serif" font-size="36" font-weight="800">Declare → Compile → Execute</text>
+  <text x="54" y="316" fill="#b2c2de" font-family="Inter,system-ui,sans-serif" font-size="24">DAG scheduling · Barrier generation · Memory aliasing</text>
+
+  <polyline points="62,520 170,492 278,500 386,454 494,468 602,424 710,438 818,392" fill="none" stroke="#57f08d" stroke-width="10" stroke-linecap="round"/>
+  <rect x="54" y="566" width="780" height="10" rx="5" fill="#1b3352"/>
+  <rect x="54" y="566" width="536" height="10" rx="5" fill="#57f08d"/>
+
+  <g filter="url(#softShadow)">
+    <polygon points="992,208 1512,208 1550,240 1030,240" fill="url(#panelTop)"/>
+    <polygon points="1512,208 1550,240 1550,548 1512,516" fill="url(#panelSide)"/>
+    <polygon points="992,208 1030,240 1030,548 992,516" fill="#102239"/>
+    <polygon points="1030,240 1550,240 1550,548 1030,548" fill="#11233b" stroke="#3a6293" stroke-width="2"/>
+
+    <g transform="translate(154.5,0) scale(0.85,1)">
+    <g stroke="#a4c9ee" stroke-width="3" fill="none" stroke-linecap="round" opacity=".95">
+      <line x1="1126" y1="382" x2="1186" y2="324"/>
+      <line x1="1126" y1="392" x2="1162" y2="440"/>
+      <line x1="1252" y1="440" x2="1296" y2="440"/>
+      <line x1="1274" y1="324" x2="1360" y2="324"/>
+      <line x1="1364" y1="440" x2="1386" y2="350"/>
+      <line x1="1252" y1="452" x2="1394" y2="352"/>
+      <line x1="1450" y1="350" x2="1538" y2="344"/>
+    </g>
+
+    <rect x="1058" y="364" width="68" height="48" rx="18" fill="#2f5f95" stroke="#78b4ff" stroke-width="2"/>
+    <rect x="1186" y="294" width="88" height="48" rx="18" fill="#2f5f95" stroke="#78b4ff" stroke-width="2"/>
+    <rect x="1162" y="414" width="90" height="48" rx="18" fill="#2f5f95" stroke="#78b4ff" stroke-width="2"/>
+    <rect x="1296" y="414" width="68" height="48" rx="18" fill="#d08a3d" stroke="#ffc88e" stroke-width="2"/>
+    <rect x="1360" y="308" width="90" height="56" rx="20" fill="#d08a3d" stroke="#ffc88e" stroke-width="2"/>
+    <rect x="1538" y="322" width="62" height="44" rx="18" fill="#9e3b3b" stroke="#ff9c9c" stroke-width="2"/>
+
+    <text x="1092" y="386" text-anchor="middle" fill="#edf5ff" font-family="JetBrains Mono,Fira Code,monospace" font-size="12" font-weight="700">Z-PRE</text>
+
+    <text x="1230" y="321" text-anchor="middle" fill="#edf5ff" font-family="JetBrains Mono,Fira Code,monospace" font-size="13" font-weight="700">SHADOWS</text>
+
+    <text x="1207" y="443" text-anchor="middle" fill="#edf5ff" font-family="JetBrains Mono,Fira Code,monospace" font-size="13" font-weight="700">GBUFFER</text>
+
+    <text x="1330" y="443" text-anchor="middle" fill="#fff3e5" font-family="JetBrains Mono,Fira Code,monospace" font-size="13" font-weight="700">SSAO</text>
+
+    <text x="1405" y="340" text-anchor="middle" fill="#fff3e5" font-family="JetBrains Mono,Fira Code,monospace" font-size="13" font-weight="700">LIGHTING</text>
+
+    <text x="1569" y="347" text-anchor="middle" fill="#fff0f0" font-family="JetBrains Mono,Fira Code,monospace" font-size="10" font-weight="700">PRESENT</text>
+
+    <text x="1182" y="286" text-anchor="middle" fill="#a8d1ff" font-family="JetBrains Mono,Fira Code,monospace" font-size="13">shadow map</text>
+    <text x="1290" y="478" text-anchor="middle" fill="#a8d1ff" font-family="JetBrains Mono,Fira Code,monospace" font-size="13">GBuffer MRTs</text>
+    </g>
+
+    <text x="1058" y="270" fill="#a8d1ff" font-family="JetBrains Mono,Fira Code,monospace" font-size="18" font-weight="700">SIMPLIFIED DAG</text>
+  </g>
+  </g>
+
+</svg>

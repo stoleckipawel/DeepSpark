@@ -4,10 +4,11 @@ date: 2026-02-11
 lastmod: 2026-02-23
 draft: false
 authors: ["Pawel Stolecki"]
-description: "How UE5 and Frostbite implement frame graphs at scale, plus the upgrade roadmap from MVP to production."
+description: "Production renderers run 700+ passes across a thread pool with persistent heap pooling. This article maps the gap between your MVP and UE5 RDG."
 tags: ["rendering", "frame-graph", "gpu", "architecture", "ue5"]
 categories: ["analysis"]
 summary: "UE5 RDG and Frostbite FrameGraph at production scale: parallel command recording, bindless integration, barrier batching, and the upgrade path from MVP."
+listImage: "images/thumbnails/frame-graph-production.svg"
 showTableOfContents: false
 keywords: ["UE5 RDG", "Render Dependency Graph", "Frostbite frame graph", "parallel command recording", "bindless rendering", "production rendering"]
 ---
