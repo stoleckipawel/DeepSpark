@@ -1,6 +1,6 @@
 ﻿/* hero-particles.js - Sponza Palace ray-tracing visualisation
-   Two-story arcade with semicircular arches, balustrade, coloured
-   banners, open-air roof, and depth-of-field defocused ray bounces. */
+   Two-story arcade with semicircular arches, balustrade,
+   open-air roof, and depth-of-field defocused ray bounces. */
 
 (function () {
   'use strict';
@@ -34,14 +34,8 @@
   /* Architecture colour */
   var stoneCol = [210, 185, 140];
 
-  /* (banner palette – unused, kept for reference) */
-  var bannerPalette = [
-    [190, 45, 45],    // deep red
-    [45, 130, 65],    // green
-    [55, 75, 165],    // blue
-    [195, 165, 50],   // gold
-    [145, 50, 85],    // burgundy
-  ];
+  /* Warm white for ray hot core */
+  var warmWhite = [255, 240, 210];
 
   var rays = [];
   var sceneSegs = [];
@@ -79,7 +73,6 @@
     var balTopY  = 0.34;    // balustrade top rail
     var uColCapY = 0.16;    // upper-gallery column capital
     var corniceY = 0.06;    // cornice above upper arches
-    var roofY    = 0.02;    // roof parapet / sky-opening edge
 
     /* Horizontal layout - NARROWER corridor like real Sponza */
     var wallL = 0.04,  wallR = 0.96;
@@ -303,11 +296,18 @@
             perspX(x1, bz), perspY(y1, bz), bz);
       }
     }
-  }
 
-  /* Sort segments back-to-front (painter's algorithm) so nearer
-     geometry naturally paints over distant geometry */
-  sceneSegs.sort(function(a, b) { return b.depth - a.depth; });
+    /* Sort back-to-front + precompute per-segment invariants */
+    sceneSegs.sort(function(a, b) { return b.depth - a.depth; });
+    for (var pi = 0; pi < sceneSegs.length; pi++) {
+      var ps = sceneSegs[pi];
+      ps.depthOcc = Math.exp(-ps.depth * 2.4);
+      ps.coc = cocRadius(ps.depth);
+      ps.baseLw = Math.max(0.4, ps.coc * 0.18 * ps.depthOcc + 0.5);
+      ps.baseCol = ps.col || stoneCol;
+      ps.isColored = !!ps.col;
+    }
+  }
 
   /* -- Ray-segment intersection (2D) ---------------------------- */
   function intersectScene(ox, oy, dx, dy) {
@@ -402,7 +402,7 @@
       dir = { x: rx / rl, y: ry / rl };
     }
 
-    /* Cumulative lengths */
+    /* Cumulative lengths + precompute per-segment values */
     var totalLen = 0;
     for (var s = 0; s < segments.length; s++) {
       var sg = segments[s];
@@ -410,6 +410,8 @@
       sg.len = Math.sqrt(ddx * ddx + ddy * ddy);
       sg.cumStart = totalLen;
       totalLen += sg.len;
+      var ds = 1.0 / (1.0 + sg.depth * 2.5);
+      sg.coc = cocRadius(sg.depth) * ds;
     }
 
     return {
@@ -453,74 +455,37 @@
       offX = (width - sceneW) * 0.5;
       offY = 0;
     }
+
+    /* Precompute screen-space coords for scene segments */
+    for (var i = 0; i < sceneSegs.length; i++) {
+      var s = sceneSegs[i];
+      s.sx0 = offX + s.x0 * sceneW;
+      s.sy0 = offY + s.y0 * sceneH;
+      s.sx1 = offX + s.x1 * sceneW;
+      s.sy1 = offY + s.y1 * sceneH;
+    }
   }
 
   function rgba(c, a) {
     return 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + a + ')';
   }
 
-  /* -- Draw soft beam with DoF ---------------------------------- */
-  function drawSoftBeam(x0, y0, x1, y1, color, alpha, depth) {
-    var coc = cocRadius(depth);
-    var layers = [
-      { w: coc * 2.2, a: alpha * 0.035 },
-      { w: coc * 1.4, a: alpha * 0.09 },
-      { w: coc * 0.6, a: alpha * 0.20 },
-      { w: Math.max(coc * 0.12, 1.0), a: alpha * 0.50 },
-    ];
-    for (var i = 0; i < layers.length; i++) {
-      ctx.beginPath();
-      ctx.moveTo(x0, y0);
-      ctx.lineTo(x1, y1);
-      ctx.strokeStyle = rgba(color, layers[i].a);
-      ctx.lineWidth = layers[i].w;
-      ctx.lineCap = 'round';
-      ctx.stroke();
-    }
-  }
-
-  /* -- Draw bloom with DoF -------------------------------------- */
-  function drawBloom(x, y, color, alpha, depth) {
-    var r = cocRadius(depth) * 2.5;
-    var grad = ctx.createRadialGradient(x, y, 0, x, y, r);
-    grad.addColorStop(0,    rgba(color, alpha * 0.45));
-    grad.addColorStop(0.15, rgba(color, alpha * 0.28));
-    grad.addColorStop(0.4,  rgba(color, alpha * 0.08));
-    grad.addColorStop(1,    rgba(color, 0));
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fillStyle = grad;
-    ctx.fill();
-  }
-
-  /* -- Draw scene architecture with per-segment colour ---------- */
+  /* -- Draw scene architecture (precomputed values) ------------- */
   function drawSceneArch(t) {
     var pulse = SCENE_ALPHA * (0.7 + 0.3 * Math.sin(t * 0.0003));
     ctx.lineCap = 'round';
     for (var si = 0; si < sceneSegs.length; si++) {
       var s = sceneSegs[si];
-
-      /* Viewport culling — skip segments entirely off-screen */
-      var px0 = toScreenX(s.x0), py0 = toScreenY(s.y0);
-      var px1 = toScreenX(s.x1), py1 = toScreenY(s.y1);
-      if ((px0 < -20 && px1 < -20) || (px0 > width + 20 && px1 > width + 20)) continue;
-      if ((py0 < -20 && py1 < -20) || (py0 > height + 20 && py1 > height + 20)) continue;
-
-      /* Exponential depth occlusion — gentler fade keeps centre visible */
-      var coc = cocRadius(s.depth);
-      var depthOcc = Math.exp(-s.depth * 1.6);
-      if (depthOcc < 0.015) continue;
-
-      /* Closer segments: brighter + thicker. Far away: dim + thin */
-      var a = pulse * depthOcc;
-      var lw = Math.max(0.4, coc * 0.18 * depthOcc + 0.5);
-      var color = s.col || stoneCol;
-      var isColored = !!s.col;
+      if (s.depthOcc < 0.015) continue;
+      /* Viewport culling using precomputed screen coords */
+      if ((s.sx0 < -20 && s.sx1 < -20) || (s.sx0 > width + 20 && s.sx1 > width + 20)) continue;
+      if ((s.sy0 < -20 && s.sy1 < -20) || (s.sy0 > height + 20 && s.sy1 > height + 20)) continue;
+      var a = pulse * s.depthOcc;
       ctx.beginPath();
-      ctx.moveTo(px0, py0);
-      ctx.lineTo(px1, py1);
-      ctx.strokeStyle = rgba(color, a * (isColored ? 1.5 : 1.0));
-      ctx.lineWidth = lw * (isColored ? 1.3 : 1.0);
+      ctx.moveTo(s.sx0, s.sy0);
+      ctx.lineTo(s.sx1, s.sy1);
+      ctx.strokeStyle = rgba(s.baseCol, a * (s.isColored ? 1.5 : 1.0));
+      ctx.lineWidth = s.baseLw * (s.isColored ? 1.3 : 1.0);
       ctx.stroke();
     }
   }
@@ -580,48 +545,34 @@
         if ((sx0 < -30 && sx1 < -30) || (sx0 > width + 30 && sx1 > width + 30)) continue;
         if ((sy0 < -30 && sy1 < -30) || (sy0 > height + 30 && sy1 > height + 30)) continue;
 
-        /* Per-segment alpha based on distance from head */
+        /* Per-segment alpha based on distance from head + depth fade */
         var segMidDist = seg.cumStart + seg.len * (clipS + clipE) * 0.5;
         var headDist = clamp01((drawnLen - segMidDist) / tailLen);
         var tailA = 1 - headDist;
         tailA *= tailA;
-        var a = baseAlpha * tailA;
+        var depthFade = Math.exp(-seg.depth * 2.4);
+        var a = baseAlpha * tailA * depthFade;
 
         if (a > 0.002) {
-          /* Perspective scale: rays further away are thinner */
-          var depthScale = 1.0 / (1.0 + seg.depth * 2.5);
-          /* Draw as one straight canvas line with gradient stroke */
-          var coc = cocRadius(seg.depth) * depthScale;
-          var grad = ctx.createLinearGradient(sx0, sy0, sx1, sy1);
-          var aStart = baseAlpha * (function(d){ var h = clamp01((drawnLen - d) / tailLen); var v = 1-h; return v*v; })(seg.cumStart + seg.len * clipS);
-          var aEnd   = baseAlpha * (function(d){ var h = clamp01((drawnLen - d) / tailLen); var v = 1-h; return v*v; })(seg.cumStart + seg.len * clipE);
+          /* Solid-colour layers — no gradient allocation */
+          var coc = seg.coc;
+          ctx.lineCap = 'round';
 
-          /* Outer glow */
-          grad.addColorStop(0, rgba(ray.color, aStart * 0.04));
-          grad.addColorStop(1, rgba(ray.color, aEnd * 0.04));
           ctx.beginPath(); ctx.moveTo(sx0, sy0); ctx.lineTo(sx1, sy1);
-          ctx.strokeStyle = grad; ctx.lineWidth = coc * 2.2; ctx.lineCap = 'round'; ctx.stroke();
+          ctx.strokeStyle = rgba(ray.color, a * 0.04);
+          ctx.lineWidth = coc * 2.2; ctx.stroke();
 
-          /* Mid glow */
-          var grad2 = ctx.createLinearGradient(sx0, sy0, sx1, sy1);
-          grad2.addColorStop(0, rgba(ray.color, aStart * 0.10));
-          grad2.addColorStop(1, rgba(ray.color, aEnd * 0.10));
           ctx.beginPath(); ctx.moveTo(sx0, sy0); ctx.lineTo(sx1, sy1);
-          ctx.strokeStyle = grad2; ctx.lineWidth = coc * 1.2; ctx.lineCap = 'round'; ctx.stroke();
+          ctx.strokeStyle = rgba(ray.color, a * 0.10);
+          ctx.lineWidth = coc * 1.2; ctx.stroke();
 
-          /* Core beam */
-          var grad3 = ctx.createLinearGradient(sx0, sy0, sx1, sy1);
-          grad3.addColorStop(0, rgba(ray.color, aStart * 0.28));
-          grad3.addColorStop(1, rgba(ray.color, aEnd * 0.28));
           ctx.beginPath(); ctx.moveTo(sx0, sy0); ctx.lineTo(sx1, sy1);
-          ctx.strokeStyle = grad3; ctx.lineWidth = Math.max(1, coc * 0.3); ctx.lineCap = 'round'; ctx.stroke();
+          ctx.strokeStyle = rgba(ray.color, a * 0.28);
+          ctx.lineWidth = Math.max(1, coc * 0.3); ctx.stroke();
 
-          /* Hot core */
-          var grad4 = ctx.createLinearGradient(sx0, sy0, sx1, sy1);
-          grad4.addColorStop(0, rgba([255,240,210], aStart * 0.40));
-          grad4.addColorStop(1, rgba([255,240,210], aEnd * 0.40));
           ctx.beginPath(); ctx.moveTo(sx0, sy0); ctx.lineTo(sx1, sy1);
-          ctx.strokeStyle = grad4; ctx.lineWidth = Math.max(0.5, coc * 0.08); ctx.lineCap = 'round'; ctx.stroke();
+          ctx.strokeStyle = rgba(warmWhite, a * 0.40);
+          ctx.lineWidth = Math.max(0.5, coc * 0.08); ctx.stroke();
         }
       }
 
@@ -634,13 +585,14 @@
             var pr = pDist / pseg.len;
             var px = toScreenX(pseg.x0 + (pseg.x1 - pseg.x0) * pr);
             var py = toScreenY(pseg.y0 + (pseg.y1 - pseg.y0) * pr);
-            var pDepthScale = 1.0 / (1.0 + pseg.depth * 2.5);
-            var pCoc = cocRadius(pseg.depth) * 1.4 * pDepthScale;
+            var pCoc = pseg.coc * 1.4;
+            var pDepthFade = Math.exp(-pseg.depth * 2.4);
+            var pAlpha = baseAlpha * pDepthFade;
 
             var pgGrad = ctx.createRadialGradient(px, py, 0, px, py, pCoc);
-            pgGrad.addColorStop(0,    rgba([255, 240, 210], baseAlpha * 0.60));
-            pgGrad.addColorStop(0.20, rgba(ray.color, baseAlpha * 0.28));
-            pgGrad.addColorStop(0.55, rgba(ray.color, baseAlpha * 0.06));
+            pgGrad.addColorStop(0,    rgba(warmWhite, pAlpha * 0.60));
+            pgGrad.addColorStop(0.20, rgba(ray.color, pAlpha * 0.28));
+            pgGrad.addColorStop(0.55, rgba(ray.color, pAlpha * 0.06));
             pgGrad.addColorStop(1,    rgba(ray.color, 0));
             ctx.beginPath();
             ctx.arc(px, py, pCoc, 0, Math.PI * 2);
