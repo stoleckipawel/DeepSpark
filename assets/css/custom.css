@@ -238,7 +238,7 @@ html {
 .ds-posts-series-grid {
   display: grid;
   gap: 1.6em;
-  padding: .85em;
+  padding: 0;
   width: 100%;
   grid-template-columns: repeat(2, minmax(300px, 1fr));
   justify-content: stretch;

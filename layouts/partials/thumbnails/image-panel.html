@@ -36,17 +36,16 @@
     <stop offset="100%" stop-color="#0b1526" stop-opacity="0"/>
   </linearGradient>
   <clipPath id="imgClip-{{ $id }}">
-    {{/* Sharp left edge, rounded right edge to match thumbnail border */}}
-    <rect x="903" y="8" width="661" height="684"/>
-    <rect x="1564" y="8" width="28" height="684" rx="28"/>
+    {{/* Full-height sharp crop aligned with shared frame */}}
+    <rect x="903" y="0" width="689" height="720"/>
   </clipPath>
 </defs>
 
 <g clip-path="url(#imgClip-{{ $id }})">
-  <image href="{{ $url }}" x="903" y="8" width="689" height="684"
+  <image href="{{ $url }}" x="903" y="0" width="689" height="720"
          preserveAspectRatio="xMidYMid slice"/>
-  <rect x="903" y="8" width="3" height="684" fill="#0b1526" fill-opacity=".82"/>
-  <rect x="903" y="8" width="24" height="684" fill="url(#imgSeamFix-{{ $id }})"/>
-  <rect x="903" y="8" width="689" height="684" fill="url(#imgFade-{{ $id }})"/>
-  <rect x="903" y="8" width="689" height="684" fill="url(#imgVignette-{{ $id }})"/>
+  <rect x="903" y="0" width="3" height="720" fill="#0b1526" fill-opacity=".82"/>
+  <rect x="903" y="0" width="24" height="720" fill="url(#imgSeamFix-{{ $id }})"/>
+  <rect x="903" y="0" width="689" height="720" fill="url(#imgFade-{{ $id }})"/>
+  <rect x="903" y="0" width="689" height="720" fill="url(#imgVignette-{{ $id }})"/>
 </g>
