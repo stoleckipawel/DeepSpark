@@ -1,6 +1,6 @@
 {{/*
-  Reusable right-side image panel for thumbnails.
-  Full height, flush right edge, left-edge fade, no shadow.
+  Right-side image panel for thumbnails.
+  Uses a single SVG <mask> for a clean left-edge fade — no overlay hacks.
 
   Params (dict):
     .id        – SVG-ID namespace (slug)
@@ -10,46 +10,32 @@
 {{ $url := .imageURL }}
 
 <defs>
-  <linearGradient id="imgFade-{{ $id }}" x1="0" y1="0" x2="1" y2="0">
-    {{/* Smoothstep-style fade: fully opaque → ease-out mid → ease-in tail → transparent */}}
-    <stop offset="0%"   stop-color="#0B0B0E" stop-opacity=".94"/>
-    <stop offset="5%"   stop-color="#0B0B0E" stop-opacity=".88"/>
-    <stop offset="14%"  stop-color="#0B0B0E" stop-opacity=".68"/>
-    <stop offset="24%"  stop-color="#0B0B0E" stop-opacity=".46"/>
-    <stop offset="34%"  stop-color="#0B0B0E" stop-opacity=".26"/>
-    <stop offset="44%"  stop-color="#0B0B0E" stop-opacity=".13"/>
-    <stop offset="54%"  stop-color="#0B0B0E" stop-opacity=".04"/>
-    <stop offset="100%" stop-color="#0B0B0E" stop-opacity="0"/>
+  {{/* Horizontal fade: invisible on the left, fully visible on the right */}}
+  <linearGradient id="imgH-{{ $id }}" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%"   stop-color="black"/>
+    <stop offset="35%"  stop-color="white"/>
   </linearGradient>
-  <linearGradient id="imgVignette-{{ $id }}" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="0%"   stop-color="#0B0B0E" stop-opacity=".3"/>
-    <stop offset="12%"  stop-color="#0B0B0E" stop-opacity="0"/>
-    <stop offset="88%"  stop-color="#0B0B0E" stop-opacity="0"/>
-    <stop offset="100%" stop-color="#0B0B0E" stop-opacity=".36"/>
+  {{/* Vertical vignette: slight darkening at top/bottom edges */}}
+  <linearGradient id="imgV-{{ $id }}" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%"   stop-color="#ccc"/>
+    <stop offset="10%"  stop-color="white"/>
+    <stop offset="90%"  stop-color="white"/>
+    <stop offset="100%" stop-color="#ccc"/>
   </linearGradient>
-  <linearGradient id="imgSeamFix-{{ $id }}" x1="0" y1="0" x2="1" y2="0">
-    <stop offset="0%"   stop-color="#0B0B0E" stop-opacity=".5"/>
-    <stop offset="16%"  stop-color="#0B0B0E" stop-opacity=".26"/>
-    <stop offset="48%"  stop-color="#0B0B0E" stop-opacity=".06"/>
-    <stop offset="100%" stop-color="#0B0B0E" stop-opacity="0"/>
-  </linearGradient>
-  <linearGradient id="imgGlass-{{ $id }}" x1="0" y1="0" x2="1" y2="1">
-    <stop offset="0%" stop-color="#60A5FA" stop-opacity=".07"/>
-    <stop offset="38%" stop-color="#60A5FA" stop-opacity=".02"/>
-    <stop offset="100%" stop-color="#60A5FA" stop-opacity="0"/>
-  </linearGradient>
+  {{/* Compose both gradients into one mask */}}
+  <mask id="imgMask-{{ $id }}">
+    <rect x="903" y="0" width="697" height="720" fill="url(#imgH-{{ $id }})"/>
+    <rect x="903" y="0" width="697" height="720" fill="url(#imgV-{{ $id }})"
+          style="mix-blend-mode:multiply"/>
+  </mask>
   <clipPath id="imgClip-{{ $id }}">
-    {{/* Full-height sharp crop aligned with shared frame */}}
-    <rect x="903" y="0" width="689" height="720"/>
+    <rect x="903" y="0" width="697" height="720"/>
   </clipPath>
 </defs>
 
 <g clip-path="url(#imgClip-{{ $id }})">
-  <image href="{{ $url }}" x="903" y="0" width="689" height="720"
-         preserveAspectRatio="xMidYMid slice"/>
-  <rect x="903" y="0" width="2" height="720" fill="#60A5FA" fill-opacity=".24"/>
-  <rect x="903" y="0" width="24" height="720" fill="url(#imgSeamFix-{{ $id }})"/>
-  <rect x="903" y="0" width="689" height="720" fill="url(#imgFade-{{ $id }})"/>
-  <rect x="903" y="0" width="689" height="720" fill="url(#imgVignette-{{ $id }})"/>
-  <rect x="903" y="0" width="689" height="720" fill="url(#imgGlass-{{ $id }})"/>
+  <image href="{{ $url }}" x="903" y="0" width="697" height="720"
+         preserveAspectRatio="xMidYMid slice"
+         mask="url(#imgMask-{{ $id }})"
+         opacity=".85"/>
 </g>
