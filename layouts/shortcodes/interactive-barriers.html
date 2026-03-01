@@ -229,7 +229,7 @@ window.barrierNext=function(){
   });
   // Process writes
   pass.writes.forEach(wi=>{
-    const needed=currentStep===5?"Present":stateFor(true,resources[wi].fmt);
+    const needed=currentStep===passOrder.length-1?"Present":stateFor(true,resources[wi].fmt);
     if(resources[wi].state!==needed){
       const old=resources[wi].state;
       transitions[wi]={from:old,to:needed};
@@ -244,6 +244,12 @@ window.barrierNext=function(){
 
 window.barrierReset=function(){loadExample(curExIdx)};
 window.barrierSetExample=loadExample;
-loadExample(0);
+
+/* ── Lazy-init: defer until widget scrolls into view ── */
+var _barrierEl=document.getElementById('barrier-widget');
+var _barrierObs=new IntersectionObserver(function(entries){
+  if(entries[0].isIntersecting){_barrierObs.disconnect();loadExample(0);}
+},{rootMargin:'200px'});
+_barrierObs.observe(_barrierEl);
 })();
 </script>

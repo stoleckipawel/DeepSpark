@@ -339,6 +339,12 @@ window.topoNext=function(){
 
 window.topoReset=init;
 window.topoSetExample=loadExample;
-loadExample(0);
+
+/* ── Lazy-init: defer until widget scrolls into view ── */
+var _topoEl=document.getElementById('topo-widget');
+var _topoObs=new IntersectionObserver(function(entries){
+  if(entries[0].isIntersecting){_topoObs.disconnect();loadExample(0);}
+},{rootMargin:'200px'});
+_topoObs.observe(_topoEl);
 })();
 </script>

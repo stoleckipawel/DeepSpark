@@ -30,6 +30,7 @@
 #dag-svg .edge{cursor:pointer}
 #dag-svg .edge path:not(.flow){fill:none;stroke-width:2;transition:stroke .2s,opacity .2s}
 #dag-svg .edge.edge-active path:not(.flow){animation:edge-color-pulse 1.6s ease-in-out infinite}
+.dag-offscreen #dag-svg .edge.edge-active path:not(.flow),.dag-offscreen #dag-svg .edge.edge-active polygon{animation-play-state:paused}
 #dag-svg .edge polygon{transition:fill .2s,opacity .2s}
 #dag-svg .edge.edge-active polygon{animation:edge-color-pulse 1.6s ease-in-out infinite}
 #dag-svg .edge-label{font:500 10px system-ui,sans-serif;pointer-events:none;text-anchor:middle;dominant-baseline:central;transition:fill .2s,opacity .2s}
@@ -252,6 +253,16 @@ function render(){
 
 window.dagSetExample=function(idx){loadExample(idx)};
 window.dagReset=function(){loadExample(curExample)};
-loadExample(0);
+
+/* ── Lazy-init + pause animations when offscreen ── */
+var _dagEl=document.getElementById('dag-widget');
+var _dagVis=new IntersectionObserver(function(entries){
+  _dagEl.classList.toggle('dag-offscreen',!entries[0].isIntersecting);
+},{rootMargin:'50px'});
+_dagVis.observe(_dagEl);
+var _dagInit=new IntersectionObserver(function(entries){
+  if(entries[0].isIntersecting){_dagInit.disconnect();loadExample(0);}
+},{rootMargin:'200px'});
+_dagInit.observe(_dagEl);
 })();
 </script>

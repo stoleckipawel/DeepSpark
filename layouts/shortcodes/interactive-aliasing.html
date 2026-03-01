@@ -85,14 +85,13 @@ var passes,resources;
 
 function overlaps(a,b){return a.first<=b.last&&b.first<=a.last;}
 
+/* Batch resolve: reuse a single hidden element to avoid forced layouts per color */
+var _resolveEl;
 function resolveColor(c){
   if(!c||c.indexOf('var(')<0) return c;
-  var el=document.createElement('div');
-  el.style.color=c;
-  document.body.appendChild(el);
-  var resolved=getComputedStyle(el).color;
-  document.body.removeChild(el);
-  return resolved;
+  if(!_resolveEl){_resolveEl=document.createElement('div');_resolveEl.style.cssText='position:absolute;visibility:hidden;pointer-events:none';document.body.appendChild(_resolveEl);}
+  _resolveEl.style.color=c;
+  return getComputedStyle(_resolveEl).color;
 }
 
 function loadExample(idx){
@@ -258,12 +257,22 @@ function resizeCanvas(){
   draw();
 }
 
-loadExample(0);
-requestAnimationFrame(()=>{resizeCanvas();});
-window.addEventListener("resize",()=>{requestAnimationFrame(resizeCanvas);});
+/* ── Lazy-init: defer until widget scrolls into view ── */
+var _aliasEl=document.getElementById('alias-widget');
+var _aliasReady=false;
+function _aliasBootstrap(){
+  if(_aliasReady) return; _aliasReady=true;
+  loadExample(0);
+  requestAnimationFrame(()=>{resizeCanvas();});
+  window.addEventListener("resize",()=>{requestAnimationFrame(resizeCanvas);});
+}
+var _aliasObs=new IntersectionObserver(function(entries){
+  if(entries[0].isIntersecting){_aliasObs.disconnect();_aliasBootstrap();}
+},{rootMargin:'200px'});
+_aliasObs.observe(_aliasEl);
 
 // Re-draw on theme change (re-resolve colors for new theme)
-const obs=new MutationObserver(()=>{loadExample(curExIdx);});
-obs.observe(document.documentElement,{attributes:true,attributeFilter:["class"]});
+const themeObs=new MutationObserver(()=>{if(_aliasReady){_resolveEl=null;loadExample(curExIdx);}});
+themeObs.observe(document.documentElement,{attributes:true,attributeFilter:["class"]});
 })();
 </script>
