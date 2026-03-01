@@ -1,22 +1,54 @@
 {{/*  Inner artwork for "Frame Graph: Production Engines" thumbnail.
-      Receives dict: .id, .imageURL  */}}
+      Receives dict: .id, .imageURL
+      Modernised: value-line → hero stat → queue viz → outcome chips  */}}
 {{ $id := .id }}
 
-{{/* ── Left side: headlines + queue legend ──────────────────── */}}
-<text x="54" y="252" fill="#f7faff" font-family="Inter,system-ui,sans-serif"
-      font-size="44" font-weight="900">700+ PASSES</text>
-<text x="54" y="312" fill="#4af0a4" font-family="Inter,system-ui,sans-serif"
-      font-size="44" font-weight="900">THREAD POOL + QUEUES</text>
-<text x="54" y="378" fill="#b2c2de" font-family="Inter,system-ui,sans-serif"
-      font-size="24">UE5 RDG · Frostbite · Production constraints</text>
+{{/* ── Value line ──────────────────────────────────────────── */}}
+<text x="54" y="256" fill="#b2c2de" font-family="Inter,system-ui,sans-serif"
+      font-size="24" font-weight="520">UE5 RDG · Frostbite · What scales beyond your MVP</text>
 
-<rect x="54" y="430" width="580" height="150" rx="14" fill="#11233b" stroke="#3a6293" stroke-width="2"/>
-<text x="86" y="470" fill="#c0d5f5" font-family="JetBrains Mono,Fira Code,monospace" font-size="21">Graphics Queue</text>
-<text x="86" y="510" fill="#5ec6ff" font-family="JetBrains Mono,Fira Code,monospace" font-size="21">Compute Queue</text>
-<text x="86" y="550" fill="#ffb974" font-family="JetBrains Mono,Fira Code,monospace" font-size="21">Copy Queue</text>
-<line x1="250" y1="464" x2="600" y2="464" stroke="#6f8fb8" stroke-width="4"/>
-<line x1="250" y1="504" x2="560" y2="504" stroke="#4fb386" stroke-width="4"/>
-<line x1="250" y1="544" x2="520" y2="544" stroke="#b17f53" stroke-width="4"/>
+{{/* ── Hero stat ───────────────────────────────────────────── */}}
+<text x="54" y="340" fill="#f7faff" font-family="Inter,system-ui,sans-serif"
+      font-size="58" font-weight="820" letter-spacing=".3">700+ PASSES</text>
 
-{{/* ── Right side: shared image panel (UE5 RDG Insights) ───── */}}
+{{/* ── Queue visualization ─────────────────────────────────── */}}
+<g transform="translate(54, 390)">
+  <rect x="0" y="0" width="780" height="186" rx="14" fill="#0d1b2e" fill-opacity=".65"
+        stroke="#3B82F6" stroke-opacity=".2" stroke-width="1.2"/>
+
+  {{/* Graphics queue */}}
+  <text x="28" y="44" fill="#c8d9f5" font-family="JetBrains Mono,Fira Code,monospace"
+        font-size="20" font-weight="560">Graphics</text>
+  <line x1="188" y1="36" x2="740" y2="36" stroke="#60A5FA" stroke-width="14" stroke-linecap="round"/>
+
+  {{/* Compute queue */}}
+  <text x="28" y="104" fill="#78c1ff" font-family="JetBrains Mono,Fira Code,monospace"
+        font-size="20" font-weight="560">Compute</text>
+  <line x1="188" y1="96" x2="660" y2="96" stroke="#22C55E" stroke-width="14" stroke-linecap="round"/>
+
+  {{/* Copy queue */}}
+  <text x="28" y="164" fill="#ffbe73" font-family="JetBrains Mono,Fira Code,monospace"
+        font-size="20" font-weight="560">Copy</text>
+  <line x1="188" y1="156" x2="520" y2="156" stroke="#FF9F1C" stroke-width="14" stroke-linecap="round"/>
+</g>
+
+{{/* ── Outcome chips ───────────────────────────────────────── */}}
+<g transform="translate(54, 610)">
+  <rect x="0" y="0" width="240" height="42" rx="10" fill="#0e1a2e"
+        stroke="#60A5FA" stroke-opacity=".24" stroke-width="1"/>
+  <text x="120" y="27" text-anchor="middle" fill="#6b92c0"
+        font-family="Inter,system-ui,sans-serif" font-size="16" font-weight="640">PARALLEL RECORDING</text>
+
+  <rect x="258" y="0" width="248" height="42" rx="10" fill="#0e2016"
+        stroke="#22C55E" stroke-opacity=".24" stroke-width="1"/>
+  <text x="382" y="27" text-anchor="middle" fill="#6bc08a"
+        font-family="Inter,system-ui,sans-serif" font-size="16" font-weight="640">RESOURCE LIFETIME</text>
+
+  <rect x="524" y="0" width="268" height="42" rx="10" fill="#1e170b"
+        stroke="#FF9F1C" stroke-opacity=".24" stroke-width="1"/>
+  <text x="658" y="27" text-anchor="middle" fill="#c09360"
+        font-family="Inter,system-ui,sans-serif" font-size="16" font-weight="640">MIGRATION STRATEGY</text>
+</g>
+
+{{/* ── Right side: image panel (UE5 RDG Insights) ─────────── */}}
 {{ partial "thumbnails/image-panel.html" (dict "id" $id "imageURL" .imageURL) }}

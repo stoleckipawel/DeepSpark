@@ -12,28 +12,31 @@
 <defs>
   <linearGradient id="imgFade-{{ $id }}" x1="0" y1="0" x2="1" y2="0">
     {{/* Smoothstep-style fade: fully opaque → ease-out mid → ease-in tail → transparent */}}
-    <stop offset="0%"   stop-color="#0b1526" stop-opacity="1"/>
-    <stop offset="3%"   stop-color="#0b1526" stop-opacity="1"/>
-    <stop offset="10%"  stop-color="#0b1526" stop-opacity=".92"/>
-    <stop offset="19%"  stop-color="#0b1526" stop-opacity=".72"/>
-    <stop offset="29%"  stop-color="#0b1526" stop-opacity=".42"/>
-    <stop offset="37%"  stop-color="#0b1526" stop-opacity=".19"/>
-    <stop offset="44%"  stop-color="#0b1526" stop-opacity=".07"/>
-    <stop offset="50%"  stop-color="#0b1526" stop-opacity=".02"/>
-    <stop offset="56%"  stop-color="#0b1526" stop-opacity=".005"/>
-    <stop offset="100%" stop-color="#0b1526" stop-opacity="0"/>
+    <stop offset="0%"   stop-color="#0B0B0E" stop-opacity=".94"/>
+    <stop offset="5%"   stop-color="#0B0B0E" stop-opacity=".88"/>
+    <stop offset="14%"  stop-color="#0B0B0E" stop-opacity=".68"/>
+    <stop offset="24%"  stop-color="#0B0B0E" stop-opacity=".46"/>
+    <stop offset="34%"  stop-color="#0B0B0E" stop-opacity=".26"/>
+    <stop offset="44%"  stop-color="#0B0B0E" stop-opacity=".13"/>
+    <stop offset="54%"  stop-color="#0B0B0E" stop-opacity=".04"/>
+    <stop offset="100%" stop-color="#0B0B0E" stop-opacity="0"/>
   </linearGradient>
   <linearGradient id="imgVignette-{{ $id }}" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="0%"   stop-color="#070c18" stop-opacity=".45"/>
-    <stop offset="12%"  stop-color="#070c18" stop-opacity="0"/>
-    <stop offset="88%"  stop-color="#070c18" stop-opacity="0"/>
-    <stop offset="100%" stop-color="#070c18" stop-opacity=".55"/>
+    <stop offset="0%"   stop-color="#0B0B0E" stop-opacity=".3"/>
+    <stop offset="12%"  stop-color="#0B0B0E" stop-opacity="0"/>
+    <stop offset="88%"  stop-color="#0B0B0E" stop-opacity="0"/>
+    <stop offset="100%" stop-color="#0B0B0E" stop-opacity=".36"/>
   </linearGradient>
   <linearGradient id="imgSeamFix-{{ $id }}" x1="0" y1="0" x2="1" y2="0">
-    <stop offset="0%"   stop-color="#0b1526" stop-opacity=".62"/>
-    <stop offset="18%"  stop-color="#0b1526" stop-opacity=".34"/>
-    <stop offset="55%"  stop-color="#0b1526" stop-opacity=".08"/>
-    <stop offset="100%" stop-color="#0b1526" stop-opacity="0"/>
+    <stop offset="0%"   stop-color="#0B0B0E" stop-opacity=".5"/>
+    <stop offset="16%"  stop-color="#0B0B0E" stop-opacity=".26"/>
+    <stop offset="48%"  stop-color="#0B0B0E" stop-opacity=".06"/>
+    <stop offset="100%" stop-color="#0B0B0E" stop-opacity="0"/>
+  </linearGradient>
+  <linearGradient id="imgGlass-{{ $id }}" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0%" stop-color="#60A5FA" stop-opacity=".07"/>
+    <stop offset="38%" stop-color="#60A5FA" stop-opacity=".02"/>
+    <stop offset="100%" stop-color="#60A5FA" stop-opacity="0"/>
   </linearGradient>
   <clipPath id="imgClip-{{ $id }}">
     {{/* Full-height sharp crop aligned with shared frame */}}
@@ -44,8 +47,9 @@
 <g clip-path="url(#imgClip-{{ $id }})">
   <image href="{{ $url }}" x="903" y="0" width="689" height="720"
          preserveAspectRatio="xMidYMid slice"/>
-  <rect x="903" y="0" width="3" height="720" fill="#0b1526" fill-opacity=".82"/>
+  <rect x="903" y="0" width="2" height="720" fill="#60A5FA" fill-opacity=".24"/>
   <rect x="903" y="0" width="24" height="720" fill="url(#imgSeamFix-{{ $id }})"/>
   <rect x="903" y="0" width="689" height="720" fill="url(#imgFade-{{ $id }})"/>
   <rect x="903" y="0" width="689" height="720" fill="url(#imgVignette-{{ $id }})"/>
+  <rect x="903" y="0" width="689" height="720" fill="url(#imgGlass-{{ $id }})"/>
 </g>
