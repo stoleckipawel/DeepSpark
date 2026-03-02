@@ -23,12 +23,12 @@ keywords: ["frame graph C++", "render graph implementation", "topological sort",
 
 <!-- MVP progression, animated power-up timeline -->
 <div style="margin:1.6em 0 1.2em;position:relative;padding-left:3em;">
-  <div style="margin-left:-3em;margin-bottom:1.4em;font-size:1.15em;font-weight:900;text-align:center;letter-spacing:.03em;">🧬 MVP Progression</div>
+  <div style="margin-left:-3em;margin-bottom:1.4em;font-size:1.15em;font-weight:900;text-align:center;letter-spacing:.03em;">MVP Progression</div>
   <!-- vertical connector -->
   <div style="position:absolute;left:1.15em;top:3.2em;bottom:.8em;width:3px;background:linear-gradient(to bottom, var(--ds-info), var(--ds-code), var(--ds-success));border-radius:2px;opacity:.45;"></div>
 
   <!-- ── v1 ── -->
-  <a href="#-v1--the-scaffold" style="text-decoration:none;color:inherit;display:block;position:relative;margin-bottom:1.6em;cursor:pointer;" onmouseover="this.querySelector('.mvp-card').style.transform='translateX(4px)';this.querySelector('.mvp-card').style.borderColor='rgba(var(--ds-info-rgb),.5)'" onmouseout="this.querySelector('.mvp-card').style.transform='';this.querySelector('.mvp-card').style.borderColor='rgba(var(--ds-info-rgb),.2)'">
+  <a class="ds-mvp-link" href="#-v1--the-scaffold" style="text-decoration:none;color:inherit;display:block;position:relative;margin-bottom:1.6em;cursor:pointer;" onmouseover="this.querySelector('.mvp-card').style.transform='translateX(4px)'" onmouseout="this.querySelector('.mvp-card').style.transform=''">
     <div class="ds-dot ds-dot--info" style="left:-3em;top:.3em;">v1</div>
     <div class="mvp-card ds-mvp-card ds-mvp-card--info">
       <div class="ds-mvp-card__title ds-mvp-card__title--info">
@@ -48,7 +48,7 @@ keywords: ["frame graph C++", "render graph implementation", "topological sort",
   </a>
 
   <!-- ── v2 ── -->
-  <a href="#-mvp-v2--dependencies--barriers" style="text-decoration:none;color:inherit;display:block;position:relative;margin-bottom:1.6em;cursor:pointer;" onmouseover="this.querySelector('.mvp-card').style.transform='translateX(4px)';this.querySelector('.mvp-card').style.borderColor='rgba(var(--ds-code-rgb),.5)'" onmouseout="this.querySelector('.mvp-card').style.transform='';this.querySelector('.mvp-card').style.borderColor='rgba(var(--ds-code-rgb),.2)'">
+  <a class="ds-mvp-link" href="#-mvp-v2--dependencies--barriers" style="text-decoration:none;color:inherit;display:block;position:relative;margin-bottom:1.6em;cursor:pointer;" onmouseover="this.querySelector('.mvp-card').style.transform='translateX(4px)'" onmouseout="this.querySelector('.mvp-card').style.transform=''">
     <div class="ds-dot ds-dot--code" style="left:-3em;top:.3em;">v2</div>
     <div class="mvp-card ds-mvp-card ds-mvp-card--code">
       <div class="ds-mvp-card__title ds-mvp-card__title--code">
@@ -68,7 +68,7 @@ keywords: ["frame graph C++", "render graph implementation", "topological sort",
   </a>
 
   <!-- ── v3 ── -->
-  <a href="#-mvp-v3--lifetimes--aliasing" style="text-decoration:none;color:inherit;display:block;position:relative;cursor:pointer;" onmouseover="this.querySelector('.mvp-card').style.transform='translateX(4px)';this.querySelector('.mvp-card').style.borderColor='rgba(var(--ds-success-rgb),.6)'" onmouseout="this.querySelector('.mvp-card').style.transform='';this.querySelector('.mvp-card').style.borderColor='rgba(var(--ds-success-rgb),.3)'">
+  <a class="ds-mvp-link" href="#-mvp-v3--lifetimes--aliasing" style="text-decoration:none;color:inherit;display:block;position:relative;cursor:pointer;" onmouseover="this.querySelector('.mvp-card').style.transform='translateX(4px)'" onmouseout="this.querySelector('.mvp-card').style.transform=''">
     <div class="ds-dot ds-dot--success" style="left:-3em;top:.3em;">v3</div>
     <div class="mvp-card ds-mvp-card ds-mvp-card--success">
       <div class="ds-mvp-card__title ds-mvp-card__title--success">
