@@ -258,7 +258,6 @@ The point isn't that every project needs a render graph. The point is that if yo
 ## Resources
 
 - **[Rendergraphs & High Level Rendering: Wijiler (YouTube)](https://www.youtube.com/watch?v=FBYg64QKjFo)**: 15-minute visual intro to render graphs and modern graphics APIs.
-- **[Render Graphs: GPUOpen](https://gpuopen.com/learn/render-graphs/)**: AMD's overview covering declare/compile/execute, barriers, and aliasing.
 - **[FrameGraph: Extensible Rendering Architecture in Frostbite (GDC 2017)](https://www.gdcvault.com/play/1024612/FrameGraph-Extensible-Rendering-Architecture-in)**: The original talk that introduced the modern frame graph concept.
 - **[Render Graphs: Riccardo Loggini](https://logins.github.io/graphics/2021/05/31/RenderGraphs.html)**: Practical walkthrough with D3D12 placed resources and transient aliasing.
 - **[Render graphs and Vulkan: themaister](https://themaister.net/blog/2017/08/15/render-graphs-and-vulkan-a-deep-dive/)**: Full Vulkan implementation covering barriers, subpass optimization, and async compute.
