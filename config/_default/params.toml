@@ -30,7 +30,7 @@ secondaryLogo = "images/DeepSparkIcon.png"
 
 # defaultBackgroundImage = "IMAGE.jpg" # used as default for background images
 # defaultFeaturedImage = "IMAGE.jpg" # used as default for featured images in all articles
-defaultSocialImage = "images/og-frame-graph-series.png" # used as default for social media sharing (Open Graph and Twitter)
+defaultSocialImage = "images/FrameGraphSeries.png" # used as default for social media sharing (Open Graph and Twitter)
 hotlinkFeatureImage = false
 # imagePosition = "50% 50%"
 
