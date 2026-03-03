@@ -1,0 +1,6 @@
+{{/* SEO: Override <meta name="keywords"> with front-matter keywords when available.
+     The theme default uses .Params.Tags for keywords; this adds the richer
+     keywords list from the front-matter 'keywords' field alongside the tags. */}}
+{{- with .Params.keywords }}
+  <meta name="keywords" content="{{ delimit . ", " }}">
+{{- end }}

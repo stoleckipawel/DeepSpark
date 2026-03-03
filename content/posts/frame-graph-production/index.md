@@ -7,6 +7,7 @@ authors: ["Pawel Stolecki"]
 description: "Production renderers run 700+ passes across a thread pool with persistent heap pooling. This article maps the gap between your MVP and UE5 RDG."
 tags: ["rendering", "frame-graph", "gpu", "architecture", "ue5"]
 categories: ["analysis"]
+series: ["Frame Graph"]
 summary: "UE5 RDG and Frostbite FrameGraph at production scale: parallel command recording, bindless integration, barrier batching, and the upgrade path from MVP."
 listImage: "images/thumbnails/frame-graph-production.svg"
 showTableOfContents: false

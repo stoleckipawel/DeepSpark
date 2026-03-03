@@ -7,6 +7,7 @@ authors: ["Pawel Stolecki"]
 description: "The theory behind frame graphs: how a DAG of passes and resources gives the compiler enough information to automate scheduling, barriers, and memory aliasing."
 tags: ["rendering", "frame-graph", "gpu", "architecture"]
 categories: ["analysis"]
+series: ["Frame Graph"]
 summary: "Declare → Compile → Execute. How a directed acyclic graph of render passes and virtual resources lets an engine automate topological sorting, barrier insertion, pass culling, and VRAM aliasing."
 listImage: "images/thumbnails/frame-graph-theory-e3.svg"
 showTableOfContents: false

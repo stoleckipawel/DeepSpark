@@ -2,6 +2,9 @@
 title: "LinkedIn Promo R&D"
 date: 2026-03-03
 draft: true
+robots: "noindex, nofollow"
+sitemap:
+  disable: true
 showTableOfContents: false
 showDate: false
 showAuthor: false

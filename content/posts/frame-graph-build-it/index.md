@@ -7,6 +7,7 @@ authors: ["Pawel Stolecki"]
 description: "Three iterations from blank file to working frame graph with automatic barriers and memory aliasing."
 tags: ["rendering", "frame-graph", "gpu", "architecture", "cpp"]
 categories: ["analysis"]
+series: ["Frame Graph"]
 summary: "Three C++ iterations (v1 scaffold, v2 dependencies and barriers, v3 lifetime analysis and memory aliasing), building a complete frame graph from scratch."
 listImage: "images/thumbnails/frame-graph-theory-f2.svg"
 showTableOfContents: false

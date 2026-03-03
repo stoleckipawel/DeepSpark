@@ -7,6 +7,7 @@ authors: ["Pawel Stolecki"]
 description: "Async compute and split barriers: how the frame graph compiler squeezes more performance from the same DAG."
 tags: ["rendering", "frame-graph", "gpu", "architecture"]
 categories: ["analysis"]
+series: ["Frame Graph"]
 summary: "How the frame graph compiler schedules async compute across GPU queues and splits barrier transitions to hide cache-flush latency."
 listImage: "images/thumbnails/frame-graph-advanced.svg"
 showTableOfContents: false
