@@ -71,8 +71,8 @@ var EXAMPLES=[
     passOrder:[
       {name:"DepthPrepass",writes:[0],reads:[],desc:"Writes depth buffer"},
       {name:"GBuffer",reads:[0],writes:[1,2],desc:"Reads depth, writes albedo + normals"},
-      {name:"SSAO",reads:[2],writes:[3],desc:"Reads normals, writes SSAO result"},
-      {name:"Lighting",reads:[1,2,3],writes:[4],desc:"Reads albedo + normals + SSAO, writes HDR"},
+      {name:"SSAO",reads:[0,2],writes:[3],desc:"Reads depth + normals, writes SSAO result"},
+      {name:"Lighting",reads:[0,1,2,3],writes:[4],desc:"Reads depth + albedo + normals + SSAO, writes HDR"},
       {name:"Tonemap",reads:[4],writes:[5],desc:"Reads HDR, writes backbuffer"},
       {name:"Present",reads:[5],writes:[],desc:"Present backbuffer to screen"}
     ]

@@ -2327,6 +2327,8 @@ footer.pt-8 {
 .flow-d6 { animation-duration: 2.6s }
 .flow-d7 { animation-duration: 1.5s }
 .flow-d8 { animation-duration: 1.8s }
+.flow-d9 { animation-duration: 2.2s }
+.flow-d10 { animation-duration: 3.0s }
 
 /* ═══════════════════════════════════════════════════════════════════
    Global VS Dark C++ palette — override Chroma github-dark so that

@@ -123,6 +123,8 @@ A frame graph models an entire frame as a **directed acyclic graph (DAG)**. Each
   <!-- base edges -->
   <path d="M115,100 L155,100 L155,42 L195,42" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#ah)"/>
   <path d="M115,120 L155,120 L155,160 L200,160" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#ah)"/>
+  <path d="M115,110 Q250,80 380,155" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="2" stroke-linecap="round" marker-end="url(#ah)"/>
+  <path d="M115,90 C280,0 440,0 548,88" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="2" stroke-linecap="round" marker-end="url(#ah)"/>
   <path d="M300,160 L380,160" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="2" stroke-linecap="round" marker-end="url(#ah)"/>
   <path d="M320,42 L520,42 L520,96 L548,96" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#ah)"/>
   <path d="M462,160 L548,118" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="2" stroke-linecap="round" marker-end="url(#ah)"/>
@@ -132,6 +134,8 @@ A frame graph models an entire frame as a **directed acyclic graph (DAG)**. Each
   <!-- flow particles (CSS animated, classes from custom.css flow system) -->
   <path class="flow flow-lg flow-d1" d="M115,100 L155,100 L155,42 L195,42"/>
   <path class="flow flow-lg flow-d2" d="M115,120 L155,120 L155,160 L200,160"/>
+  <path class="flow flow-lg flow-d9" d="M115,110 Q250,80 380,155"/>
+  <path class="flow flow-lg flow-d10" d="M115,90 C280,0 440,0 548,88"/>
   <path class="flow flow-lg flow-d3" d="M300,160 L380,160"/>
   <path class="flow flow-lg flow-d4" d="M320,42 L520,42 L520,96 L548,96"/>
   <path class="flow flow-lg flow-d5" d="M462,160 L548,118"/>
@@ -156,6 +160,8 @@ A frame graph models an entire frame as a **directed acyclic graph (DAG)**. Each
   <!-- edge labels -->
   <text x="155" y="68" text-anchor="middle" fill="rgba(255,255,255,.4)" font-size="9.5" font-style="italic" letter-spacing=".3">depth</text>
   <text x="155" y="145" text-anchor="middle" fill="rgba(255,255,255,.4)" font-size="9.5" font-style="italic" letter-spacing=".3">depth</text>
+  <text x="265" y="90" text-anchor="middle" fill="rgba(255,255,255,.4)" font-size="9.5" font-style="italic" letter-spacing=".3">depth</text>
+  <text x="350" y="12" text-anchor="middle" fill="rgba(255,255,255,.4)" font-size="9.5" font-style="italic" letter-spacing=".3">depth</text>
   <text x="340" y="152" text-anchor="middle" fill="rgba(255,255,255,.4)" font-size="9.5" font-style="italic" letter-spacing=".3">normals</text>
   <text x="420" y="34" text-anchor="middle" fill="rgba(255,255,255,.4)" font-size="9.5" font-style="italic" letter-spacing=".3">shadow map</text>
   <text x="505" y="130" text-anchor="middle" fill="rgba(255,255,255,.4)" font-size="9.5" font-style="italic" letter-spacing=".3">AO</text>

@@ -59,10 +59,10 @@ var EXAMPLES=[
       {id:0,name:"Depth",       queue:"gfx",cost:2,deps:[],     canCompute:false,desc:"Rasterizes depth -- needs graphics pipeline"},
       {id:1,name:"Shadows",     queue:"gfx",cost:3,deps:[],     canCompute:false,desc:"Shadow map rasterization -- graphics only"},
       {id:2,name:"GBuffer",     queue:"gfx",cost:3,deps:[0],    canCompute:false,desc:"Rasterizes geometry to G-buffers -- graphics only"},
-      {id:3,name:"SSAO",        queue:"gfx",cost:2,deps:[2],    canCompute:true, desc:"Screen-space compute -- no rasterization needed"},
+      {id:3,name:"SSAO",        queue:"gfx",cost:2,deps:[0,2],  canCompute:true, desc:"Screen-space AO -- reads depth + normals, pure compute"},
       {id:4,name:"Light Cull",  queue:"gfx",cost:2,deps:[0],    canCompute:true, desc:"Tile/cluster light assignment -- pure compute"},
-      {id:5,name:"Volumetrics", queue:"gfx",cost:3,deps:[1],    canCompute:true, desc:"Raymarching fog/god rays -- pure compute"},
-      {id:6,name:"Lighting",    queue:"gfx",cost:3,deps:[2,3,4,5],canCompute:false,desc:"Deferred shading -- reads all inputs, needs raster"},
+      {id:5,name:"Volumetrics", queue:"gfx",cost:3,deps:[0,1],  canCompute:true, desc:"Raymarching fog/god rays -- reads depth + shadows, pure compute"},
+      {id:6,name:"Lighting",    queue:"gfx",cost:3,deps:[0,1,2,3,4,5],canCompute:false,desc:"Deferred shading -- reads depth + shadows + all inputs, needs raster"},
       {id:7,name:"Bloom",       queue:"gfx",cost:2,deps:[6],    canCompute:true, desc:"Downsample + blur -- compute dispatches"},
       {id:8,name:"Tonemap",     queue:"gfx",cost:1,deps:[6,7],  canCompute:false,desc:"Final output -- needs graphics for present"}
     ]
@@ -72,10 +72,10 @@ var EXAMPLES=[
     passes:[
       {id:0,name:"Depth",     queue:"gfx",cost:2,deps:[],   canCompute:false,desc:"Depth prepass -- rasterization"},
       {id:1,name:"GBuffer",   queue:"gfx",cost:3,deps:[0],  canCompute:false,desc:"G-buffer fill -- rasterization"},
-      {id:2,name:"Lighting",  queue:"gfx",cost:3,deps:[1],  canCompute:false,desc:"Deferred lighting -- rasterization"},
+      {id:2,name:"Lighting",  queue:"gfx",cost:3,deps:[0,1],canCompute:false,desc:"Deferred lighting -- reads depth + GBuffer, rasterization"},
       {id:3,name:"Bloom Down",queue:"gfx",cost:2,deps:[2],  canCompute:true, desc:"Bloom downsample -- pure compute"},
       {id:4,name:"Bloom Up",  queue:"gfx",cost:2,deps:[3],  canCompute:true, desc:"Bloom upsample -- pure compute"},
-      {id:5,name:"DOF",       queue:"gfx",cost:2,deps:[2],  canCompute:true, desc:"Depth of field -- gather compute"},
+      {id:5,name:"DOF",       queue:"gfx",cost:2,deps:[0,2],canCompute:true, desc:"Depth of field -- reads depth + HDR, gather compute"},
       {id:6,name:"TAA",       queue:"gfx",cost:1,deps:[4,5],canCompute:true, desc:"Temporal AA resolve -- pure compute"},
       {id:7,name:"Tonemap",   queue:"gfx",cost:1,deps:[6],  canCompute:false,desc:"Final output -- needs present"}
     ]
@@ -85,10 +85,10 @@ var EXAMPLES=[
     passes:[
       {id:0,name:"Depth",     queue:"gfx",cost:2,deps:[],    canCompute:false,desc:"Depth prepass -- rasterization"},
       {id:1,name:"GBuffer",   queue:"gfx",cost:3,deps:[0],   canCompute:false,desc:"G-buffer fill -- rasterization"},
-      {id:2,name:"RT Shadows",queue:"gfx",cost:4,deps:[1],   canCompute:true, desc:"Ray-traced shadows -- compute/RT pipeline"},
-      {id:3,name:"RT AO",     queue:"gfx",cost:3,deps:[1],   canCompute:true, desc:"Ray-traced ambient occlusion -- compute/RT"},
+      {id:2,name:"RT Shadows",queue:"gfx",cost:4,deps:[0,1], canCompute:true, desc:"Ray-traced shadows -- reads depth + GBuffer, compute/RT pipeline"},
+      {id:3,name:"RT AO",     queue:"gfx",cost:3,deps:[0,1], canCompute:true, desc:"Ray-traced ambient occlusion -- reads depth + GBuffer, compute/RT"},
       {id:4,name:"Denoise",   queue:"gfx",cost:2,deps:[2,3], canCompute:true, desc:"Spatio-temporal denoiser -- compute"},
-      {id:5,name:"Lighting",  queue:"gfx",cost:3,deps:[1,4], canCompute:false,desc:"Deferred resolve -- rasterization"},
+      {id:5,name:"Lighting",  queue:"gfx",cost:3,deps:[0,1,4],canCompute:false,desc:"Deferred resolve -- reads depth + GBuffer + denoised, rasterization"},
       {id:6,name:"Composite", queue:"gfx",cost:1,deps:[5],   canCompute:false,desc:"Final composite + present"}
     ]
   }
