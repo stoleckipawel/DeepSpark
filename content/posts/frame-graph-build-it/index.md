@@ -20,7 +20,7 @@ keywords: ["frame graph C++", "render graph implementation", "topological sort",
 📖 <strong>Part II of IV.</strong>&ensp; <a href="../frame-graph-theory/">Theory</a> → <em>Build It</em> → <a href="../frame-graph-advanced/">Beyond MVP</a> → <a href="../frame-graph-production/">Production Engines</a>
 </div>
 
-*Part I laid out the theory: declare, compile, execute. Now we turn that blueprint into code. Three iterations, each one building on the last: v1 lays the scaffold, v2 adds dependency-driven execution order (topological sort, pass culling, and automatic barriers), and v3 introduces lifetime analysis so non-overlapping resources can share the same heap. Time to get our hands dirty.*
+*Part I laid out the theory: declare, compile, execute. Now we turn that blueprint into code. Three iterations, each one building on the last: v1 lays the scaffold, v2 adds dependency-driven execution order (topological sort, pass culling, and automatic barriers), and v3 introduces lifetime analysis so non-overlapping resources can share the same heap. Let's build it.*
 
 <!-- MVP progression, animated power-up timeline -->
 <div style="margin:1.6em 0 1.2em;position:relative;padding-left:3em;">
@@ -299,7 +299,7 @@ The three-phase model from [Part I](../frame-graph-theory/) forces eight API dec
 
 ### The Target API
 
-With those choices made, here's where we're headed — the complete API:
+With those choices made, here's where we're headed: the complete API.
 
 {{< include-code file="api_demo.cpp" lang="cpp" open="true" >}}
 
@@ -480,7 +480,7 @@ Every write bumps a version number, and every read attaches to the current versi
 
 The key data structure: each resource entry tracks its **current version** (incremented on write) and a **writer pass index** per version. When a pass calls `Read(h)`, the graph looks up the current version's writer and adds a dependency edge from that writer to the reading pass.
 
-Here's what changes from v1. The `ResourceDesc` array becomes `ResourceEntry`, each entry carrying a version list and an `imported` flag. `ResourceVersion` tracks which pass wrote each version and which passes read it. This is the data Read/Write use to build edges:
+From v1, the core change is in resource tracking. The `ResourceDesc` array becomes `ResourceEntry`, each entry carrying a version list and an `imported` flag. `ResourceVersion` tracks which pass wrote each version and which passes read it. This is the data Read/Write use to build edges:
 
 {{< code-diff title="v1 → v2, ResourceVersion & ResourceEntry" collapsible="true" >}}
 @@ frame_graph_v2.h, PassIndex alias, ResourceVersion, ResourceEntry @@
@@ -605,7 +605,7 @@ Here's what changes from v1. The `ResourceDesc` array becomes `ResourceEntry`, e
 +}
 {{< /code-diff >}}
 
-Every `Write()` adds a WAW edge from the previous writer (if any) plus WAR edges from every reader of the current version (so they finish before the overwrite), then bumps the version. Every `Read()` finds the current version's writer and records a RAW edge. Together they capture all three data hazards — read-after-write, write-after-read, and write-after-write — and those edges feed the next three steps.
+Every `Write()` adds a WAW edge from the previous writer (if any) plus WAR edges from every reader of the current version (so they finish before the overwrite), then bumps the version. Every `Read()` finds the current version's writer and records a RAW edge. Together they capture all three data hazards: read-after-write, write-after-read, and write-after-write. Those edges feed the next three steps.
 
 ---
 
@@ -1238,7 +1238,7 @@ For each transient resource, scan existing physical blocks for one that is both 
 -        // (v2: only state transitions)
 +        if (b.isAliasing)
 +        {
-+            // D3D12: D3D12_RESOURCE_BARRIER_TYPE_ALIASING / Vulkan: memory barrier on the shared heap region.
+  +            // D3D12: D3D12_RESOURCE_BARRIER_TYPE_ALIASING / Vulkan: appropriate synchronization between the old and new occupant.
 +        }
 +        else
 +        {
@@ -1250,9 +1250,7 @@ For each transient resource, scan existing physical blocks for one that is both 
 
 `Execute()` stays unchanged: still pure playback of the compiled plan. All the new logic lives in `Compile()`, which now runs five stages instead of three: build edges → topo-sort → cull → **scan lifetimes → alias → compute barriers**. The last three stages add ~170 lines on top of v2.
 
-The aliasing barriers matter for correctness, not just bookkeeping. When a physical block changes occupant, the GPU's L2 cache may still hold stale data from the previous resource. D3D12 exposes this as `D3D12_RESOURCE_BARRIER_TYPE_ALIASING`. Vulkan uses a `VkMemoryBarrier` on the heap region covering both the outgoing and incoming resource. Omitting these leads to corruption that's timing-dependent and GPU-vendor-specific, exactly the kind of bug that only shows up in the field.
-
-Our `AllocSize()` rounds every resource up to **64 KB** — the placement alignment real GPUs require for shared heaps. The `BytesPerPixel()` calculation is intentionally simplified. A production allocator would query the driver instead — `GetResourceAllocationInfo` on D3D12 or `vkGetImageMemoryRequirements` on Vulkan — to account for row padding, tiling overhead, and per-format alignment. The aliasing algorithm stays the same; only the size input changes.
+The aliasing barrier and alignment rules are the same ones covered in [Part I](/posts/frame-graph-theory/#allocation-and-aliasing). The important implementation point here is that v3 now emits the aliasing barrier when a block changes occupant, and `AllocSize()` gives the free-list allocator a conservative aligned size to work with. The size model is still intentionally simplified. A production allocator would query the driver for the real requirements, but the aliasing algorithm stays the same.
 
 That wraps v3. Starting from v2's compile/execute split, we added lifetime analysis, a greedy free-list allocator, and aliasing-aware barrier insertion, the same architecture Frostbite described at GDC 2017, and the same approach UE5 uses today for every transient `FRDGTexture` created through `FRDGBuilder::CreateTexture`. The graph now owns the full lifecycle: declare virtual resources → analyze dependencies → pack physical memory → precompute every barrier → execute as pure playback.
 

@@ -78,7 +78,7 @@ Each `AddPass` takes a parameter struct + execute lambda. The struct *is* the se
 
 ### Frostbite
 
-Frostbite's GDC 2017 talk described a similar lambda-based declaration: setup lambda declares reads/writes, execute lambda records GPU commands. The exact current implementation isn't public.
+Frostbite's GDC 2017 talk described a similar split: a setup lambda declares reads and writes, and an execute lambda records GPU commands. The exact current implementation isn't public.
 
 ### What's different from our MVP
 
@@ -88,7 +88,7 @@ Frostbite's GDC 2017 talk described a similar lambda-based declaration: setup la
   <tr><td><strong>Edge declaration</strong></td><td>Explicit <code>read()</code> / <code>write()</code> / <code>readWrite()</code> calls in setup lambda</td><td>UE5: macro-generated metadata. Frostbite: lambda-based, similar to MVP.</td></tr>
   <tr><td><strong>Resource creation</strong></td><td>Transient (<code>CreateResource</code>) + imported (<code>ImportResource</code>), imported tracked for barriers but not aliased</td><td>Same distinction, plus cross-frame heap pooling, placed sub-allocation, and size bucketing.</td></tr>
   <tr><td><strong>Queue assignment</strong></td><td>Single queue</td><td>Per-pass flags: graphics, compute, async compute, copy</td></tr>
-  <tr><td><strong>Rebuild</strong></td><td>Full rebuild every frame</td><td>UE5: hybrid (cached topology, invalidated on change). Others: dynamic rebuild.</td></tr>
+  <tr><td><strong>Rebuild</strong></td><td>Full rebuild every frame</td><td>UE5: hybrid (cached topology, invalidated on change or explicit engine events). Others: dynamic rebuild.</td></tr>
 </table>
 </div>
 

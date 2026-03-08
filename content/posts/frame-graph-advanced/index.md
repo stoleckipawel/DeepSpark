@@ -36,7 +36,7 @@ The algorithm is called **reachability analysis**: for each pass, the compiler f
 
 ### Minimizing fences
 
-Cross-queue work needs **GPU fences**: one queue signals, the other waits. Each fence adds dead GPU time: async workloads under ~0.2 ms are unlikely to show any benefit because fence resolution overhead alone eats the gain, and AMD's RDNA Performance Guide advises minimizing queue synchronization because "each fence has a CPU and GPU cost" ([GPUOpen](https://gpuopen.com/learn/rdna-performance-guide/)). Offload three passes to async compute and you might need three separate fences — one per synchronization point — and the accumulated stall time from waiting on all of them can negate the overlap benefit entirely. The compiler applies **transitive reduction** to collapse those down:
+Cross-queue work needs **GPU fences**: one queue signals, the other waits. Each fence adds dead GPU time: async workloads under ~0.2 ms are unlikely to show any benefit because fence resolution overhead alone eats the gain, and AMD's RDNA Performance Guide advises minimizing queue synchronization because "each fence has a CPU and GPU cost" ([GPUOpen](https://gpuopen.com/learn/rdna-performance-guide/)). Offload three passes to async compute and you might need three separate fences, one per synchronization point, and the accumulated stall time from waiting on all of them can negate the overlap benefit entirely. The compiler applies **transitive reduction** to collapse those down:
 
 <div class="fg-grid-stagger ds-grid-2col">
   <div class="fg-hoverable" style="border-radius:10px;border:1.5px solid rgba(var(--ds-danger-rgb),.25);overflow:hidden;">

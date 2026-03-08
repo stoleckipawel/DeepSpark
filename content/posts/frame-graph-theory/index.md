@@ -20,7 +20,7 @@ keywords: ["frame graph", "render graph", "render pass", "DAG", "topological sor
 📖 <strong>Part I of IV.</strong>&ensp; <em>Theory</em> → <a href="../frame-graph-build-it/">Build It</a> → <a href="../frame-graph-advanced/">Beyond MVP</a> → <a href="../frame-graph-production/">Production Engines</a>
 </div>
 
-Behind every smooth frame is a brutal scheduling problem: which passes can run in parallel, which buffers can reuse the same memory, and which barriers are actually necessary. Frame graphs solve it: declare what each pass reads and writes, and the graph handles the rest. This series breaks down the theory, builds a real implementation in C++, and shows how the same ideas scale to production engines like UE5's RDG.
+Behind every smooth frame is a complex scheduling problem: which passes can run in parallel, which buffers can reuse the same memory, and which barriers are actually necessary. Frame graphs solve it: declare what each pass reads and writes, and the graph handles the rest. This series breaks down the theory, builds a real implementation in C++, and shows how the same ideas scale to production engines like UE5's RDG.
 
 <div class="fg-reveal" data-keep-emoji="true" style="margin:1.5em 0;border-radius:12px;overflow:hidden;border:1.5px solid rgba(var(--ds-indigo-rgb),.25);background:linear-gradient(135deg,rgba(var(--ds-indigo-rgb),.04),transparent);">
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0;">
@@ -176,7 +176,7 @@ A frame graph models an entire frame as a **directed acyclic graph (DAG)**. Each
 
 The GPU never sees this graph. It exists only on the CPU, long enough for the system to inspect **every** pass and **every** resource before a single GPU command is recorded. That global view is what makes automatic scheduling, memory aliasing, and barrier insertion possible. These are exactly the things that break when done by hand at scale.
 
-The key insight is **deferred execution**. Instead of recording GPU commands as you encounter each pass, you first build a complete description of the frame: every pass, every resource, every dependency, and only then hand it to a compiler that can see the whole picture at once. It's the difference between giving a builder one instruction at a time ("lay a brick… now another brick…") and handing them the full blueprint so they can plan the entire build before picking up a tool. The frame graph's compile step is that planning phase.
+The key insight is **deferred execution**. Instead of recording GPU commands as you encounter each pass, you first build a complete description of the frame: every pass, every resource, every dependency, and only then hand it to a compiler that can see the whole picture at once. It's the difference between giving a builder one instruction at a time and handing them the full blueprint so they can plan the entire build before picking up a tool. The frame graph's compile step is that planning phase.
 
 This separation has a second benefit: the graph is a **first-class data structure** you can inspect, serialize, diff, and visualize. You can dump it to a log and replay it offline. You can compare this frame's graph to last frame's to see what changed. None of this is possible when commands are recorded inline, since the information is scattered across dozens of call sites and evaporates the moment the frame ends.
 
@@ -362,7 +362,7 @@ Once every pass has declared its resources and dependencies, the compiler takes 
 
 Before the GPU can execute anything, the compiler needs to turn the DAG into an ordered schedule. The rule is simple: **no pass runs before the passes it depends on**. This is called a **topological sort**.
 
-The input is the raw edge set from the declare step: every read/write dependency between passes. The output is a flat list of passes in an order that respects all of them. If pass A writes a resource that pass B reads, A will always appear before B. If two passes share no dependencies, either order is valid, and the compiler is free to pick whichever is cheaper. Crucially, this isn't a fixed ordering you design upfront. It's derived automatically from the declared edges, so adding or removing a pass never requires manual re-sequencing.
+The input is the raw edge set from the declare step: every read/write dependency between passes. The output is a flat list of passes in an order that respects all of them. If pass A writes a resource that pass B reads, A will always appear before B. If two passes share no dependencies, either order is valid, and the compiler is free to pick whichever is cheaper. This isn't a fixed ordering you design upfront. It's derived automatically from the declared edges, so adding or removing a pass never requires manual re-sequencing.
 
 The algorithm most compilers use is **Kahn's algorithm**. Think of it like a to-do list where you can only start a task once all its prerequisites are done:
 
@@ -412,7 +412,9 @@ The allocator works in two passes: first, walk the sorted pass list and record e
 
 3. **Placed-resource alignment is non-negotiable.** D3D12 requires 64 KB (`D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT`) for most textures, or 4 MB for MSAA. Vulkan surfaces the requirement via `VkMemoryRequirements::alignment`. Any allocator must round up to at least 64 KB to satisfy the common-case constraint.
 
-4. **An aliasing barrier must separate occupants.** Before the GPU begins writing the new resource, it must flush caches and invalidate metadata belonging to the old one. D3D12 exposes `D3D12_RESOURCE_BARRIER_TYPE_ALIASING`. Vulkan handles this via a `VkImageMemoryBarrier` transitioning the incoming resource from `VK_IMAGE_LAYOUT_UNDEFINED`, which implicitly invalidates caches and metadata for the shared memory region. Omitting this barrier causes timing-dependent corruption. AMD and NVIDIA GPUs cache metadata differently, so the bug may only reproduce on one vendor. The frame graph's barrier compiler emits these automatically whenever a heap block changes owner between passes.
+4. **An aliasing barrier must separate occupants.** Before the GPU begins using the new resource, it must make the old occupant's caches and metadata irrelevant to that shared memory block. D3D12 exposes `D3D12_RESOURCE_BARRIER_TYPE_ALIASING`. Omitting this synchronization causes timing-dependent corruption that may vary by driver or GPU architecture. The frame graph's barrier compiler emits these automatically whenever a heap block changes owner between passes.
+
+<p class="ext-ref">Deep dive: D3D12 — <a href="https://learn.microsoft.com/en-us/windows/win32/direct3d12/memory-aliasing-and-data-inheritance#aliasing">Memory Aliasing and Data Inheritance, “Aliasing”</a> · D3D12 — <a href="https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_resource_aliasing_barrier">D3D12_RESOURCE_ALIASING_BARRIER</a> · Vulkan — <a href="https://docs.vulkan.org/refpages/latest/refpages/source/VkMemoryBarrier.html">VkMemoryBarrier</a> / <a href="https://docs.vulkan.org/refpages/latest/refpages/source/VkImageMemoryBarrier.html">VkImageMemoryBarrier</a></p>
 
 {{< interactive-aliasing >}}
 
@@ -472,7 +474,9 @@ The scalability gain comes from the DAG itself: passes at the same depth in the 
 
 ### Cleanup and reset
 
-After every pass has been recorded, cleanup is trivial. The frame graph was designed around single-frame lifetimes, so there's nothing to track individually. The system just resets the transient memory pool in one shot (every GBuffer, scratch texture, and temporary buffer vanishes together). Imported resources like the swapchain, TAA history, or shadow atlas aren't touched. They belong to external systems and persist across frames. The graph object itself clears its pass list and resource table, leaving it empty and ready for the next frame's declare phase to start fresh. This reset-and-rebuild cycle is what lets engines add or remove passes freely without any teardown logic.
+After every pass has been recorded, cleanup of the graph's own transient state is trivial. The single-frame lifetime rule applies to graph-owned temporaries, so the system just resets the transient memory pool in one shot (every GBuffer, scratch texture, and temporary buffer vanishes together). Imported resources like the swapchain, TAA history, or shadow atlas aren't reset or destroyed. The graph still tracks their reads, writes, dependencies, and barriers while compiling the frame; they simply remain owned by external systems and persist across frames. The graph object itself clears its pass list and resource table, leaving it empty and ready for the next frame's declare phase to start fresh. This reset-and-rebuild cycle is what lets engines add or remove passes freely without any teardown logic.
+
+<p class="ext-ref">Deep dive: UE5 RDG — <a href="https://dev.epicgames.com/documentation/en-us/unreal-engine/render-dependency-graph-in-unreal-engine#transient-resources">“Transient Resources”</a> · UE5 RDG — <a href="https://dev.epicgames.com/documentation/en-us/unreal-engine/render-dependency-graph-in-unreal-engine#external-resources">“External Resources”</a></p>
 
 ---
 
@@ -516,7 +520,9 @@ How often should the graph recompile? Three approaches, each a valid tradeoff:
 
 **Dynamic** is the simplest approach and the most common starting point. The compile cost is low (sorting, culling, aliasing, and barrier computation are all CPU-side integer work over small arrays), but it isn't zero. It scales with the number of passes and resources, and on CPU-constrained platforms (consoles, mobile) or graphs with hundreds of passes, the per-frame cost can become noticeable.
 
-**Hybrid** exists precisely because of that cost. When the graph topology is mostly stable frame-to-frame (same passes, same connections), there's no reason to recompute the same plan 60 times per second. A hybrid approach caches the compiled result and only invalidates when the declared graph actually changes (typically detected by hashing the pass + resource set). The tradeoff is complexity: you need reliable dirty-tracking and must guarantee a stale plan is never replayed against a changed graph.
+**Hybrid** exists precisely because of that cost. When the graph topology is mostly stable frame-to-frame (same passes, same connections), there's no reason to recompute the same plan 60 times per second. A hybrid approach caches the compiled result and only invalidates when the declared graph actually changes. Some engines detect that automatically (hashing the pass + resource set, dirty bits, topology fingerprints). Others make it an explicit API decision: the caller decides when to recompile because it already knows which events can change the graph. The tradeoff is the same either way: you must guarantee a stale plan is never replayed against a changed graph.
+
+<p class="ext-ref">Deep dive: Khronos Vulkan Guide — <a href="https://docs.vulkan.org/guide/latest/common_pitfalls.html#recording-command-buffers">Common Pitfalls, “Recording Command Buffers”</a> (why fresh per-frame recording is often acceptable in practice)</p>
 
 **Static** compiles once at init and replays the same plan forever. It's rarely useful because the whole point of a frame graph is flexibility: feature toggles, dynamic quality scaling, debug overlays. A locked pipeline can't adapt.
 
