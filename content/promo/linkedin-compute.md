@@ -13,9 +13,9 @@ showTitle: false
 ---
 
 <!-- ═══════════════════════════════════════════════════════════════
-     LINKEDIN PROMO R&D — Compute Article
-     Quiet, technical concepts for: "Making a Tiny Compute Clear
-     Survive a Real Unreal Frame"
+  LINKEDIN PROMO R&D — Compute Article
+  Quiet, technical concepts for: "Making a Tiny Compute Copy
+  Survive a Real Unreal Frame"
      ═══════════════════════════════════════════════════════════════ -->
 
 <style>
@@ -563,9 +563,9 @@ Final thumbnail direction for the compute article. The audience is Unreal-facing
 <div class="li-post-text">
 <div class="li-hook">If you use Unreal, this is the layer under the pass you already know.</div>
 <div class="li-body">
-This article starts from a familiar Unreal-level goal: clear a texture with one small compute pass.
+This article starts from a familiar Unreal-level goal: copy one texture into another with one small compute pass.
 <br><br>
-Then it walks one layer down and shows what that simple pass actually means in D3D12: binding contract, descriptors, PSO creation, command recording, queue submission, and the hand-off to the next pass.
+Then it walks one layer down and shows what that simple pass actually means in D3D12: source and destination resources, SRV and UAV bindings, a root signature that defines shader access, a Pipeline State Object (PSO), command-list recording, queue submission, and the hand-off to the next pass.
 <br><br>
 The value is practical: a clearer model for where compute passes usually go wrong, what each layer is responsible for, and why a pass that looks simple in Unreal still has real API machinery underneath it.
 </div>
@@ -576,61 +576,61 @@ The value is practical: a clearer model for where compute passes usually go wron
 <div class="slide compute-slide">
   <span class="slide-label">Compute Article / Final Thumbnail</span>
   <span class="slide-num">1 / 5</span>
-  <div class="compute-kicker">Unreal To D3D12</div>
+  <div class="compute-kicker">Under The Pass</div>
   <div class="hook">What does one Unreal pass<br>really become in D3D12?</div>
-  <div class="sub">A concrete walkthrough of the binding, execution, and frame-level machinery underneath one small compute pass.</div>
+  <div class="sub">Start from one simple Unreal copy pass, then unwrap the D3D12 path beneath it: source and destination resources, binding layout, executable pipeline state, Dispatch, and the next-pass transition.</div>
   <div class="compute-flow">
     <div class="stage">
-      <div class="step">Engine</div>
-      <div class="headline">Clear texture</div>
-      <div class="copy">The pass as it feels in Unreal.</div>
+      <div class="step">Start</div>
+      <div class="headline">Copy pass</div>
+      <div class="copy">Read one texture, write another.</div>
     </div>
     <div class="stage">
-      <div class="step">Binding</div>
-      <div class="headline">Root + descriptors</div>
-      <div class="copy">Where the pass becomes a binding contract.</div>
+      <div class="step">Below</div>
+      <div class="headline">D3D12 path</div>
+      <div class="copy">Resources, SRV/UAV bindings, and executable state.</div>
     </div>
     <div class="stage">
-      <div class="step">Execution</div>
-      <div class="headline">PSO + command list</div>
-      <div class="copy">Where the pass becomes real GPU work.</div>
+      <div class="step">Execute</div>
+      <div class="headline">Dispatch</div>
+      <div class="copy">The command list turns setup into GPU work.</div>
     </div>
     <div class="stage">
-      <div class="step">Frame</div>
-      <div class="headline">State + hand-off</div>
-      <div class="copy">Where the result survives the frame.</div>
+      <div class="step">After</div>
+      <div class="headline">Transition</div>
+      <div class="copy">The output must still reach the next pass correctly.</div>
     </div>
   </div>
-  <div class="compute-banner"><strong>Promise:</strong> the article shows the layer Unreal usually hides, and turns one familiar pass into a clearer mental model for real D3D12 work.</div>
+  <div class="compute-banner"><strong>Angle:</strong> this version frames the article as an unwrapping of the hidden D3D12 layer underneath one familiar Unreal pass.</div>
 </div>
 
-## 8-Slide Preview
+## 9-Slide Preview
 
 <div class="post-caption">
-Full-size preview of the selected carousel direction. Every slide now carries real structure so the preview matches the posting format more closely.
+Full-size preview of the selected carousel direction. Each slide now carries one core concept so the sequence teaches one step at a time.
 </div>
 
 <div class="slide compute-slide">
   <span class="slide-label">Compute Article / Carousel Preview</span>
-  <span class="slide-num">1 / 8</span>
+  <span class="slide-num">1 / 9</span>
   <div class="compute-kicker">Pull Back</div>
   <div class="hook">What does one Unreal pass<br>really become in D3D12?</div>
-  <div class="sub">Start with the familiar pass, then pull the curtain back on the layers Unreal quietly handles for you.</div>
+  <div class="sub">Start with one familiar compute copy pass, then pull the curtain back on the layers Unreal quietly handles for you.</div>
   <div class="compute-flow">
     <div class="stage">
       <div class="step">Engine</div>
       <div class="headline">Simple pass</div>
-      <div class="copy">It feels local and lightweight.</div>
+      <div class="copy">Read one texture, write one texture.</div>
     </div>
     <div class="stage">
-      <div class="step">API</div>
+      <div class="step">D3D12</div>
       <div class="headline">Real setup</div>
-      <div class="copy">Resources, views, pipeline state.</div>
+      <div class="copy">SRV, UAV, descriptors, PSO.</div>
     </div>
     <div class="stage">
       <div class="step">GPU</div>
       <div class="headline">Real work</div>
-      <div class="copy">Recorded commands and execution.</div>
+      <div class="copy">Command list plus Dispatch.</div>
     </div>
     <div class="stage">
       <div class="step">Frame</div>
@@ -638,153 +638,184 @@ Full-size preview of the selected carousel direction. Every slide now carries re
       <div class="copy">The output still has to survive.</div>
     </div>
   </div>
-  <div class="compute-banner"><strong>Idea:</strong> Unreal gives you a clean pass abstraction. The article shows the explicit D3D12 path under that abstraction.</div>
+  <div class="compute-banner"><strong>Idea:</strong> Unreal gives you a clean pass abstraction. The article shows the explicit D3D12 path underneath it without assuming you already speak D3D12 fluently.</div>
 </div>
 
 <div class="slide compute-slide">
   <span class="slide-label">Compute Article / Carousel Preview</span>
-  <span class="slide-num">2 / 8</span>
-  <div class="compute-kicker">The Pass</div>
-  <div class="hook">In Unreal, it starts as<br>one tiny clear pass.</div>
-  <div class="sub">One output texture. One small parameter block. One dispatch. That is exactly why it is a good example.</div>
+  <span class="slide-num">2 / 9</span>
+  <div class="compute-kicker">Pass Intent</div>
+  <div class="hook">In Unreal, this starts as<br>one small render pass.</div>
+  <div class="sub">At the engine level the ask is simple: read one texture and copy it into another. But the moment that pass enters the frame, the renderer has to turn that intent into something the GPU can actually execute.</div>
   <div class="compute-ladder">
     <div class="row">
-      <div class="left">Goal</div>
-      <div class="right"><strong>Clear a texture</strong> with compute</div>
+      <div class="left">Intent</div>
+      <div class="right"><strong>One pass</strong> wants to read a source and write a destination</div>
     </div>
     <div class="row">
-      <div class="left">Pass view</div>
-      <div class="right"><strong>One render-graph-style step</strong> inside the frame</div>
+      <div class="left">Context</div>
+      <div class="right"><strong>The frame accepts it</strong> as part of a larger render sequence</div>
     </div>
     <div class="row">
-      <div class="left">Reader value</div>
-      <div class="right"><strong>Small example</strong>, full API path underneath</div>
+      <div class="left">Question</div>
+      <div class="right"><strong>What has to exist</strong> before that pass can legally run?</div>
     </div>
   </div>
-  <div class="compute-banner"><strong>Why this example:</strong> once the shader stays simple, the machinery around it becomes the real subject.</div>
+  <div class="compute-banner"><strong>Core concept:</strong> the journey starts with pass intent. The next step is giving that intent real source and destination resources.</div>
 </div>
 
 <div class="slide compute-slide">
   <span class="slide-label">Compute Article / Carousel Preview</span>
-  <span class="slide-num">3 / 8</span>
-  <div class="compute-kicker">Resource Work</div>
-  <div class="hook">The pass needs a real<br>resource story first.</div>
-  <div class="sub">Before the shader can write anything, the output has to exist as real GPU memory with the right usage model behind it.</div>
+  <span class="slide-num">3 / 9</span>
+  <div class="compute-kicker">Real Resources</div>
+  <div class="hook">Before anything else, the pass needs<br>something to read and somewhere to write.</div>
+  <div class="sub">The Unreal pass cannot stay abstract anymore. In D3D12 that means a real source resource in a readable state and a real destination resource created for unordered compute writes. If either one is missing or misconfigured, the copy path is broken before Dispatch even exists.</div>
   <div class="compute-metric-row">
     <div class="compute-metric">
-      <div class="k">Engine view</div>
-      <div class="v">Output texture</div>
+      <div class="k">Read</div>
+      <div class="v">Source texture</div>
     </div>
     <div class="compute-metric">
-      <div class="k">D3D12 view</div>
-      <div class="v">Concrete resource</div>
+      <div class="k">Write</div>
+      <div class="v">Destination texture</div>
     </div>
     <div class="compute-metric">
-      <div class="k">Why it matters</div>
-      <div class="v">No resource, no pass</div>
+      <div class="k">Next</div>
+      <div class="v">How will the shader see both?</div>
     </div>
   </div>
-  <div class="compute-banner"><strong>Unreal helps here:</strong> it hides much of the allocation and lifetime management that still has to be true underneath.</div>
+  <div class="compute-banner"><strong>Core concept:</strong> a copy-style compute pass needs both readable input and writable output. The next step is defining what kind of access the shader is allowed to have to each one.</div>
 </div>
 
 <div class="slide compute-slide">
   <span class="slide-label">Compute Article / Carousel Preview</span>
-  <span class="slide-num">4 / 8</span>
-  <div class="compute-kicker">Binding Work</div>
-  <div class="hook">The shader only sees<br>what binding makes legal.</div>
-  <div class="sub">This is where friendly engine parameters turn into actual UAVs, CBVs, descriptors, and a root signature contract.</div>
+  <span class="slide-num">4 / 9</span>
+  <div class="compute-kicker">Binding Contract</div>
+  <div class="hook">Now the renderer defines<br>what the shader is allowed to touch.</div>
+  <div class="sub">A compute shader cannot just reach into memory. In D3D12 this contract is the root signature: it declares which bindings exist, whether the shader receives an SRV for reads, a UAV for writes, constants, or descriptor-backed tables, and what layout the command list must satisfy before the shader is allowed to run.</div>
   <div class="compute-flow">
-    <div class="stage">
-      <div class="step">Shader</div>
-      <div class="headline">u0 / b0</div>
-      <div class="copy">Registers define what the shader expects.</div>
-    </div>
-    <div class="stage">
-      <div class="step">Views</div>
-      <div class="headline">UAV / CBV</div>
-      <div class="copy">Descriptors define what the GPU can see.</div>
-    </div>
     <div class="stage">
       <div class="step">Contract</div>
       <div class="headline">Root signature</div>
-      <div class="copy">Bindings become explicit and legal.</div>
+      <div class="copy">Defines the binding layout the shader expects.</div>
     </div>
     <div class="stage">
-      <div class="step">Engine</div>
-      <div class="headline">Parameter block</div>
-      <div class="copy">Unreal hides much of this translation.</div>
+      <div class="step">Input</div>
+      <div class="headline">SRV slot</div>
+      <div class="copy">An SRV slot exposes readable resource data.</div>
+    </div>
+    <div class="stage">
+      <div class="step">Output</div>
+      <div class="headline">UAV slot</div>
+      <div class="copy">A UAV slot exposes writable resource data.</div>
+    </div>
+    <div class="stage">
+      <div class="step">Question</div>
+      <div class="headline">What binds there?</div>
+      <div class="copy">The contract exists, but it still points at nothing.</div>
     </div>
   </div>
-  <div class="compute-banner"><strong>Unreal helps here:</strong> it makes parameter setup feel friendly, while the underlying binding contract remains strict.</div>
+  <div class="compute-banner"><strong>Core concept:</strong> the root signature is the legal interface between shader code and GPU state. For a copy pass, it needs to describe both reads and writes before the bindings can be filled in.</div>
 </div>
 
 <div class="slide compute-slide">
   <span class="slide-label">Compute Article / Carousel Preview</span>
-  <span class="slide-num">5 / 8</span>
-  <div class="compute-kicker">Pipeline Work</div>
-  <div class="hook">The pass also needs<br>an executable shape.</div>
-  <div class="sub">Shader bytecode is not enough. The pass has to be frozen into pipeline state that matches the binding contract.</div>
+  <span class="slide-num">5 / 9</span>
+  <div class="compute-kicker">Real Bindings</div>
+  <div class="hook">Then those abstract slots become<br>real descriptors and real data.</div>
+  <div class="sub">The source texture needs an SRV descriptor, the destination texture needs a UAV descriptor, and those pieces have to be placed where D3D12 can reference them. A descriptor is not the resource itself. It is the small record that tells the GPU which resource to access, which subresource range to use, and whether that binding is for reading or writing.</div>
   <div class="compute-ladder">
     <div class="row">
-      <div class="left">Shader</div>
-      <div class="right"><strong>Compute bytecode</strong> expresses the work</div>
+      <div class="left">Source</div>
+      <div class="right"><strong>Create an SRV descriptor</strong> that points at the readable texture resource</div>
     </div>
     <div class="row">
-      <div class="left">Contract</div>
-      <div class="right"><strong>Root signature</strong> expresses legal bindings</div>
+      <div class="left">Destination</div>
+      <div class="right"><strong>Create a UAV descriptor</strong> that points at the writable texture resource</div>
     </div>
     <div class="row">
-      <div class="left">Executable</div>
-      <div class="right"><strong>Compute PSO</strong> locks the path into shape</div>
+      <div class="left">Bind</div>
+      <div class="right"><strong>Descriptor tables or root bindings</strong> connect the root signature to both resources</div>
     </div>
   </div>
-  <div class="compute-banner"><strong>Unreal helps here:</strong> it hides most of the plumbing between “I have a shader” and “the GPU has a legal pipeline to run.”</div>
+  <div class="compute-banner"><strong>Core concept:</strong> descriptors are how D3D12 names real GPU resources at bind time. In a copy pass, the important distinction is explicit: one descriptor is for reading, one is for writing.</div>
 </div>
 
 <div class="slide compute-slide">
   <span class="slide-label">Compute Article / Carousel Preview</span>
-  <span class="slide-num">6 / 8</span>
-  <div class="compute-kicker">Command Work</div>
-  <div class="hook">Then the pass has to become<br>real recorded GPU work.</div>
-  <div class="sub">Only here do command allocators, command lists, bindings, and Dispatch turn the pass into something the GPU can actually execute.</div>
+  <span class="slide-num">6 / 9</span>
+  <div class="compute-kicker">Pipeline State</div>
+  <div class="hook">The shader still needs<br>a legal executable form.</div>
+  <div class="sub">Source code is not enough. The renderer has to turn the compute shader and its binding layout into a compute Pipeline State Object, or PSO. In practice, that PSO packages the compiled shader together with the root-signature expectations so the command list can bind one coherent piece of executable state instead of loosely assembled setup.</div>
   <div class="compute-metric-row">
     <div class="compute-metric">
-      <div class="k">Before</div>
-      <div class="v">Objects exist</div>
+      <div class="k">Pipeline</div>
+      <div class="v">Shader + PSO</div>
     </div>
     <div class="compute-metric">
-      <div class="k">During</div>
-      <div class="v">Commands record</div>
+      <div class="k">Reason</div>
+      <div class="v">Executable state</div>
     </div>
     <div class="compute-metric">
-      <div class="k">After</div>
-      <div class="v">Dispatch is real</div>
+      <div class="k">Next</div>
+      <div class="v">Record commands</div>
     </div>
   </div>
-  <div class="compute-banner"><strong>Unreal helps here:</strong> it gives you a pass execution point instead of exposing the full command recording sequence every time.</div>
+  <div class="compute-banner"><strong>Core concept:</strong> PSO creation freezes the compute shader into executable GPU state with a matching binding layout. The next step is placing that state onto a command list in the right order.</div>
 </div>
 
 <div class="slide compute-slide">
   <span class="slide-label">Compute Article / Carousel Preview</span>
-  <span class="slide-num">7 / 8</span>
-  <div class="compute-kicker">Frame Survival</div>
-  <div class="hook">Dispatch is not enough.<br>The frame still decides.</div>
-  <div class="sub">The result has to survive resource state transitions, ordering, and the next pass that wants to read or sample it.</div>
+  <span class="slide-num">7 / 9</span>
+  <div class="compute-kicker">Command Recording</div>
+  <div class="hook">Now the renderer finally binds state<br>and records the dispatch.</div>
+  <div class="sub">This is the moment the pass becomes command-list work. The renderer records commands in the exact order the GPU must observe them: bind the descriptor heap, bind the root signature, bind the PSO, transition the source into a readable state and the destination into UAV state, set the root bindings, and only then call Dispatch.</div>
   <div class="compute-flow">
     <div class="stage">
-      <div class="step">Pass A</div>
-      <div class="headline">Write</div>
-      <div class="copy">The compute pass writes the output.</div>
+      <div class="step">Bind</div>
+      <div class="headline">Heap + root</div>
+      <div class="copy">The command list gets the descriptor space and binding layout.</div>
     </div>
     <div class="stage">
       <div class="step">State</div>
       <div class="headline">Transition</div>
-      <div class="copy">The resource has to be left in a usable state.</div>
+      <div class="copy">The source becomes readable and the destination becomes writable.</div>
+    </div>
+    <div class="stage">
+      <div class="step">Execute</div>
+      <div class="headline">Dispatch</div>
+      <div class="copy">Dispatch defines how many thread groups copy source texels into destination texels.</div>
+    </div>
+    <div class="stage">
+      <div class="step">Question</div>
+      <div class="headline">Then what?</div>
+      <div class="copy">The output still has to survive the frame.</div>
+    </div>
+  </div>
+  <div class="compute-banner"><strong>Core concept:</strong> command recording is the ordered script the GPU follows. For a copy pass, both the read path and the write path have to be valid before Dispatch.</div>
+</div>
+
+<div class="slide compute-slide">
+  <span class="slide-label">Compute Article / Carousel Preview</span>
+  <span class="slide-num">8 / 9</span>
+  <div class="compute-kicker">Pass Hand-Off</div>
+  <div class="hook">The output matters only if the next pass<br>can safely consume it.</div>
+  <div class="sub">After Dispatch, the renderer still has to preserve ordering, issue the right barrier or transition, and carry the result forward without breaking the frame graph. If the compute pass reads one texture and writes another, D3D12 still needs an explicit story for when the write becomes visible and which later pass is allowed to consume the destination.</div>
+  <div class="compute-flow">
+    <div class="stage">
+      <div class="step">Pass A</div>
+      <div class="headline">Read + write</div>
+      <div class="copy">The compute pass samples the source and writes the destination.</div>
+    </div>
+    <div class="stage">
+      <div class="step">State</div>
+      <div class="headline">Transition</div>
+      <div class="copy">The destination may need to move from UAV write state to an SRV or copy state.</div>
     </div>
     <div class="stage">
       <div class="step">Order</div>
       <div class="headline">Barrier</div>
-      <div class="copy">The frame needs a correct dependency story.</div>
+      <div class="copy">A barrier tells the GPU when writes must be visible before later reads.</div>
     </div>
     <div class="stage">
       <div class="step">Pass B</div>
@@ -792,30 +823,30 @@ Full-size preview of the selected carousel direction. Every slide now carries re
       <div class="copy">The next pass has to see the result correctly.</div>
     </div>
   </div>
-  <div class="compute-banner"><strong>Unreal helps here:</strong> it makes the frame feel continuous while a lot of explicit state and dependency work happens underneath.</div>
+  <div class="compute-banner"><strong>Core concept:</strong> a pass is only useful if its written result survives into the next pass. In D3D12 that means explicit resource states, explicit visibility rules, and explicit synchronization rather than assuming the driver will infer intent.</div>
 </div>
 
 <div class="slide compute-slide">
   <span class="slide-label">Compute Article / Carousel Preview</span>
-  <span class="slide-num">8 / 8</span>
-  <div class="compute-kicker">What Unreal Does</div>
-  <div class="hook">That is the curtain:<br>what the engine does for you.</div>
-  <div class="sub">The article is not just about D3D12. It is about understanding the layer Unreal is carrying so you can reason, debug, and build with more confidence.</div>
+  <span class="slide-num">9 / 9</span>
+  <div class="compute-kicker">Why This Helps</div>
+  <div class="hook">By the end of the frame,<br>the hidden work is finally visible.</div>
+  <div class="sub">The pass felt simple because Unreal carried the D3D12 mechanics for you: source and destination resources, SRV and UAV bindings, PSO setup, command-list recording, and pass-to-pass hand-off.</div>
   <div class="compute-bullet-list">
     <div class="compute-bullet-item">
       <div class="dot"></div>
-      <div><strong>See the hidden layer:</strong> resource, binding, pipeline, command, and frame work.</div>
+      <div><strong>Clearer ordering:</strong> pass intent became source and destination resources, binding contract, descriptors, pipeline, dispatch, and then hand-off.</div>
     </div>
     <div class="compute-bullet-item">
       <div class="dot"></div>
-      <div><strong>Debug better:</strong> most pass failures live around the shader, not inside it.</div>
+      <div><strong>Clearer value:</strong> when a compute pass fails, you know which layer to inspect first.</div>
     </div>
     <div class="compute-bullet-item">
       <div class="dot"></div>
-      <div><strong>Learn the mental model:</strong> one small pass, one reusable path underneath.</div>
+      <div><strong>Reader payoff:</strong> you leave with a reusable model for what Unreal is doing underneath one familiar pass.</div>
     </div>
   </div>
-  <div class="compute-banner"><strong>Read the article:</strong> one Unreal-style compute clear, followed all the way down until it becomes real D3D12 work.</div>
+  <div class="compute-banner"><strong>Read the article:</strong> follow one Unreal-style compute copy pass from read/write intent, to resources, to bindings, to Dispatch, to the next pass, and the whole path stops feeling mysterious.</div>
 </div>
 
 </div>

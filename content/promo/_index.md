@@ -11,7 +11,7 @@ cascade:
     disable: true
   build:
     list: never
-    render: always
+    render: never
   showTableOfContents: false
   showDate: false
   showAuthor: false
